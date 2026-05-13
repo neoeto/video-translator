@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VidiTranslate - Home/Download</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=Geist:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary": "#1000a9",
+                        "outline-variant": "#414755",
+                        "primary": "#adc6ff",
+                        "inverse-on-surface": "#303030",
+                        "surface": "#131313",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-surface-variant": "#c1c6d7",
+                        "on-primary-container": "#00285c",
+                        "surface-bright": "#393939",
+                        "surface-container": "#202020",
+                        "secondary-fixed": "#72fe88",
+                        "inverse-surface": "#e5e2e1",
+                        "surface-variant": "#353535",
+                        "primary-fixed-dim": "#adc6ff",
+                        "surface-container-high": "#2a2a2a",
+                        "tertiary": "#c0c1ff",
+                        "on-secondary-fixed": "#002107",
+                        "surface-container-low": "#1b1b1c",
+                        "background": "#131313",
+                        "tertiary-fixed-dim": "#c0c1ff",
+                        "surface-dim": "#131313",
+                        "surface-tint": "#adc6ff",
+                        "on-primary-fixed": "#001a41",
+                        "on-error": "#690005",
+                        "primary-fixed": "#d8e2ff",
+                        "secondary": "#53e16f",
+                        "surface-container-highest": "#353535",
+                        "on-tertiary-fixed": "#07006c",
+                        "outline": "#8b90a0",
+                        "tertiary-container": "#8083ff",
+                        "inverse-primary": "#005bc1",
+                        "on-background": "#e5e2e1",
+                        "on-tertiary-container": "#0d0096",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-fixed-variant": "#2f2ebe",
+                        "on-secondary-container": "#003a11",
+                        "on-primary": "#002e69",
+                        "on-secondary": "#003911",
+                        "secondary-fixed-dim": "#53e16f",
+                        "tertiary-fixed": "#e1e0ff",
+                        "error-container": "#93000a",
+                        "on-secondary-fixed-variant": "#00531c",
+                        "secondary-container": "#05b046",
+                        "error": "#ffb4ab",
+                        "primary-container": "#4b8eff",
+                        "on-surface": "#e5e2e1",
+                        "on-primary-fixed-variant": "#004493"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "sidebar-width": "260px",
+                        "container-padding": "24px",
+                        "unit-md": "16px",
+                        "unit-xs": "4px",
+                        "gutter": "16px",
+                        "unit-xl": "48px",
+                        "unit-sm": "8px",
+                        "unit-lg": "24px"
+                    },
+                    "fontFamily": {
+                        "title-sm": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "mono-data": ["Geist"],
+                        "body-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "label-caps": ["Geist"],
+                        "headline-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "title-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "body-sm": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "mono-data": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "display-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-caps": ["11px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #121212; color: #e5e2e1; }
+        .sharp-shadow { box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.5); }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden font-body-md bg-background">
+<!-- SideNavBar -->
+<nav class="hidden md:flex flex-col h-full py-unit-lg bg-surface-container-low dark:bg-surface-container-lowest border-r border-outline-variant fixed left-0 top-0 w-sidebar-width z-20">
+<div class="px-container-padding mb-unit-xl">
+<h1 class="font-display-lg text-display-lg text-primary">VidiTranslate</h1>
+<p class="font-mono-data text-mono-data text-on-surface-variant mt-unit-xs">Pro Workspace</p>
+</div>
+<div class="flex-1 flex flex-col gap-unit-xs px-unit-sm">
+<!-- Active: Home/Download -->
+<a class="flex items-center gap-unit-md px-container-padding py-unit-sm rounded-lg text-on-surface bg-white/5 border-l-2 border-primary font-bold transition-all opacity-80" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">download</span>
+<span class="font-body-md text-body-md">Home/Download</span>
+</a>
+<!-- Inactive -->
+<a class="flex items-center gap-unit-md px-container-padding py-unit-sm rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">sync</span>
+<span class="font-body-md text-body-md">Processing</span>
+</a>
+<a class="flex items-center gap-unit-md px-container-padding py-unit-sm rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">video_library</span>
+<span class="font-body-md text-body-md">Library</span>
+</a>
+<a class="flex items-center gap-unit-md px-container-padding py-unit-sm rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors duration-200 mt-auto" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col ml-0 md:ml-sidebar-width w-full h-full">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center h-16 px-gutter bg-surface dark:bg-surface border-b border-outline-variant shrink-0 z-10">
+<div class="flex items-center md:hidden">
+<span class="font-headline-md text-headline-md text-on-surface">VidiTranslate</span>
+</div>
+<div class="hidden md:flex"></div>
+<div class="flex items-center gap-unit-md">
+<button class="p-2 rounded-full text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-variant">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 rounded-full text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-variant">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Canvas -->
+<main class="flex-1 overflow-y-auto p-container-padding flex flex-col gap-unit-xl">
+<!-- Hero / Input Section -->
+<section class="flex flex-col items-center justify-center pt-16 pb-8 max-w-3xl mx-auto w-full text-center">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-unit-sm">Start a New Translation Task</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mb-unit-xl">Paste a video URL to begin downloading and high-fidelity translation processing.</p>
+<div class="w-full relative flex items-center group">
+<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-outline-variant group-focus-within:text-primary transition-colors">link</span>
+</div>
+<input class="w-full bg-[#181818] border border-[#333333] text-on-surface rounded-lg pl-12 pr-32 py-4 font-body-md text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-outline-variant" placeholder="https://youtube.com/watch?v=..." type="text"/>
+<div class="absolute inset-y-0 right-2 flex items-center">
+<button class="bg-primary text-on-primary font-title-sm text-title-sm px-6 py-2 rounded-[4px] hover:bg-primary-container transition-colors flex items-center gap-2">
+<span>Translate</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Recent Tasks Bento -->
+<section class="max-w-5xl mx-auto w-full">
+<div class="flex justify-between items-end mb-unit-md">
+<h3 class="font-title-sm text-title-sm text-on-surface">Recent Tasks</h3>
+<button class="font-label-caps text-label-caps text-primary hover:text-primary-container uppercase tracking-wider">View All</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-unit-md">
+<!-- Card 1 -->
+<div class="bg-[#1E1E1E] rounded-lg border border-[#333333] hover:bg-[#2A2A2A] transition-colors relative overflow-hidden flex flex-col group sharp-shadow">
+<div class="absolute left-0 top-0 bottom-0 w-[4px] bg-secondary-container"></div>
+<div class="p-unit-md flex-1 flex flex-col pl-6">
+<div class="w-full aspect-video bg-surface-container-highest rounded-[4px] mb-unit-md overflow-hidden relative">
+<img alt="Video Thumbnail" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" data-alt="A cinematic, high-contrast shot of a professional studio microphone in a dark recording booth. The scene is illuminated by sleek, modern corporate lighting with a high-tech dark aesthetic. Deep monochromatic layers dominate the background, punctuated by an electric blue LED accent light on the microphone stand, conveying an authoritative and efficient atmosphere typical of high-performance audio/video editing environments." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZjZRriuC52vnaN4_lAAANXHwqY-qkXj16shSLEzJdee1NkQ9jOpElZW9RWtvxW353MM0XQwKcEKxCtFjK9FRxvYf1QnVYYMUu1BYTBpnlAR9dLxn2RRHZRerWMSrFSyFqsW4XGS7cqUG1wIekiiOEWDVsep_jvRjxCU1kw6W3flSNEwnmNn0w-Y_-jHFPO7NahVdUTw-TmSmiowGmLpztb9Co76Lct_oe9HehwVwoBOivdNcxX2uVC5aiy2Op3mXx8y6-C6vqxAQ"/>
+<div class="absolute inset-0 border border-white/10 rounded-[4px] pointer-events-none"></div>
+<div class="absolute bottom-2 right-2 bg-black/80 px-2 py-1 rounded text-white font-mono-data text-mono-data">14:22</div>
+</div>
+<h4 class="font-title-sm text-title-sm text-on-surface line-clamp-2 mb-unit-sm">Interview with Tech CEO - Full Breakdown and Analysis</h4>
+<div class="mt-auto flex justify-between items-center">
+<span class="font-mono-data text-mono-data text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                                    Completed
+                                </span>
+<span class="font-mono-data text-mono-data text-on-surface-variant">2 hours ago</span>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-[#1E1E1E] rounded-lg border border-[#333333] hover:bg-[#2A2A2A] transition-colors relative overflow-hidden flex flex-col group sharp-shadow">
+<div class="absolute left-0 top-0 bottom-0 w-[4px] bg-secondary-container"></div>
+<div class="p-unit-md flex-1 flex flex-col pl-6">
+<div class="w-full aspect-video bg-surface-container-highest rounded-[4px] mb-unit-md overflow-hidden relative">
+<img alt="Video Thumbnail" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" data-alt="A wide angle view of a complex data center aisle under low-light conditions. Racks of servers emit subtle electric blue and green status lights, creating a modern, high-tech dark corporate minimalism style. The overall palette is composed of deep grays and blacks (#121212, #1E1E1E) with sharp, vibrant functional accents that suggest speed, reliability, and technical precision in a professional setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAgvlvKPp4TQzvI3VT23Da2KoiVFJrZ6SIXrmSxP86YJ061N2rzCEK-tW9J_eUYqxyD0yVg7K9Aoi7I_1Ee4mgWOSF1maedwp2-uPkrS48Yhejz_Jurk8yz4UROQKmYAEZGeqzjWJeSZYLUlOOe7PmoWFCVLaIEOIghZCm5eRntw8g0Na0Yx7vtvjsEQ1s-M-h7tLm-DgqlQnznDBqRFX3e2Jk9t-bRdlMtJgNB8LMt-gI24Z5w-FzSQk9d75lIxSEA9-SoCPekrzY"/>
+<div class="absolute inset-0 border border-white/10 rounded-[4px] pointer-events-none"></div>
+<div class="absolute bottom-2 right-2 bg-black/80 px-2 py-1 rounded text-white font-mono-data text-mono-data">45:10</div>
+</div>
+<h4 class="font-title-sm text-title-sm text-on-surface line-clamp-2 mb-unit-sm">Q3 Financial Report Presentation - Board Meeting Recording</h4>
+<div class="mt-auto flex justify-between items-center">
+<span class="font-mono-data text-mono-data text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                                    Completed
+                                </span>
+<span class="font-mono-data text-mono-data text-on-surface-variant">Yesterday</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+</div>
+</body></html>

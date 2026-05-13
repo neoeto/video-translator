@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VidiTranslate - Processing Pipeline</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=Geist:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary": "#1000a9",
+                        "outline-variant": "#414755",
+                        "primary": "#adc6ff",
+                        "inverse-on-surface": "#303030",
+                        "surface": "#131313",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-surface-variant": "#c1c6d7",
+                        "on-primary-container": "#00285c",
+                        "surface-bright": "#393939",
+                        "surface-container": "#202020",
+                        "secondary-fixed": "#72fe88",
+                        "inverse-surface": "#e5e2e1",
+                        "surface-variant": "#353535",
+                        "primary-fixed-dim": "#adc6ff",
+                        "surface-container-high": "#2a2a2a",
+                        "tertiary": "#c0c1ff",
+                        "on-secondary-fixed": "#002107",
+                        "surface-container-low": "#1b1b1c",
+                        "background": "#131313",
+                        "tertiary-fixed-dim": "#c0c1ff",
+                        "surface-dim": "#131313",
+                        "surface-tint": "#adc6ff",
+                        "on-primary-fixed": "#001a41",
+                        "on-error": "#690005",
+                        "primary-fixed": "#d8e2ff",
+                        "secondary": "#53e16f",
+                        "surface-container-highest": "#353535",
+                        "on-tertiary-fixed": "#07006c",
+                        "outline": "#8b90a0",
+                        "tertiary-container": "#8083ff",
+                        "inverse-primary": "#005bc1",
+                        "on-background": "#e5e2e1",
+                        "on-tertiary-container": "#0d0096",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-fixed-variant": "#2f2ebe",
+                        "on-secondary-container": "#003a11",
+                        "on-primary": "#002e69",
+                        "on-secondary": "#003911",
+                        "secondary-fixed-dim": "#53e16f",
+                        "tertiary-fixed": "#e1e0ff",
+                        "error-container": "#93000a",
+                        "on-secondary-fixed-variant": "#00531c",
+                        "secondary-container": "#05b046",
+                        "error": "#ffb4ab",
+                        "primary-container": "#4b8eff",
+                        "on-surface": "#e5e2e1",
+                        "on-primary-fixed-variant": "#004493"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "sidebar-width": "260px",
+                        "container-padding": "24px",
+                        "unit-md": "16px",
+                        "unit-xs": "4px",
+                        "gutter": "16px",
+                        "unit-xl": "48px",
+                        "unit-sm": "8px",
+                        "unit-lg": "24px"
+                    },
+                    "fontFamily": {
+                        "title-sm": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "mono-data": ["Geist"],
+                        "body-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "label-caps": ["Geist"],
+                        "headline-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "title-sm": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                        "mono-data": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for deep dark theme */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #131313; }
+        ::-webkit-scrollbar-thumb { background: #353535; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #414755; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface flex h-screen overflow-hidden font-body-md text-body-md">
+<!-- SideNavBar (from Shared Components JSON) -->
+<nav class="fixed left-0 top-0 h-full w-sidebar-width bg-surface-container-low dark:bg-surface-container-lowest border-r border-outline-variant flex flex-col py-unit-lg z-20">
+<div class="px-gutter mb-unit-xl">
+<h1 class="font-display-lg text-display-lg text-primary truncate">VidiTranslate</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Pro Workspace</p>
+</div>
+<div class="flex flex-col gap-2 px-unit-sm">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">download</span>
+<span class="font-label-caps text-label-caps">Home/Download</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface bg-white/5 border-l-2 border-primary font-bold opacity-80 transition-all" href="#">
+<span class="material-symbols-outlined">sync</span>
+<span class="font-label-caps text-label-caps">Processing</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">video_library</span>
+<span class="font-label-caps text-label-caps">Library</span>
+</a>
+<div class="mt-auto pt-unit-xl">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-caps text-label-caps">Settings</span>
+</a>
+</div>
+</div>
+</nav>
+<!-- Main Content Wrapper -->
+<div class="flex-1 flex flex-col ml-sidebar-width w-[calc(100%-260px)] h-full relative">
+<!-- TopAppBar (from Shared Components JSON) -->
+<header class="docked full-width top-0 bg-surface dark:bg-surface border-b border-outline-variant flex justify-between items-center h-16 px-gutter z-10 shrink-0">
+<div class="flex-1"></div> <!-- Spacer for left side if needed -->
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-primary transition-colors w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-variant">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-variant">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Canvas Area -->
+<main class="flex-1 overflow-y-auto p-container-padding bg-background">
+<div class="max-w-6xl mx-auto flex flex-col gap-unit-lg">
+<header class="mb-unit-sm">
+<h2 class="font-headline-md text-headline-md text-on-surface">Active Pipeline</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Monitoring intensive video processing tasks.</p>
+</header>
+<!-- Task Card 1: In Progress (Translation 60%) -->
+<article class="bg-surface-container rounded-xl border border-outline-variant border-l-4 border-l-primary-container overflow-hidden flex flex-col lg:flex-row gap-0 shadow-[0px_4px_12px_rgba(0,0,0,0.5)]">
+<!-- Thumbnail Section -->
+<div class="w-full lg:w-72 shrink-0 p-unit-md bg-surface-container-low border-b lg:border-b-0 lg:border-r border-outline-variant flex flex-col gap-3">
+<div class="w-full aspect-video rounded-lg overflow-hidden border border-white/10 relative bg-surface">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="A wide-angle, cinematic shot of a modern, sleek corporate boardroom with a large holographic interface displaying complex data visualizations in the center. The room is dimly lit with cool, high-tech neon blue architectural lighting highlighting the edges of the dark gray walls and glossy black conference table. The overall aesthetic is distinctly high-tech dark mode, professional, and slightly futuristic, matching a premium software environment." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDtw-bGg2KlfsQ6GedgpR0gjyYiVJ48wKeICaJfFmfWxZMU1IqXb61NNDwoC4q3Q7f2fdWAiZ014VE8oRYJrBW1NQOxRXAS42u-y2Jlnta-9-6LGgGmaLKCasVLCJqaIIf40BLmci3FAguv6GfKz30CTq5NgXooGPckmXjzefm4WBJJZPc1gp1eIkzdiUQCcXLPGVqXCDcv9aUzB1NazFORh1AH-AamgDMOylpQgcFxBpE6yKf2JkflWrrzzUMZymvTzD7wIUFpTXc');"></div>
+<div class="absolute bottom-2 right-2 bg-surface/80 backdrop-blur px-2 py-0.5 rounded font-mono-data text-mono-data text-on-surface">14:23</div>
+</div>
+<div class="px-1">
+<h3 class="font-title-sm text-title-sm text-on-surface truncate">Q3_Earnings_Global_Release_v2.mp4</h3>
+<p class="font-mono-data text-mono-data text-primary-container mt-1">ID: TRN-8924-XYZ</p>
+</div>
+</div>
+<!-- Pipeline Tracker Section -->
+<div class="flex-1 p-unit-lg flex flex-col justify-center bg-surface-container relative">
+<div class="flex justify-between items-end mb-6">
+<div>
+<span class="font-label-caps text-label-caps text-primary-container px-2 py-1 rounded bg-primary-container/10 border border-primary-container/20">PROCESSING</span>
+</div>
+<div class="text-right">
+<span class="font-title-sm text-title-sm text-on-surface block">60% Complete</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Est. time remaining: 4m 12s</span>
+</div>
+</div>
+<!-- Tracker Visual -->
+<div class="relative w-full mt-4 px-4">
+<!-- Background Track Line -->
+<div class="absolute top-[11px] left-[5%] right-[5%] h-[2px] bg-outline-variant/50 -z-10"></div>
+<!-- Active Progress Line (roughly 60% through the 5 steps, landing on step 3) -->
+<div class="absolute top-[11px] left-[5%] w-[45%] h-[2px] bg-primary-container -z-10 shadow-[0_0_8px_rgba(75,142,255,0.6)]"></div>
+<div class="flex justify-between items-start relative z-0">
+<!-- Step 1: Complete -->
+<div class="flex flex-col items-center gap-3 w-20">
+<div class="w-6 h-6 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center border-2 border-secondary-container">
+<span class="material-symbols-outlined text-[14px] font-bold">check</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-surface text-center leading-tight">Extracting<br/>Audio</span>
+</div>
+<!-- Step 2: Complete -->
+<div class="flex flex-col items-center gap-3 w-20">
+<div class="w-6 h-6 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center border-2 border-secondary-container">
+<span class="material-symbols-outlined text-[14px] font-bold">check</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-surface text-center leading-tight">Speech to<br/>Text</span>
+</div>
+<!-- Step 3: Active (Translation) -->
+<div class="flex flex-col items-center gap-3 w-20">
+<div class="w-6 h-6 rounded-full bg-surface-container border-2 border-primary-container flex items-center justify-center relative">
+<!-- Simulated pulse ring using static styling as per constraints -->
+<div class="absolute inset-0 rounded-full ring-4 ring-primary-container/30"></div>
+<div class="w-2 h-2 rounded-full bg-primary-container"></div>
+</div>
+<span class="font-label-caps text-label-caps text-primary text-center leading-tight">Translation</span>
+</div>
+<!-- Step 4: Pending -->
+<div class="flex flex-col items-center gap-3 w-20">
+<div class="w-6 h-6 rounded-full bg-surface-container border-2 border-outline flex items-center justify-center">
+</div>
+<span class="font-label-caps text-label-caps text-outline text-center leading-tight">Voice<br/>Synthesis</span>
+</div>
+<!-- Step 5: Pending -->
+<div class="flex flex-col items-center gap-3 w-20">
+<div class="w-6 h-6 rounded-full bg-surface-container border-2 border-outline flex items-center justify-center">
+</div>
+<span class="font-label-caps text-label-caps text-outline text-center leading-tight">Video<br/>Merging</span>
+</div>
+</div>
+</div>
+</div>
+</article>
+<!-- Task Card 2: Completed -->
+<article class="bg-surface-container rounded-xl border border-outline-variant border-l-4 border-l-secondary-container overflow-hidden flex flex-col lg:flex-row gap-0 shadow-[0px_4px_12px_rgba(0,0,0,0.5)]">
+<!-- Thumbnail Section -->
+<div class="w-full lg:w-72 shrink-0 p-unit-md bg-surface-container-low border-b lg:border-b-0 lg:border-r border-outline-variant flex flex-col gap-3">
+<div class="w-full aspect-video rounded-lg overflow-hidden border border-white/10 relative bg-surface group cursor-pointer">
+<div class="absolute inset-0 bg-cover bg-center transition-transform group-hover:scale-105 duration-500" data-alt="A close-up, high-fidelity render of abstract, geometric data streams flowing across a dark screen. The visual represents processed information, utilizing sharp, angular shapes in glowing emerald green and deep forest green against a pitch-black background. The lighting is intensely focused on the data points, creating a stark, high-contrast, technological aesthetic indicative of successful digital completion." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBap-M-d1j7KMs3ndR35nkUHMyw5Lytf_BCQ9oyvZrdeeLqjA4WFViETHcBYuAkgf3_LS-nX_VOxdPRntrbkZMy5J6J5M1lpxC88ysQW8t6xeuVcoNy8N2PwyDej7ER13MYMXVpR6zbHDgzXQ4aV3jceHF46E05vwTQM1ewCr-MebiLgCES4ZxKL47WmkA3-bY3_0p7CMeGC8KwQQmhxaVe48Jm8WPdyWsi7TyD_uyh2cagGSrp67gqANmpf-EeOIVypUAvI3NQI3k');"></div>
+<div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-white text-[48px]">play_circle</span>
+</div>
+<div class="absolute bottom-2 right-2 bg-surface/80 backdrop-blur px-2 py-0.5 rounded font-mono-data text-mono-data text-on-surface">05:12</div>
+</div>
+<div class="px-1">
+<h3 class="font-title-sm text-title-sm text-on-surface truncate">Product_Demo_JP_Localized.mp4</h3>
+<p class="font-mono-data text-mono-data text-secondary-container mt-1">ID: CMP-2201-ABC</p>
+</div>
+</div>
+<!-- Pipeline Tracker Section -->
+<div class="flex-1 p-unit-lg flex flex-col justify-center bg-surface-container relative">
+<div class="flex justify-between items-end mb-6">
+<div>
+<span class="font-label-caps text-label-caps text-secondary-container px-2 py-1 rounded bg-secondary-container/10 border border-secondary-container/20">COMPLETED</span>
+</div>
+<div class="flex gap-2">
+<button class="px-4 py-1.5 rounded bg-transparent border border-outline-variant text-on-surface hover:bg-surface-variant font-label-caps text-label-caps flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">visibility</span> View Details
+                                </button>
+<button class="px-4 py-1.5 rounded bg-inverse-primary text-white font-label-caps text-label-caps hover:bg-primary-container flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">download</span> Download File
+                                </button>
+</div>
+</div>
+<!-- Tracker Visual -->
+<div class="relative w-full mt-4 px-4 opacity-70 hover:opacity-100 transition-opacity">
+<!-- Background Track Line -->
+<div class="absolute top-[11px] left-[5%] right-[5%] h-[2px] bg-secondary-container -z-10"></div>
+<div class="flex justify-between items-start relative z-0">
+<!-- All Steps Complete -->
+<div class="flex flex-col items-center gap-3 w-20">
+<div class="w-6 h-6 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center border-2 border-secondary-container">
+<span class="material-symbols-outlined text-[14px] font-bold">check</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-surface-variant text-center leading-tight">Extracting<br/>Audio</span>
+</div>
+<div class="flex flex-col items-center gap-3 w-20">
+<div class="w-6 h-6 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center border-2 border-secondary-container">
+<span class="material-symbols-outlined text-[14px] font-bold">check</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-surface-variant text-center leading-tight">Speech to<br/>Text</span>
+</div>
+<div class="flex flex-col items-center gap-3 w-20">
+<div class="w-6 h-6 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center border-2 border-secondary-container">
+<span class="material-symbols-outlined text-[14px] font-bold">check</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-surface-variant text-center leading-tight">Translation</span>
+</div>
+<div class="flex flex-col items-center gap-3 w-20">
+<div class="w-6 h-6 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center border-2 border-secondary-container">
+<span class="material-symbols-outlined text-[14px] font-bold">check</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-surface-variant text-center leading-tight">Voice<br/>Synthesis</span>
+</div>
+<div class="flex flex-col items-center gap-3 w-20">
+<div class="w-6 h-6 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center border-2 border-secondary-container">
+<span class="material-symbols-outlined text-[14px] font-bold">check</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-surface-variant text-center leading-tight">Video<br/>Merging</span>
+</div>
+</div>
+</div>
+</div>
+</article>
+</div>
+</main>
+</div>
+</body></html>

@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VidiTranslate - Library</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;600&amp;family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary": "#1000a9",
+                        "outline-variant": "#414755",
+                        "primary": "#adc6ff",
+                        "inverse-on-surface": "#303030",
+                        "surface": "#131313",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-surface-variant": "#c1c6d7",
+                        "on-primary-container": "#00285c",
+                        "surface-bright": "#393939",
+                        "surface-container": "#202020",
+                        "secondary-fixed": "#72fe88",
+                        "inverse-surface": "#e5e2e1",
+                        "surface-variant": "#353535",
+                        "primary-fixed-dim": "#adc6ff",
+                        "surface-container-high": "#2a2a2a",
+                        "tertiary": "#c0c1ff",
+                        "on-secondary-fixed": "#002107",
+                        "surface-container-low": "#1b1b1c",
+                        "background": "#131313",
+                        "tertiary-fixed-dim": "#c0c1ff",
+                        "surface-dim": "#131313",
+                        "surface-tint": "#adc6ff",
+                        "on-primary-fixed": "#001a41",
+                        "on-error": "#690005",
+                        "primary-fixed": "#d8e2ff",
+                        "secondary": "#53e16f",
+                        "surface-container-highest": "#353535",
+                        "on-tertiary-fixed": "#07006c",
+                        "outline": "#8b90a0",
+                        "tertiary-container": "#8083ff",
+                        "inverse-primary": "#005bc1",
+                        "on-background": "#e5e2e1",
+                        "on-tertiary-container": "#0d0096",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-fixed-variant": "#2f2ebe",
+                        "on-secondary-container": "#003a11",
+                        "on-primary": "#002e69",
+                        "on-secondary": "#003911",
+                        "secondary-fixed-dim": "#53e16f",
+                        "tertiary-fixed": "#e1e0ff",
+                        "error-container": "#93000a",
+                        "on-secondary-fixed-variant": "#00531c",
+                        "secondary-container": "#05b046",
+                        "error": "#ffb4ab",
+                        "primary-container": "#4b8eff",
+                        "on-surface": "#e5e2e1",
+                        "on-primary-fixed-variant": "#004493"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "sidebar-width": "260px",
+                        "container-padding": "24px",
+                        "unit-md": "16px",
+                        "unit-xs": "4px",
+                        "gutter": "16px",
+                        "unit-xl": "48px",
+                        "unit-sm": "8px",
+                        "unit-lg": "24px"
+                    },
+                    "fontFamily": {
+                        "title-sm": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "mono-data": ["Geist"],
+                        "body-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "label-caps": ["Geist"],
+                        "headline-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "title-sm": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                        "mono-data": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background min-h-screen overflow-hidden flex font-body-md text-body-md antialiased selection:bg-primary-container selection:text-on-primary-container">
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-full w-sidebar-width bg-surface-container-low dark:bg-surface-container-lowest border-r border-outline-variant flex flex-col py-unit-lg z-20">
+<!-- Brand Header -->
+<div class="px-unit-lg mb-unit-xl">
+<h1 class="font-display-lg text-display-lg text-primary tracking-tight">VidiTranslate</h1>
+<p class="font-label-caps text-label-caps text-on-surface-variant mt-1 uppercase tracking-wider">Pro Workspace</p>
+</div>
+<!-- Navigation Links -->
+<div class="flex-1 px-unit-sm space-y-1">
+<!-- Inactive -->
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+<span class="font-title-sm text-title-sm">Home/Download</span>
+</a>
+<!-- Inactive -->
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="sync">sync</span>
+<span class="font-title-sm text-title-sm">Processing</span>
+</a>
+<!-- Active -->
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface bg-white/5 border-l-2 border-primary opacity-80 transition-all" href="#">
+<span class="material-symbols-outlined text-primary" data-icon="video_library" style="font-variation-settings: 'FILL' 1;">video_library</span>
+<span class="font-title-sm text-title-sm text-primary">Library</span>
+</a>
+<!-- Inactive -->
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-title-sm text-title-sm">Settings</span>
+</a>
+</div>
+<!-- User Profile Area -->
+<div class="mt-auto px-unit-lg">
+<div class="flex items-center gap-3 py-3 border-t border-outline-variant/30">
+<div class="w-8 h-8 rounded-full bg-surface-container-high overflow-hidden shrink-0">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A professional headshot of a person looking directly at the camera. The lighting is studio-quality and even, matching a modern corporate aesthetic. The background is a clean, neutral dark grey tone that perfectly complements a high-tech dark mode user interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCecMQxzeqiYYSitk-6t87K0HkUHdUBBze0addBkLFWlVAlhiW7Z83WKQ668egYtfjYUQCWIkwyHuNyabXHBLmlQR_DDbA_IRmThaKn0_ZAJR-utxK0I2nEC3S_XB3JsRReWNzTzulGukRSBurM1vz_mspTGzMPx5jKcchLsE3mOGlGYQHgwuLlny4maqlst7Fcue--SuhqZZw_sphZ-Gp2hcGNbciBewo58Q1zNs48ciHqaEwEu61olRWd8X-SETqnFS00zHxhgBY"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-body-sm text-body-sm text-on-surface truncate">Alex Mercer</p>
+<p class="font-mono-data text-mono-data text-on-surface-variant truncate">Enterprise Plan</p>
+</div>
+</div>
+</div>
+</nav>
+<!-- Main Workspace -->
+<div class="flex-1 ml-sidebar-width flex flex-col h-screen relative">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center h-16 px-gutter bg-surface z-10 shrink-0">
+<!-- Title Area -->
+<div class="flex items-center gap-4">
+<h2 class="font-headline-md text-headline-md text-on-surface">Library</h2>
+</div>
+<!-- Actions Area -->
+<div class="flex items-center gap-4">
+<!-- Search -->
+<div class="relative hidden md:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]" data-icon="search">search</span>
+<input class="bg-surface-container-low border border-outline-variant rounded-lg pl-10 pr-4 py-1.5 text-body-sm font-body-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 w-64 transition-all" placeholder="Search videos..." type="text"/>
+</div>
+<!-- Trailing Icons -->
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-variant transition-colors duration-200">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-variant transition-colors duration-200">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Canvas -->
+<main class="flex-1 overflow-y-auto p-container-padding">
+<!-- Grid Layout -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-unit-lg">
+<!-- Video Card 1 -->
+<article class="group bg-surface-container rounded-xl overflow-hidden border border-outline-variant/30 hover:bg-surface-container-high transition-colors duration-300 flex flex-col">
+<!-- Thumbnail Area -->
+<div class="relative aspect-video bg-surface-container-highest overflow-hidden">
+<img alt="Video Thumbnail" class="w-full h-full object-cover" data-alt="A high-quality establishing shot of a modern, bustling data center with rows of illuminated server racks. The lighting is dominated by cool neon blues and crisp whites against a dark, industrial background. This visual perfectly aligns with an authoritative, high-tech dark mode theme indicating professional data processing." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCU8Spt66Jf2IRPEm7FTsS-L76yqiwTl8rHVxa2VLiFoguQgFn66Ka6PM84cd5ESk9fMjq2C1n0Lw81fMJYR5f5tuOc_Lajn84s-d3siEinj_Kgem6ju5ejR5vcbTYrV07W-ENE-37ovS6zwNAgy5dhD_lUinzyKDCdPkpINsGWAswBr68Al8I9Af2BOwQneNvxdr_ugbpgO-8g58ODkVeZf7wfF7_xm2qgUBy5-K1wuc19dv5Ow_Ce1fSWClipg4x5IROu4uT1zVw"/>
+<!-- Duration Badge -->
+<div class="absolute bottom-2 right-2 bg-surface/90 backdrop-blur-sm border border-outline-variant/50 px-2 py-0.5 rounded text-on-surface font-mono-data text-mono-data z-10">
+                            12:45
+                        </div>
+<!-- Hover Overlay Actions -->
+<div class="absolute inset-0 bg-surface-container-lowest/80 backdrop-blur-sm flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
+<button aria-label="Play" class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center hover:scale-105 transition-transform">
+<span class="material-symbols-outlined" data-icon="play_arrow" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+<button aria-label="Open Folder" class="w-10 h-10 rounded-full bg-surface-container text-on-surface border border-outline-variant flex items-center justify-center hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="folder_open">folder_open</span>
+</button>
+<button aria-label="Delete" class="w-10 h-10 rounded-full bg-surface-container text-error border border-error/30 flex items-center justify-center hover:bg-error/10 transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+<!-- Details Area -->
+<div class="p-4 flex flex-col gap-2 flex-1">
+<h3 class="font-title-sm text-title-sm text-on-surface line-clamp-2">Quarterly Earnings Report Q3 2023 - APAC Region Overview</h3>
+<div class="mt-auto flex items-center justify-between pt-2">
+<div class="flex items-center gap-2">
+<div class="px-2 py-1 rounded bg-primary/10 border border-primary/20 text-primary font-label-caps text-label-caps uppercase tracking-wider">
+                                    EN <span class="material-symbols-outlined text-[12px] align-middle px-0.5" data-icon="arrow_forward">arrow_forward</span> CN
+                                </div>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">2h ago</span>
+</div>
+</div>
+</article>
+<!-- Video Card 2 -->
+<article class="group bg-surface-container rounded-xl overflow-hidden border border-outline-variant/30 hover:bg-surface-container-high transition-colors duration-300 flex flex-col">
+<div class="relative aspect-video bg-surface-container-highest overflow-hidden">
+<img alt="Video Thumbnail" class="w-full h-full object-cover" data-alt="A wide shot of a modern corporate boardroom during a presentation. An executive is standing near a bright digital display showing charts, while colleagues sit around a sleek conference table. The overall mood is serious and professional, with high-contrast cinematic lighting suited for a minimalist, dark-themed business application." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCgdBgD4YIqAmFb5OmcG1LC1t2gZ0HxJNZ43jmGZcY37uZUEjD0t0QXFO-uD5v1j0A9loGSMbC6SDps3zwpIZuzfxTVaGTQVivwqTZ7tjvkzh_1yEN8PP2ARd3U9M8q37slVmGbNbe9jCuv992mEZUDlWV98Je9SNqqQU7VMAW-dsbRwLVIVTbsoxdqz4jfN_FMSswMgjoKlcMssZ89rsL3GErDcuYzUMq3bio-03iDU5m4R2dxlBLHKliGzzw7OuDA1JYUI4xnbac"/>
+<div class="absolute bottom-2 right-2 bg-surface/90 backdrop-blur-sm border border-outline-variant/50 px-2 py-0.5 rounded text-on-surface font-mono-data text-mono-data z-10">
+                            45:20
+                        </div>
+<div class="absolute inset-0 bg-surface-container-lowest/80 backdrop-blur-sm flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
+<button class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center hover:scale-105 transition-transform">
+<span class="material-symbols-outlined" data-icon="play_arrow" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+<button class="w-10 h-10 rounded-full bg-surface-container text-on-surface border border-outline-variant flex items-center justify-center hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="folder_open">folder_open</span>
+</button>
+<button class="w-10 h-10 rounded-full bg-surface-container text-error border border-error/30 flex items-center justify-center hover:bg-error/10 transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+<div class="p-4 flex flex-col gap-2 flex-1">
+<h3 class="font-title-sm text-title-sm text-on-surface line-clamp-2">Product Launch Keynote: Next-Gen AI Integration Features</h3>
+<div class="mt-auto flex items-center justify-between pt-2">
+<div class="flex items-center gap-2">
+<div class="px-2 py-1 rounded bg-secondary-container/20 border border-secondary/30 text-secondary font-label-caps text-label-caps uppercase tracking-wider">
+                                    EN <span class="material-symbols-outlined text-[12px] align-middle px-0.5" data-icon="arrow_forward">arrow_forward</span> JP
+                                </div>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Yesterday</span>
+</div>
+</div>
+</article>
+<!-- Video Card 3 -->
+<article class="group bg-surface-container rounded-xl overflow-hidden border border-outline-variant/30 hover:bg-surface-container-high transition-colors duration-300 flex flex-col">
+<div class="relative aspect-video bg-surface-container-highest overflow-hidden">
+<img alt="Video Thumbnail" class="w-full h-full object-cover" data-alt="A close-up shot of a diverse business team collaborating closely over digital tablets and printed documents in a modern office space. The scene uses desaturated, cool tones with sharp focus on the central activity, evoking a highly professional, efficient atmosphere consistent with a premium corporate dark UI theme." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBf-sQDPt-jzFcqqKTeGC8D2aJEoG22k-fGVL9S8_2Lh5GZU6HTYop3jIyKL2md_kCfWWvT4mcTImIAmhJPz0MFta7i6YUyk73r1O151023MvgLMHob9ScSCeXk_i3aGMwoD1rHTS6eaHoGKLLonrn9aPnSTk1uhKNUsYXnx6bbS55ykpeF2FQm4kGLtDtDctI5MV4MIDDtPcSH0zcucHM0FibSrIgTSQI29xDAQR6ca2sa2PKqDiXkDAEiVpEi5Jv1znZdsJqstLY"/>
+<div class="absolute bottom-2 right-2 bg-surface/90 backdrop-blur-sm border border-outline-variant/50 px-2 py-0.5 rounded text-on-surface font-mono-data text-mono-data z-10">
+                            08:15
+                        </div>
+<div class="absolute inset-0 bg-surface-container-lowest/80 backdrop-blur-sm flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
+<button class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center hover:scale-105 transition-transform">
+<span class="material-symbols-outlined" data-icon="play_arrow" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+<button class="w-10 h-10 rounded-full bg-surface-container text-on-surface border border-outline-variant flex items-center justify-center hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="folder_open">folder_open</span>
+</button>
+<button class="w-10 h-10 rounded-full bg-surface-container text-error border border-error/30 flex items-center justify-center hover:bg-error/10 transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+<div class="p-4 flex flex-col gap-2 flex-1">
+<h3 class="font-title-sm text-title-sm text-on-surface line-clamp-2">HR Training Module: Compliance and Security Protocol Update</h3>
+<div class="mt-auto flex items-center justify-between pt-2">
+<div class="flex items-center gap-2">
+<div class="px-2 py-1 rounded bg-primary/10 border border-primary/20 text-primary font-label-caps text-label-caps uppercase tracking-wider">
+                                    EN <span class="material-symbols-outlined text-[12px] align-middle px-0.5" data-icon="arrow_forward">arrow_forward</span> DE
+                                </div>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Nov 12</span>
+</div>
+</div>
+</article>
+<!-- Video Card 4 -->
+<article class="group bg-surface-container rounded-xl overflow-hidden border border-outline-variant/30 hover:bg-surface-container-high transition-colors duration-300 flex flex-col">
+<div class="relative aspect-video bg-surface-container-highest overflow-hidden">
+<img alt="Video Thumbnail" class="w-full h-full object-cover" data-alt="A dynamic, slightly blurred view of heavy industrial manufacturing machinery in operation, featuring deep shadow contrasts. Bright sparks and intense metallic highlights pierce the dark background. The imagery is highly technical and robust, fitting perfectly within an authoritative, high-performance software environment designed for intense workloads." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCGy1Rl3O0LYF9AyQKXERxQqkN7MIWwR5RSA4Tb8cAlti3nQsrXd1Py7NF2YA9jIcFugqZS2mINEhJKLGpq7TC6gqZuhjaSFYTv0DymDrbhL4Yj5B67H5xeLRhlRRhgiqWjn7vRTlXJrfckl-G39vjfIEsOJKYUUygDsut8lLMNvPeIDeedxa4ndFh0Km9oSO7HZIthMp27WshDrdzSo-AGbWDC9iDGnNBVaSrthQWHacyOyZHn_D3gu2oMamUiz_uNRLdj7kKrOkc"/>
+<div class="absolute bottom-2 right-2 bg-surface/90 backdrop-blur-sm border border-outline-variant/50 px-2 py-0.5 rounded text-on-surface font-mono-data text-mono-data z-10">
+                            1:12:05
+                        </div>
+<div class="absolute inset-0 bg-surface-container-lowest/80 backdrop-blur-sm flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
+<button class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center hover:scale-105 transition-transform">
+<span class="material-symbols-outlined" data-icon="play_arrow" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+<button class="w-10 h-10 rounded-full bg-surface-container text-on-surface border border-outline-variant flex items-center justify-center hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="folder_open">folder_open</span>
+</button>
+<button class="w-10 h-10 rounded-full bg-surface-container text-error border border-error/30 flex items-center justify-center hover:bg-error/10 transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+<div class="p-4 flex flex-col gap-2 flex-1">
+<h3 class="font-title-sm text-title-sm text-on-surface line-clamp-2">Engineering All-Hands: Architecture Review Q4</h3>
+<div class="mt-auto flex items-center justify-between pt-2">
+<div class="flex items-center gap-2">
+<div class="px-2 py-1 rounded bg-tertiary-container/20 border border-tertiary/30 text-tertiary font-label-caps text-label-caps uppercase tracking-wider">
+                                    EN <span class="material-symbols-outlined text-[12px] align-middle px-0.5" data-icon="arrow_forward">arrow_forward</span> FR
+                                </div>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Nov 10</span>
+</div>
+</div>
+</article>
+</div>
+</main>
+</div>
+</body></html>

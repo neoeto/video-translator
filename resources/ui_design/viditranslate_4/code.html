@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VidiTranslate - Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=Geist:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary": "#1000a9",
+                      "outline-variant": "#414755",
+                      "primary": "#adc6ff",
+                      "inverse-on-surface": "#303030",
+                      "surface": "#131313",
+                      "surface-container-lowest": "#0e0e0e",
+                      "on-surface-variant": "#c1c6d7",
+                      "on-primary-container": "#00285c",
+                      "surface-bright": "#393939",
+                      "surface-container": "#202020",
+                      "secondary-fixed": "#72fe88",
+                      "inverse-surface": "#e5e2e1",
+                      "surface-variant": "#353535",
+                      "primary-fixed-dim": "#adc6ff",
+                      "surface-container-high": "#2a2a2a",
+                      "tertiary": "#c0c1ff",
+                      "on-secondary-fixed": "#002107",
+                      "surface-container-low": "#1b1b1c",
+                      "background": "#131313",
+                      "tertiary-fixed-dim": "#c0c1ff",
+                      "surface-dim": "#131313",
+                      "surface-tint": "#adc6ff",
+                      "on-primary-fixed": "#001a41",
+                      "on-error": "#690005",
+                      "primary-fixed": "#d8e2ff",
+                      "secondary": "#53e16f",
+                      "surface-container-highest": "#353535",
+                      "on-tertiary-fixed": "#07006c",
+                      "outline": "#8b90a0",
+                      "tertiary-container": "#8083ff",
+                      "inverse-primary": "#005bc1",
+                      "on-background": "#e5e2e1",
+                      "on-tertiary-container": "#0d0096",
+                      "on-error-container": "#ffdad6",
+                      "on-tertiary-fixed-variant": "#2f2ebe",
+                      "on-secondary-container": "#003a11",
+                      "on-primary": "#002e69",
+                      "on-secondary": "#003911",
+                      "secondary-fixed-dim": "#53e16f",
+                      "tertiary-fixed": "#e1e0ff",
+                      "error-container": "#93000a",
+                      "on-secondary-fixed-variant": "#00531c",
+                      "secondary-container": "#05b046",
+                      "error": "#ffb4ab",
+                      "primary-container": "#4b8eff",
+                      "on-surface": "#e5e2e1",
+                      "on-primary-fixed-variant": "#004493"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "sidebar-width": "260px",
+                      "container-padding": "24px",
+                      "unit-md": "16px",
+                      "unit-xs": "4px",
+                      "gutter": "16px",
+                      "unit-xl": "48px",
+                      "unit-sm": "8px",
+                      "unit-lg": "24px"
+              },
+              "fontFamily": {
+                      "title-sm": ["Inter"],
+                      "body-sm": ["Inter"],
+                      "mono-data": ["Geist"],
+                      "body-md": ["Inter"],
+                      "display-lg": ["Inter"],
+                      "label-caps": ["Geist"],
+                      "headline-md": ["Inter"]
+              },
+              "fontSize": {
+                      "title-sm": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                      "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                      "mono-data": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "label-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #131313;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #353535;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #414755;
+        }
+        /* Style for form elements focus state */
+        .form-input:focus, .form-select:focus {
+            box-shadow: 0 0 0 2px rgba(173, 198, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md antialiased overflow-hidden flex h-screen">
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-full w-sidebar-width bg-surface-container-lowest border-r border-outline-variant flex flex-col py-unit-lg z-20">
+<!-- Brand -->
+<div class="px-container-padding mb-unit-xl">
+<h1 class="font-display-lg text-display-lg text-primary tracking-tight">VidiTranslate</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Pro Workspace</p>
+</div>
+<!-- Navigation Links -->
+<div class="flex-1 overflow-y-auto">
+<ul class="space-y-1">
+<!-- Inactive Tab -->
+<li>
+<a class="flex items-center gap-unit-md px-container-padding py-3 text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">download</span>
+<span class="font-body-md text-body-md">Home/Download</span>
+</a>
+</li>
+<!-- Inactive Tab -->
+<li>
+<a class="flex items-center gap-unit-md px-container-padding py-3 text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">sync</span>
+<span class="font-body-md text-body-md">Processing</span>
+</a>
+</li>
+<!-- Inactive Tab -->
+<li>
+<a class="flex items-center gap-unit-md px-container-padding py-3 text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">video_library</span>
+<span class="font-body-md text-body-md">Library</span>
+</a>
+</li>
+<!-- Active Tab -->
+<li>
+<a class="flex items-center gap-unit-md px-container-padding py-3 text-on-surface bg-white/5 border-l-2 border-primary font-bold opacity-80 transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+</li>
+</ul>
+</div>
+<!-- User Profile (Bottom) -->
+<div class="mt-auto px-container-padding pt-unit-lg border-t border-outline-variant/30">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center text-on-surface">
+<span class="material-symbols-outlined text-sm">account_circle</span>
+</div>
+<div>
+<p class="font-body-sm text-body-sm font-semibold text-on-surface">User Profile</p>
+</div>
+</div>
+</div>
+</nav>
+<!-- Main Layout Area -->
+<div class="flex-1 flex flex-col ml-[260px] h-screen overflow-hidden">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center h-16 px-gutter bg-surface z-10 flex-shrink-0">
+<div class="flex-1">
+<!-- Empty left area to balance search -->
+</div>
+<!-- Center / Right Content -->
+<div class="flex items-center gap-unit-md">
+<!-- Search Box -->
+<div class="relative w-64 hidden md:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-full py-1.5 pl-10 pr-4 text-sm text-on-surface focus:outline-none focus:border-primary transition-colors" placeholder="Search..." type="text"/>
+</div>
+<!-- Trailing Actions -->
+<button class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-variant">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-variant">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Main Content Scrollable Area -->
+<main class="flex-1 overflow-y-auto bg-background p-container-padding">
+<div class="max-w-5xl mx-auto">
+<!-- Page Header -->
+<div class="mb-unit-lg">
+<h2 class="font-headline-md text-headline-md text-on-surface">Settings</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Configure your processing environment and API integrations.</p>
+</div>
+<!-- Settings Layout: Sidebar + Content -->
+<div class="flex flex-col md:flex-row gap-unit-lg items-start">
+<!-- Vertical Tabs Navigation -->
+<nav class="w-full md:w-56 flex-shrink-0 bg-surface-container rounded-lg border border-outline-variant/30 overflow-hidden sticky top-0">
+<ul class="flex flex-col">
+<li>
+<button class="w-full text-left px-4 py-3 flex items-center gap-3 bg-surface-variant border-l-2 border-primary text-on-surface font-semibold transition-colors">
+<span class="material-symbols-outlined text-[20px]">smart_toy</span>
+<span class="font-body-sm text-body-sm">AI Services</span>
+</button>
+</li>
+<li>
+<button class="w-full text-left px-4 py-3 flex items-center gap-3 border-l-2 border-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-[20px]">translate</span>
+<span class="font-body-sm text-body-sm">Translation</span>
+</button>
+</li>
+<li>
+<button class="w-full text-left px-4 py-3 flex items-center gap-3 border-l-2 border-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-[20px]">record_voice_over</span>
+<span class="font-body-sm text-body-sm">TTS Engine</span>
+</button>
+</li>
+<li>
+<button class="w-full text-left px-4 py-3 flex items-center gap-3 border-l-2 border-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-[20px]">dns</span>
+<span class="font-body-sm text-body-sm">System</span>
+</button>
+</li>
+</ul>
+</nav>
+<!-- Settings Content Canvas -->
+<div class="flex-1 space-y-unit-lg min-w-0">
+<!-- Section 1: AI Services -->
+<section class="bg-surface-container rounded-xl border border-outline-variant/40 p-unit-lg shadow-sm">
+<div class="border-b border-outline-variant/30 pb-4 mb-6">
+<h3 class="font-title-sm text-title-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">smart_toy</span>
+                                    Transcription Engine
+                                </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Select and configure the core model used for audio extraction.</p>
+</div>
+<!-- Engine Toggle (Segmented Control) -->
+<div class="mb-6">
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-unit-xs">Engine Type</label>
+<div class="flex bg-surface-container-lowest rounded-lg p-1 border border-outline-variant/50 max-w-md">
+<button class="flex-1 py-2 px-4 rounded-md bg-surface-variant text-on-surface font-title-sm text-[13px] shadow-sm transition-all border border-outline-variant/50">
+                                        OpenAI Whisper API
+                                    </button>
+<button class="flex-1 py-2 px-4 rounded-md text-on-surface-variant hover:text-on-surface font-title-sm text-[13px] transition-all">
+                                        Local Whisper CLI
+                                    </button>
+</div>
+</div>
+<!-- Config Form for Active Engine (OpenAI) -->
+<div class="space-y-4">
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-unit-xs">API Key</label>
+<input class="form-input w-full max-w-md bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono-data text-mono-data focus:border-primary focus:outline-none transition-colors" placeholder="sk-..." type="password" value="sk-proj-xxxxxxxxxxxxxxxxxxxxxxxx"/>
+<p class="font-body-sm text-[12px] text-on-surface-variant mt-1">Your key is stored securely locally and never shared.</p>
+</div>
+</div>
+<!-- Placeholder for Inactive Engine Config to show structure -->
+<div class="mt-6 pt-6 border-t border-outline-variant/20 space-y-4 opacity-50 pointer-events-none">
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-unit-xs">Local CLI Path (Alternative)</label>
+<div class="flex gap-2 max-w-md">
+<input class="form-input flex-1 bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono-data text-mono-data" disabled="" type="text" value="/usr/local/bin/whisper"/>
+<button class="px-4 py-2 bg-surface-variant border border-outline-variant rounded-md text-on-surface font-body-sm hover:bg-surface-container-high transition-colors" disabled="">Browse</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 2: Translation -->
+<section class="bg-surface-container rounded-xl border border-outline-variant/40 p-unit-lg shadow-sm">
+<div class="border-b border-outline-variant/30 pb-4 mb-6">
+<h3 class="font-title-sm text-title-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">translate</span>
+                                    Translation Model
+                                </h3>
+</div>
+<div class="space-y-4 max-w-md">
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-unit-xs">Target LLM</label>
+<select class="form-select w-full bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-body-sm focus:border-primary focus:outline-none appearance-none cursor-pointer">
+<option selected="" value="gpt-4">GPT-4 (OpenAI)</option>
+<option value="gpt-3.5-turbo">GPT-3.5 Turbo (OpenAI)</option>
+<option value="claude-3-opus">Claude 3 Opus (Anthropic)</option>
+<option value="claude-3-sonnet">Claude 3 Sonnet (Anthropic)</option>
+<option value="llama-3">Llama 3 (Local)</option>
+</select>
+</div>
+</div>
+</section>
+<!-- Section 3: TTS Engine -->
+<section class="bg-surface-container rounded-xl border border-outline-variant/40 p-unit-lg shadow-sm">
+<div class="border-b border-outline-variant/30 pb-4 mb-6">
+<h3 class="font-title-sm text-title-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">record_voice_over</span>
+                                    Text-to-Speech Engine
+                                </h3>
+</div>
+<div class="space-y-4 max-w-md">
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-unit-xs">Synthesizer Provider</label>
+<select class="form-select w-full bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-body-sm focus:border-primary focus:outline-none appearance-none cursor-pointer">
+<option selected="" value="edge">Microsoft Edge TTS (Free)</option>
+<option value="openai">OpenAI TTS-1 (API Key Required)</option>
+<option value="elevenlabs">ElevenLabs (API Key Required)</option>
+</select>
+</div>
+</div>
+</section>
+<!-- Section 4: System -->
+<section class="bg-surface-container rounded-xl border border-outline-variant/40 p-unit-lg shadow-sm">
+<div class="border-b border-outline-variant/30 pb-4 mb-6">
+<h3 class="font-title-sm text-title-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">dns</span>
+                                    System Preferences
+                                </h3>
+</div>
+<div class="space-y-6 max-w-lg">
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-unit-xs">Working Directory</label>
+<div class="flex gap-2">
+<input class="form-input flex-1 bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono-data text-mono-data focus:border-primary focus:outline-none" type="text" value="/Users/admin/VidiTranslate/Workspace"/>
+<button class="px-4 py-2 bg-transparent border border-outline-variant rounded-md text-on-surface font-body-sm hover:bg-surface-variant transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">folder_open</span>
+                                            Browse
+                                        </button>
+</div>
+<p class="font-body-sm text-[12px] text-on-surface-variant mt-1">Location for temporary processing files and default exports.</p>
+</div>
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-unit-xs">Network Proxy (Optional)</label>
+<input class="form-input w-full max-w-md bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono-data text-mono-data focus:border-primary focus:outline-none" placeholder="http://127.0.0.1:7890" type="text"/>
+</div>
+</div>
+</section>
+<!-- Action Bar -->
+<div class="flex justify-end gap-3 mt-8 pt-4 pb-12">
+<button class="px-6 py-2.5 rounded-md text-on-surface hover:bg-surface-variant font-title-sm text-title-sm transition-colors border border-transparent">
+                                Discard Changes
+                            </button>
+<button class="px-6 py-2.5 rounded-md bg-primary text-on-primary hover:bg-primary/90 font-title-sm text-title-sm transition-colors shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">save</span>
+                                Save Configuration
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>
