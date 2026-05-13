@@ -35,6 +35,9 @@ export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
     if (config.ttsMode === 'openai' && !config.openaiApiKey) {
       return { valid: false, error: t('input.validation.openaiTtsKeyRequired'), isConfigError: true }
     }
+    if (config.ttsMode === 'indextts' && !config.indexttsApiUrl) {
+      return { valid: false, error: t('input.validation.indexttsApiUrlRequired'), isConfigError: true }
+    }
 
     return { valid: true, error: null, isConfigError: false }
   }

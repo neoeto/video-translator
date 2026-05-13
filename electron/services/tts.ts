@@ -4,7 +4,7 @@ import { promises as fs } from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import OpenAI from 'openai'
-import { ProxyAgent } from 'undici'
+import { fetch as undiciFetch, ProxyAgent } from 'undici'
 import { getConfig } from './config.js'
 import type { AppConfig, TranslatedSegment } from './types.js'
 
@@ -31,6 +31,9 @@ const MAX_RATE_ADJUSTMENT = 50
 const DURATION_TOLERANCE = 0.3
 const MAX_TTS_RETRIES = 3
 const INITIAL_TTS_BACKOFF_MS = 1000
+const INDEXTTS_DEFAULT_API_URL = 'http://localhost:8080'
+const INDEXTTS_ATEMPO_MIN = 0.5
+const INDEXTTS_ATEMPO_MAX = 2
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message
@@ -262,6 +265,118 @@ async function synthesizeOpenAITextToFile(
   throw lastError instanceof Error ? lastError : new Error(String(lastError))
 }
 
+function createIndexTtsUrl(config: AppConfig): string {
+  const baseUrl = config.indexttsApiUrl.trim() || INDEXTTS_DEFAULT_API_URL
+  return new URL('/tts', baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`).toString()
+}
+
+function createIndexTtsFetchOptions(config: AppConfig): { dispatcher?: ProxyAgent } {
+  return config.proxyEnabled && config.proxyUrl ? { dispatcher: new ProxyAgent(config.proxyUrl) } : {}
+}
+
+function createIndexTtsRequestBody(text: string, config: AppConfig): { text: string; reference_audio?: string } {
+  const referenceAudio = config.indexttsReferenceAudio.trim()
+  return referenceAudio ? { text, reference_audio: referenceAudio } : { text }
+}
+
+function isMp3Response(contentType: string, outputFile: string): boolean {
+  return /audio\/mpeg|audio\/mp3/i.test(contentType) || outputFile.toLowerCase().endsWith('.mp3')
+}
+
+async function convertAudioToMp3(inputFile: string, outputFile: string): Promise<void> {
+  await runFfmpeg((command) => {
+    command
+      .input(inputFile)
+      .audioCodec('libmp3lame')
+      .format('mp3')
+      .output(outputFile)
+  })
+}
+
+async function writeIndexTtsAudioResponse(response: Response, outputFile: string): Promise<void> {
+  const contentType = response.headers.get('content-type') ?? ''
+  const buffer = Buffer.from(await response.arrayBuffer())
+
+  if (isMp3Response(contentType, outputFile)) {
+    await fs.writeFile(outputFile, buffer)
+    return
+  }
+
+  const rawFile = `${outputFile}.indextts-response`
+  try {
+    await fs.writeFile(rawFile, buffer)
+    await convertAudioToMp3(rawFile, outputFile)
+  } finally {
+    await fs.rm(rawFile, { force: true }).catch(() => {})
+  }
+}
+
+async function synthesizeIndexTtsTextToFile(text: string, outputFile: string, config: AppConfig): Promise<void> {
+  let lastError: unknown
+
+  for (let attempt = 1; attempt <= MAX_TTS_RETRIES; attempt += 1) {
+    try {
+      const response = await undiciFetch(createIndexTtsUrl(config), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(createIndexTtsRequestBody(text, config)),
+        ...createIndexTtsFetchOptions(config),
+      })
+
+      if (!response.ok) {
+        const message = await response.text().catch(() => response.statusText)
+        const error = new Error(message || `IndexTTS request failed with status ${response.status}`)
+        Object.assign(error, { status: response.status })
+        throw error
+      }
+
+      await writeIndexTtsAudioResponse(response, outputFile)
+      return
+    } catch (error) {
+      lastError = error
+
+      if (!isRetryableTtsError(error) || attempt === MAX_TTS_RETRIES) {
+        throw error
+      }
+
+      await sleep(INITIAL_TTS_BACKOFF_MS * 2 ** (attempt - 1))
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError))
+}
+
+function buildAtempoFilter(playbackRate: number): string {
+  const filters: number[] = []
+  let remainingRate = playbackRate
+
+  while (remainingRate > INDEXTTS_ATEMPO_MAX) {
+    filters.push(INDEXTTS_ATEMPO_MAX)
+    remainingRate /= INDEXTTS_ATEMPO_MAX
+  }
+
+  while (remainingRate < INDEXTTS_ATEMPO_MIN) {
+    filters.push(INDEXTTS_ATEMPO_MIN)
+    remainingRate /= INDEXTTS_ATEMPO_MIN
+  }
+
+  filters.push(remainingRate)
+  return filters.map((rate) => `atempo=${rate.toFixed(6)}`).join(',')
+}
+
+async function adjustAudioTempoToDuration(inputFile: string, outputFile: string, actualDuration: number, targetDuration: number): Promise<void> {
+  const playbackRate = actualDuration / targetDuration
+
+  await runFfmpeg((command) => {
+    command
+      .input(inputFile)
+      .audioFilters(buildAtempoFilter(playbackRate))
+      .audioCodec('libmp3lame')
+      .format('mp3')
+      .output(outputFile)
+  })
+}
+
 async function padAudioToDuration(inputFile: string, outputFile: string, targetDuration: number): Promise<void> {
   const currentDuration = await probeDuration(inputFile)
   const missingDuration = targetDuration - currentDuration
@@ -324,6 +439,8 @@ async function finalizeSegmentAudio(
     }
 
     await synthesizeOpenAITextToFile(text, baseFile, openAIClient)
+  } else if (config.ttsMode === 'indextts') {
+    await synthesizeIndexTtsTextToFile(text, baseFile, config)
   } else {
     await synthesizeEdgeTextToFile(text, 0, baseFile, config)
   }
@@ -335,6 +452,15 @@ async function finalizeSegmentAudio(
     const rawRate = Math.round((actualDuration / targetDuration) * 100 - 100)
     const adjustedRate = clampRate(rawRate)
     await synthesizeEdgeTextToFile(text, adjustedRate, adjustedFile, config)
+    actualDuration = await probeDuration(adjustedFile)
+
+    if (actualDuration < targetDuration - DURATION_TOLERANCE) {
+      await padAudioToDuration(adjustedFile, finalFile, targetDuration)
+    } else {
+      await fs.copyFile(adjustedFile, finalFile)
+    }
+  } else if (config.ttsMode === 'indextts' && Math.abs(actualDuration - targetDuration) > DURATION_TOLERANCE) {
+    await adjustAudioTempoToDuration(baseFile, adjustedFile, actualDuration, targetDuration)
     actualDuration = await probeDuration(adjustedFile)
 
     if (actualDuration < targetDuration - DURATION_TOLERANCE) {

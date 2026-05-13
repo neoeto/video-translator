@@ -41,6 +41,8 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
     glmApiKey: '',
     glmModel: 'glm-4-flash',
     ttsMode: 'edge' as const,
+    indexttsApiUrl: 'http://localhost:8080',
+    indexttsReferenceAudio: '',
     subtitleStyle: {
       enFontSize: 16,
       cnFontSize: 22,

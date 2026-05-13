@@ -344,6 +344,16 @@ export const SettingsView: React.FC = () => {
                     >
                       {t('settings.tts.openai')}
                     </button>
+                    <button
+                      onClick={() => saveConfig({ ttsMode: 'indextts' })}
+                      className={`flex-1 py-2 px-4 rounded-md text-[13px] font-semibold transition-all ${
+                        config.ttsMode === 'indextts'
+                          ? 'bg-surface-variant text-on-surface shadow-sm border border-outline-variant/50'
+                          : 'text-on-surface-variant hover:text-on-surface'
+                      }`}
+                    >
+                      {t('settings.tts.indextts')}
+                    </button>
                   </div>
                 </div>
 
@@ -351,6 +361,41 @@ export const SettingsView: React.FC = () => {
                   <p className="text-[12px] text-on-surface-variant">
                     {t('settings.tts.openaiKeyHelp')}
                   </p>
+                )}
+
+                {config.ttsMode === 'indextts' && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-on-surface-variant mb-2 uppercase tracking-wider">
+                        {t('settings.tts.indextts.apiUrl')}
+                      </label>
+                      <input
+                        type="text"
+                        value={config.indexttsApiUrl || ''}
+                        onChange={(e) => saveConfig({ indexttsApiUrl: e.target.value })}
+                        placeholder={t('settings.tts.indextts.apiUrlPlaceholder')}
+                        className="w-full bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono text-xs focus:border-primary focus:outline-none transition-colors"
+                      />
+                      <p className="text-[12px] text-on-surface-variant mt-1">
+                        {t('settings.tts.indextts.apiUrlHelp')}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-on-surface-variant mb-2 uppercase tracking-wider">
+                        {t('settings.tts.indextts.referenceAudio')}
+                      </label>
+                      <input
+                        type="text"
+                        value={config.indexttsReferenceAudio || ''}
+                        onChange={(e) => saveConfig({ indexttsReferenceAudio: e.target.value })}
+                        placeholder={t('settings.tts.indextts.referenceAudioPlaceholder')}
+                        className="w-full bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono text-xs focus:border-primary focus:outline-none transition-colors"
+                      />
+                      <p className="text-[12px] text-on-surface-variant mt-1">
+                        {t('settings.tts.indextts.referenceAudioHelp')}
+                      </p>
+                    </div>
+                  </div>
                 )}
               </div>
             </section>

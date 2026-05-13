@@ -44,6 +44,8 @@ const defaultConfig: AppConfig = {
   glmApiKey: '',
   glmModel: 'glm-4-flash',
   ttsMode: 'edge',
+  indexttsApiUrl: 'http://localhost:8080',
+  indexttsReferenceAudio: '',
   subtitleStyle: {
     enFontSize: 16,
     cnFontSize: 22,
@@ -124,8 +126,16 @@ const store = new Store<AppConfig>({
     },
     ttsMode: {
       type: 'string',
-      enum: ['edge', 'openai'],
+      enum: ['edge', 'openai', 'indextts'],
       default: defaultConfig.ttsMode,
+    },
+    indexttsApiUrl: {
+      type: 'string',
+      default: defaultConfig.indexttsApiUrl,
+    },
+    indexttsReferenceAudio: {
+      type: 'string',
+      default: defaultConfig.indexttsReferenceAudio,
     },
     subtitleStyle: {
       type: 'object',
@@ -174,6 +184,8 @@ export function setConfig(partial: Partial<AppConfig>): void {
     'glmApiKey',
     'glmModel',
     'ttsMode',
+    'indexttsApiUrl',
+    'indexttsReferenceAudio',
   ] as const
 
   for (const key of simpleKeys) {
