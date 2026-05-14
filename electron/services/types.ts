@@ -82,6 +82,7 @@ export interface TranscriberStrategy {
   transcribe(input: {
     audioPath: string
     onProgress?: (pct: number) => void
+    signal?: AbortSignal
   }): Promise<TranscriptionResult>
 }
 
@@ -92,6 +93,7 @@ export interface TranslatorStrategy {
     sourceLanguage: string
     targetLanguage: string
     onProgress?: (pct: number) => void
+    signal?: AbortSignal
   }): Promise<TranslationResult>
 }
 
@@ -102,6 +104,7 @@ export interface SynthesizerStrategy {
     workDir: string
     speakers: string[]
     onProgress: (pct: number) => void
+    signal?: AbortSignal
   }): Promise<SynthesisResult>
 }
 

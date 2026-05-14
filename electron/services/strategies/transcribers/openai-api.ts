@@ -20,12 +20,13 @@ export default class OpenAIApiTranscriber implements TranscriberStrategy {
     this.name = config.transcribeMode === 'local-api' ? 'local-api' : 'openai'
   }
 
-  async transcribe(input: { audioPath: string; onProgress?: (pct: number) => void }): Promise<TranscriptionResult> {
-    const { audioPath, onProgress } = input
+  async transcribe(input: { audioPath: string; onProgress?: (pct: number) => void; signal?: AbortSignal }): Promise<TranscriptionResult> {
+    const { audioPath, onProgress, signal } = input
     let lastError: unknown
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
+        if (signal?.aborted) throw new Error('Pipeline cancelled')
         onProgress?.(10)
         const segments = await this.transcribeOnce(audioPath)
         onProgress?.(100)

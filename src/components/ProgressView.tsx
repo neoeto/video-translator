@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { usePipelineStore } from '../store/usePipelineStore'
 import type { PipelineStage } from '../types'
 import { useI18n } from '../i18n'
@@ -16,6 +16,7 @@ export const ProgressView: React.FC = () => {
   const { state, cancelPipeline, reset } = usePipelineStore()
   const t = useI18n((s) => s.t)
   const currentStage = STAGES.find(s => s.id === state.stage)
+  const taskId = useMemo(() => Date.now().toString().slice(-6), [])
 
   const getStageStatus = (stageId: PipelineStage) => {
     if (state.stage === 'error') return 'error'
@@ -50,7 +51,7 @@ export const ProgressView: React.FC = () => {
               }`}>
                 {state.stage === 'error' ? t('progress.status.error') : t('progress.status.processing')}
               </span>
-              <span className="text-on-surface-variant text-sm font-medium">{t('progress.taskId')}: #{Date.now().toString().slice(-6)}</span>
+              <span className="text-on-surface-variant text-sm font-medium">{t('progress.taskId')}: #{taskId}</span>
             </div>
             <h2 className="text-xl font-bold text-on-surface line-clamp-1" title={state.videoTitle || t('progress.processingVideoTitle')}>
               {state.videoTitle || t('progress.processingVideo')}

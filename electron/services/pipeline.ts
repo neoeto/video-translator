@@ -238,6 +238,7 @@ export class PipelineOrchestrator {
   private state: PipelineState
   private callbacks: Set<(state: PipelineState) => void>
   private cancelled: boolean
+  private abortController: AbortController | null
   private workDir: string
 
   constructor(private readonly strategies: PipelineStrategies) {
@@ -248,11 +249,13 @@ export class PipelineOrchestrator {
     }
     this.callbacks = new Set()
     this.cancelled = false
+    this.abortController = null
     this.workDir = ''
   }
 
   async start(url: string, outputDir: string): Promise<void> {
     this.cancelled = false
+    this.abortController = new AbortController()
     this.workDir = path.join(outputDir, '.tmp', getVideoStorageKey(url))
     const config = getConfig()
 
@@ -260,13 +263,13 @@ export class PipelineOrchestrator {
       await fs.mkdir(this.workDir, { recursive: true })
 
       this.assertNotCancelled()
-      const download = await this.runStep('downloading', 0, (onProgress) =>
+      const download = await this.runStep('downloading', 0, (onProgress, _signal) =>
         this.strategies.downloader.download({ url, outputDir, onProgress })
       )
       this.updateState({ videoTitle: download.title })
 
       this.assertNotCancelled()
-      const audioPath = await this.runStep('extracting', 1, async (onProgress) => {
+      const audioPath = await this.runStep('extracting', 1, async (onProgress, _signal) => {
         const cachedAudioPath = path.join(this.workDir, 'audio.wav')
         if (await fileExists(cachedAudioPath)) {
           onProgress(100)
@@ -282,7 +285,7 @@ export class PipelineOrchestrator {
       })
 
       this.assertNotCancelled()
-      const transcription = await this.runStep('transcribing', 2, async (onProgress) => {
+      const transcription = await this.runStep('transcribing', 2, async (onProgress, signal) => {
         const transcriptPath = path.join(this.workDir, 'transcript.json')
         const transcriptFingerprint = await createTranscriptionFingerprint(download.videoPath, config)
         const cachedSegments = await readCachedSegments(transcriptPath, transcriptFingerprint, isTranscriptSegment)
@@ -291,14 +294,14 @@ export class PipelineOrchestrator {
           return cachedSegments
         }
 
-        const result = await this.strategies.transcriber.transcribe({ audioPath, onProgress })
+        const result = await this.strategies.transcriber.transcribe({ audioPath, onProgress, signal })
         await writeCachedSegments(transcriptPath, transcriptFingerprint, result.segments)
         this.updateProgress(2, 100)
         return result.segments
       })
 
       this.assertNotCancelled()
-      const translationResult = await this.runStep('translating', 3, async (onProgress) => {
+      const translationResult = await this.runStep('translating', 3, async (onProgress, signal) => {
         const translationPath = path.join(this.workDir, 'translated_segments.json')
         const translationFingerprint = createTranslationFingerprint(transcription, config)
         const cachedSegments = await readCachedSegments(translationPath, translationFingerprint, isTranslatedSegment)
@@ -312,6 +315,7 @@ export class PipelineOrchestrator {
           sourceLanguage: 'English',
           targetLanguage: 'Chinese',
           onProgress,
+          signal,
         })
         await writeCachedSegments(translationPath, translationFingerprint, result.segments)
         this.updateProgress(3, 100)
@@ -320,7 +324,7 @@ export class PipelineOrchestrator {
       this.updateState({ translatedSegments: translationResult })
 
       this.assertNotCancelled()
-      const cnAudioPath = await this.runStep('synthesizing', 4, async (onProgress) => {
+      const cnAudioPath = await this.runStep('synthesizing', 4, async (onProgress, signal) => {
         const ttsCachePath = path.join(this.workDir, 'tts.json')
         const ttsFingerprint = createTtsFingerprint(translationResult, config)
         const cachedOutput = await readCachedOutput(ttsCachePath, ttsFingerprint)
@@ -335,13 +339,14 @@ export class PipelineOrchestrator {
           workDir: this.workDir,
           speakers,
           onProgress,
+          signal,
         })
         await writeCachedOutput(ttsCachePath, ttsFingerprint, result.audioPath)
         return result.audioPath
       })
 
       this.assertNotCancelled()
-      const outputPath = await this.runStep('recombining', 5, async (onProgress) => {
+      const outputPath = await this.runStep('recombining', 5, async (onProgress, _signal) => {
         const { width, height } = await getVideoDimensions(download.videoPath)
         this.assertNotCancelled()
 
@@ -381,6 +386,7 @@ export class PipelineOrchestrator {
 
   cancel(): void {
     this.cancelled = true
+    this.abortController?.abort()
   }
 
   onProgress(callback: (state: PipelineState) => void): () => void {
@@ -399,7 +405,7 @@ export class PipelineOrchestrator {
   private async runStep<T>(
     stage: PipelineStage,
     completedSteps: number,
-    operation: (onProgress: (pct: number) => void) => Promise<T>
+    operation: (onProgress: (pct: number) => void, signal: AbortSignal) => Promise<T>
   ): Promise<T> {
     // 每步开始时先固定已完成步数，当前阶段进度从 0 单独累加到总进度。
     this.updateState({
@@ -409,10 +415,11 @@ export class PipelineOrchestrator {
       error: undefined,
     })
 
+    const signal = this.abortController!.signal
     return operation((pct) => {
       // 子任务只报告本阶段百分比，编排器统一换算，避免各服务感知全局流水线。
       this.updateProgress(completedSteps, pct)
-    })
+    }, signal)
   }
 
   private updateProgress(completedSteps: number, currentStepProgress: number): void {

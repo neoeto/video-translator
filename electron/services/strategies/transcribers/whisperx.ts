@@ -12,8 +12,8 @@ export default class WhisperXTranscriber implements TranscriberStrategy {
 
   constructor(private readonly config: AppConfig) {}
 
-  async transcribe(input: { audioPath: string; onProgress?: (pct: number) => void }): Promise<TranscriptionResult> {
-    const { audioPath, onProgress } = input
+  async transcribe(input: { audioPath: string; onProgress?: (pct: number) => void; signal?: AbortSignal }): Promise<TranscriptionResult> {
+    const { audioPath, onProgress, signal } = input
     const whisperxPath = path.resolve(this.config.whisperxPath)
     const outputDir = path.dirname(audioPath)
 
@@ -25,6 +25,7 @@ export default class WhisperXTranscriber implements TranscriberStrategy {
         '--language', 'en',
         '--output_format', 'json',
         '--output_dir', outputDir,
+        '--print_progress', 'True',
       ]
 
       if (this.config.whisperxHfToken.trim()) {
@@ -32,7 +33,7 @@ export default class WhisperXTranscriber implements TranscriberStrategy {
       }
 
       onProgress?.(10)
-      await runWhisperCli(whisperxPath, args, outputDir)
+      await runWhisperCli(whisperxPath, args, outputDir, onProgress, signal)
 
       const expectedName = `${path.parse(audioPath).name}.json`
       const parsedPath = path.join(outputDir, expectedName)

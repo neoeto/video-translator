@@ -12,8 +12,8 @@ export default class LocalCliTranscriber implements TranscriberStrategy {
 
   constructor(private readonly config: AppConfig) {}
 
-  async transcribe(input: { audioPath: string; onProgress?: (pct: number) => void }): Promise<TranscriptionResult> {
-    const { audioPath, onProgress } = input
+  async transcribe(input: { audioPath: string; onProgress?: (pct: number) => void; signal?: AbortSignal }): Promise<TranscriptionResult> {
+    const { audioPath, onProgress, signal } = input
     const whisperPath = path.resolve(this.config.localWhisperCliPath)
     const outputDir = path.dirname(audioPath)
 
@@ -28,7 +28,9 @@ export default class LocalCliTranscriber implements TranscriberStrategy {
           '--output_format', 'json',
           '--output_dir', outputDir,
         ],
-        outputDir
+        outputDir,
+        onProgress,
+        signal
       )
 
       const expectedName = `${path.parse(audioPath).name}.json`

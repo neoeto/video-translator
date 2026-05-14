@@ -133,7 +133,8 @@ export async function buildTimeline(
   segments: TranslatedSegment[],
   workDir: string,
   synthesizeSegment: (segment: TranslatedSegment, index: number, workDir: string) => Promise<string>,
-  onProgress: (pct: number) => void
+  onProgress: (pct: number) => void,
+  signal?: AbortSignal,
 ): Promise<string> {
   const outputPath = path.join(workDir, '..', 'cn_audio.mp3')
 
@@ -146,6 +147,7 @@ export async function buildTimeline(
   const files: string[] = []
 
   for (let index = 0; index < segments.length; index += 1) {
+    if (signal?.aborted) throw new Error('Pipeline cancelled')
     const segment = segments[index]
     const segmentFile = await synthesizeSegment(segment, index, workDir)
 

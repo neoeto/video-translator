@@ -40,8 +40,9 @@ export default class OpenAITtsSynthesizer implements SynthesizerStrategy {
     workDir: string
     speakers: string[]
     onProgress: (pct: number) => void
+    signal?: AbortSignal
   }): Promise<SynthesisResult> {
-    const { segments, workDir, onProgress } = input
+    const { segments, workDir, onProgress, signal } = input
     const ttsWorkDir = path.join(workDir, '.tts-temp')
     await fs.mkdir(ttsWorkDir, { recursive: true })
 
@@ -50,7 +51,8 @@ export default class OpenAITtsSynthesizer implements SynthesizerStrategy {
         segments,
         ttsWorkDir,
         async (segment, index, wd) => this.synthesizeSegment(segment, index, wd),
-        onProgress
+        onProgress,
+        signal
       )
       return { audioPath }
     } catch (error) {

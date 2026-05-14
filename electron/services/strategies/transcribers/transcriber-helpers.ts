@@ -36,6 +36,8 @@ export function normalizeSegments(segments: unknown): TranscriptSegment[] {
 
 export function buildWhisperEnv(): NodeJS.ProcessEnv {
   const env = { ...process.env }
+  // Force Python to flush stdout/stderr immediately so tqdm progress is readable in real-time
+  env.PYTHONUNBUFFERED = '1'
   if (ffmpegStatic) {
     const ffmpegDir = path.dirname(ffmpegStatic)
     env.PATH = env.PATH ? `${ffmpegDir}${path.delimiter}${env.PATH}` : ffmpegDir
@@ -43,24 +45,68 @@ export function buildWhisperEnv(): NodeJS.ProcessEnv {
   return env
 }
 
-export function runWhisperCli(command: string, args: string[], cwd: string): Promise<void> {
+export function runWhisperCli(
+  command: string,
+  args: string[],
+  cwd: string,
+  onProgress?: (pct: number) => void,
+  signal?: AbortSignal,
+): Promise<void> {
   return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new Error('Pipeline cancelled'))
+      return
+    }
+
+    const captureStdout = !!onProgress
     const child = spawn(command, args, {
       cwd,
       env: buildWhisperEnv(),
-      stdio: ['ignore', 'ignore', 'pipe'],
+      stdio: ['ignore', captureStdout ? 'pipe' : 'ignore', 'pipe'],
     })
     const stderrChunks: Buffer[] = []
 
-    child.stderr.on('data', (chunk: Buffer) => {
+    const onAbort = () => {
+      child.kill('SIGTERM')
+      reject(new Error('Pipeline cancelled'))
+    }
+    signal?.addEventListener('abort', onAbort, { once: true })
+
+    if (child.stdout && onProgress) {
+      child.stdout.on('data', (chunk: Buffer) => {
+        const text = chunk.toString('utf8')
+        // WhisperX format: "Progress: 50.00%..."
+        const matches = [...text.matchAll(/Progress:\s*([\d.]+)%/g)]
+        if (matches.length > 0) {
+          const lastMatch = matches[matches.length - 1]
+          const pct = Math.min(Math.floor(parseFloat(lastMatch[1])), 99)
+          if (pct > 0) onProgress(pct)
+        }
+      })
+    }
+
+    child.stderr?.on('data', (chunk: Buffer) => {
       stderrChunks.push(chunk)
+
+      if (onProgress) {
+        const text = chunk.toString('utf8')
+        // tqdm-style progress (whisper CLI): " 50%|████..." or standalone " 50% "
+        const matches = [...text.matchAll(/(\d{1,3})%(?:\||[\s\r\n])/g)]
+        if (matches.length > 0) {
+          const lastMatch = matches[matches.length - 1]
+          const pct = Math.min(parseInt(lastMatch[1], 10), 99)
+          if (pct > 0) onProgress(pct)
+        }
+      }
     })
 
     child.on('error', (error) => {
+      signal?.removeEventListener('abort', onAbort)
       reject(error)
     })
 
-    child.on('close', (code, signal) => {
+    child.on('close', (code, signal: NodeJS.Signals | null) => {
+      signal // unused in this scope
       if (code === 0) {
         resolve()
         return

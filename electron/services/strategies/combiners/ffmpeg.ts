@@ -145,17 +145,15 @@ export default class FfmpegCombiner implements CombinerStrategy {
         .input(videoPath)
         .input(audioPath)
         .outputOptions([
-          // filter_complex 将 0 号视频流烧录字幕后命名为 [v]，再与 1 号中文音轨重新映射输出。
-          '-filter_complex', subtitleFilter,
+          // filter_complex: 烧录字幕到视频，apad 将音轨静音填充到与视频等长。
+          '-filter_complex', `${subtitleFilter};[1:a]apad=whole_dur=${duration}[a]`,
           '-map', '[v]',
-          '-map', '1:a:0',
+          '-map', '[a]',
           '-c:v', 'libx264',
           '-crf', '23',
           '-pix_fmt', 'yuv420p',
           '-c:a', 'aac',
           '-movflags', '+faststart',
-          // 合成音轨可能因静音填充略长，-shortest 可避免输出尾部出现无画面或黑场。
-          '-shortest'
         ])
         .on('progress', (info) => {
           const currentTime = info.timemark ? timeMarkToSeconds(info.timemark) : 0

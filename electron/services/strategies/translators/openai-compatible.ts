@@ -127,8 +127,9 @@ export default class OpenAICompatibleTranslator implements TranslatorStrategy {
     sourceLanguage: string
     targetLanguage: string
     onProgress?: (pct: number) => void
+    signal?: AbortSignal
   }): Promise<TranslationResult> {
-    const { segments, sourceLanguage, targetLanguage, onProgress } = input
+    const { segments, sourceLanguage, targetLanguage, onProgress, signal } = input
     const provider = getProviderSettings(this.config)
     const client = new OpenAI({
       apiKey: provider.apiKey,
@@ -143,6 +144,7 @@ export default class OpenAICompatibleTranslator implements TranslatorStrategy {
     const systemPrompt = buildSystemPrompt(sourceLanguage, targetLanguage)
 
     for (let i = 0; i < batches.length; i++) {
+      if (signal?.aborted) throw new Error('Pipeline cancelled')
       const batchTranslations = await this.translateBatch(client, batches[i], provider.model, systemPrompt)
       translatedSegments.push(...batchTranslations)
       onProgress?.(((i + 1) / batches.length) * 100)
