@@ -3,6 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { is } from '@electron-toolkit/utils'
 import { getConfig, setConfig } from './services/config.js'
+import { createPipelineStrategies } from './services/factories.js'
 import { PipelineOrchestrator } from './services/pipeline.js'
 import type { AppConfig } from './services/types.js'
 
@@ -61,7 +62,9 @@ function registerIpcHandlers(): void {
       throw new Error('Main window is not available')
     }
 
-    const pipeline = new PipelineOrchestrator()
+    const config = getConfig()
+    const strategies = createPipelineStrategies(config)
+    const pipeline = new PipelineOrchestrator(strategies)
     currentPipeline = pipeline
 
     pipeline.onProgress((state) => {

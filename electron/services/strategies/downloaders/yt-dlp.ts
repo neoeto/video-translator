@@ -3,8 +3,8 @@ import { createRequire } from 'node:module'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 
-import { getConfig } from './config.js'
-import { getVideoStorageKey } from './video-key.js'
+import { getVideoStorageKey } from '../../video-key.js'
+import type { AppConfig, DownloaderStrategy, DownloadResult } from '../../types.js'
 
 const require = createRequire(import.meta.url)
 const ffmpegStaticPath = require('ffmpeg-static') as string | null
@@ -187,9 +187,9 @@ function runYtDlp(
   })
 }
 
-async function getVideoTitle(url: string): Promise<string> {
+async function getVideoTitle(url: string, proxyUrl?: string): Promise<string> {
   try {
-    const { stdout } = await runYtDlp(['--print', 'title', url], undefined, getConfig().proxyUrl)
+    const { stdout } = await runYtDlp(['--print', 'title', url], undefined, proxyUrl)
     const title = normalizeTitle(stdout.split(/\r?\n/).find(Boolean) ?? stdout)
     if (!title) {
       throw new Error('Failed to determine video title.')
@@ -203,14 +203,16 @@ async function getVideoTitle(url: string): Promise<string> {
   }
 }
 
-async function findCachedVideo(cacheDir: string): Promise<{ filePath: string; title: string } | null> {
+async function findCachedVideo(
+  cacheDir: string
+): Promise<{ videoPath: string; title: string } | null> {
   try {
     const metaPath = path.join(cacheDir, 'meta.json')
     const metaRaw = await fs.readFile(metaPath, 'utf8')
-    const meta = JSON.parse(metaRaw) as { filePath: string; title: string }
+    const meta = JSON.parse(metaRaw) as { videoPath: string; title: string }
     // 缓存命中仍重新解析文件路径，因为旧版本或转封装后的最终文件名可能与 meta 不一致。
-    const filePath = await resolveDownloadedVideoPath(cacheDir, [meta.filePath, path.join(cacheDir, 'video.mp4')])
-    const normalizedMeta = filePath === meta.filePath ? meta : { ...meta, filePath }
+    const videoPath = await resolveDownloadedVideoPath(cacheDir, [meta.videoPath, path.join(cacheDir, 'video.mp4')])
+    const normalizedMeta = videoPath === meta.videoPath ? meta : { ...meta, videoPath }
 
     if (normalizedMeta !== meta) {
       await fs.writeFile(metaPath, JSON.stringify(normalizedMeta, null, 2), 'utf8')
@@ -222,77 +224,85 @@ async function findCachedVideo(cacheDir: string): Promise<{ filePath: string; ti
   }
 }
 
-export async function downloadVideo(
-  url: string,
-  outputDir: string,
-  onProgress: (pct: number) => void
-): Promise<{ filePath: string; title: string }> {
-  try {
-    const cacheDir = getCacheDir(outputDir, url)
+export default class YtDlpDownloader implements DownloaderStrategy {
+  readonly name = 'yt-dlp'
 
-    const cached = await findCachedVideo(cacheDir)
-    if (cached) {
-      onProgress(100)
-      return cached
-    }
+  constructor(private readonly config: AppConfig) {}
 
-    await fs.mkdir(cacheDir, { recursive: true })
-    const title = await getVideoTitle(url)
+  async download(input: {
+    url: string
+    outputDir: string
+    onProgress: (pct: number) => void
+  }): Promise<DownloadResult> {
+    const { url, outputDir, onProgress } = input
 
-    let actualFilePath = path.join(cacheDir, 'video.mp4')
-    let mergedFilePath: string | null = null
+    try {
+      const cacheDir = getCacheDir(outputDir, url)
 
-    const { stdout, stderr } = await runYtDlp(
-      ['-f', DOWNLOAD_FORMAT, '--merge-output-format', 'mp4', '-o', path.join(cacheDir, 'video.%(ext)s'), '--newline', '--no-warnings', url],
-      (line) => {
-        const progress = parseProgress(line)
-        if (progress !== null) {
-          onProgress(progress)
-        }
-        const destination = parseDownloadDestination(line)
-        if (destination) {
-          actualFilePath = destination
-        }
+      const cached = await findCachedVideo(cacheDir)
+      if (cached) {
+        onProgress(100)
+        return cached
+      }
 
+      await fs.mkdir(cacheDir, { recursive: true })
+      const title = await getVideoTitle(url, this.config.proxyUrl)
+
+      let actualFilePath = path.join(cacheDir, 'video.mp4')
+      let mergedFilePath: string | null = null
+
+      const { stdout, stderr } = await runYtDlp(
+        ['-f', DOWNLOAD_FORMAT, '--merge-output-format', 'mp4', '-o', path.join(cacheDir, 'video.%(ext)s'), '--newline', '--no-warnings', url],
+        (line) => {
+          const progress = parseProgress(line)
+          if (progress !== null) {
+            onProgress(progress)
+          }
+          const destination = parseDownloadDestination(line)
+          if (destination) {
+            actualFilePath = destination
+          }
+
+          const mergedDestination = parseMergedDestination(line)
+          if (mergedDestination) {
+            mergedFilePath = mergedDestination
+          }
+        },
+        this.config.proxyUrl
+      )
+
+      const lines = `${stdout}\n${stderr}`.split(/\r?\n/)
+      for (const line of lines) {
         const mergedDestination = parseMergedDestination(line)
         if (mergedDestination) {
           mergedFilePath = mergedDestination
         }
-      },
-      getConfig().proxyUrl
-    )
 
-    const lines = `${stdout}\n${stderr}`.split(/\r?\n/)
-    for (const line of lines) {
-      const mergedDestination = parseMergedDestination(line)
-      if (mergedDestination) {
-        mergedFilePath = mergedDestination
+        const destination = parseDownloadDestination(line)
+        if (destination) {
+          actualFilePath = destination
+        }
       }
 
-      const destination = parseDownloadDestination(line)
-      if (destination) {
-        actualFilePath = destination
+      actualFilePath = await resolveDownloadedVideoPath(cacheDir, [
+        mergedFilePath,
+        path.join(cacheDir, 'video.mp4'),
+        actualFilePath,
+      ])
+
+      const meta = { videoPath: actualFilePath, title }
+      await fs.writeFile(path.join(cacheDir, 'meta.json'), JSON.stringify(meta, null, 2), 'utf8')
+
+      onProgress(100)
+      return meta
+    } catch (error) {
+      if (isYtDlpMissingError(error)) {
+        throw new Error('yt-dlp is not installed. Please install it from https://github.com/yt-dlp/yt-dlp')
       }
+      if (error instanceof Error) {
+        throw toDescriptiveError('Failed to download video.', error.message)
+      }
+      throw new Error('Failed to download video.')
     }
-
-    actualFilePath = await resolveDownloadedVideoPath(cacheDir, [
-      mergedFilePath,
-      path.join(cacheDir, 'video.mp4'),
-      actualFilePath,
-    ])
-
-    const meta = { filePath: actualFilePath, title }
-    await fs.writeFile(path.join(cacheDir, 'meta.json'), JSON.stringify(meta, null, 2), 'utf8')
-
-    onProgress(100)
-    return meta
-  } catch (error) {
-    if (isYtDlpMissingError(error)) {
-      throw new Error('yt-dlp is not installed. Please install it from https://github.com/yt-dlp/yt-dlp')
-    }
-    if (error instanceof Error) {
-      throw toDescriptiveError('Failed to download video.', error.message)
-    }
-    throw new Error('Failed to download video.')
   }
 }

@@ -13,12 +13,15 @@ export interface Segment {
   start: number
   end: number
   text: string
-  speaker?: string
+  speaker: string
 }
 
-export interface TranslatedSegment extends Segment {
-  en: string
-  cn: string
+export interface TranslatedSegment {
+  start: number
+  end: number
+  sourceText: string
+  targetText: string
+  speaker: string
 }
 
 export interface PipelineState {

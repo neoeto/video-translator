@@ -1,0 +1,73 @@
+import fs from 'node:fs'
+import OpenAI from 'openai'
+import { ProxyAgent } from 'undici'
+import type { AppConfig, TranscriberStrategy, TranscriptionResult, TranscriptSegment } from '../../types.js'
+import { normalizeSegments, sleep, isRetryableError, describeOpenAIError } from './transcriber-helpers.js'
+
+// OpenAI Whisper API 单文件上限为 25MB，本地 API 兼容模式也沿用该边界以提前失败。
+const MAX_WHISPER_FILE_SIZE_BYTES = 25 * 1024 * 1024
+const MAX_RETRIES = 3
+const INITIAL_BACKOFF_MS = 500
+
+interface WhisperVerboseJsonResponse {
+  segments?: unknown
+}
+
+export default class OpenAIApiTranscriber implements TranscriberStrategy {
+  readonly name: string
+
+  constructor(private readonly config: AppConfig) {
+    this.name = config.transcribeMode === 'local-api' ? 'local-api' : 'openai'
+  }
+
+  async transcribe(input: { audioPath: string }): Promise<TranscriptionResult> {
+    const { audioPath } = input
+    let lastError: unknown
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const segments = await this.transcribeOnce(audioPath)
+        return { language: 'en', segments }
+      } catch (error) {
+        lastError = error
+        if (!isRetryableError(error) || attempt === MAX_RETRIES) {
+          throw new Error(describeOpenAIError(error))
+        }
+        // 指数退避降低临时限流/网络抖动时的连续请求压力。
+        await sleep(INITIAL_BACKOFF_MS * 2 ** (attempt - 1))
+      }
+    }
+
+    throw new Error(describeOpenAIError(lastError))
+  }
+
+  private async transcribeOnce(audioPath: string): Promise<TranscriptSegment[]> {
+    const stats = await fs.promises.stat(audioPath)
+    if (stats.size > MAX_WHISPER_FILE_SIZE_BYTES) {
+      console.warn(
+        `Audio file is ${(stats.size / (1024 * 1024)).toFixed(2)}MB, which exceeds Whisper's 25MB limit.`
+      )
+      throw new Error('Audio file exceeds the 25MB Whisper API limit. Please split it into smaller parts and try again.')
+    }
+
+    const isLocalApi = this.config.transcribeMode === 'local-api'
+    // local-api 复用 OpenAI SDK 协议，但鉴权通常由本地服务忽略，因此使用占位 key。
+    const client = new OpenAI({
+      apiKey: isLocalApi ? 'not-needed' : this.config.openaiApiKey,
+      ...(isLocalApi ? { baseURL: this.config.localWhisperApiUrl } : {}),
+      ...(this.config.proxyEnabled && this.config.proxyUrl
+        ? { fetchOptions: { dispatcher: new ProxyAgent(this.config.proxyUrl) } }
+        : {}),
+    })
+
+    const response = (await client.audio.transcriptions.create({
+      model: 'whisper-1',
+      file: fs.createReadStream(audioPath),
+      response_format: 'verbose_json',
+      timestamp_granularities: ['segment'],
+      language: 'en',
+    })) as WhisperVerboseJsonResponse
+
+    return normalizeSegments(response.segments)
+  }
+}

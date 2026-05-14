@@ -2,6 +2,7 @@ import { createRequire } from 'node:module'
 import ffmpeg from 'fluent-ffmpeg'
 import { existsSync, promises as fs } from 'node:fs'
 import path from 'node:path'
+import type { AppConfig, CombinerStrategy, CombineResult } from '../../types.js'
 
 const require = createRequire(import.meta.url)
 const ffmpegStatic = require('ffmpeg-static') as string | null
@@ -10,13 +11,8 @@ const ffprobeStatic = require('ffprobe-static') as { path?: string } | string
 const ffmpegPath = ffmpegStatic
 const ffprobePath = typeof ffprobeStatic === 'string' ? ffprobeStatic : ffprobeStatic.path
 
-if (typeof ffmpegPath === 'string') {
-  ffmpeg.setFfmpegPath(ffmpegPath)
-}
-
-if (typeof ffprobePath === 'string') {
-  ffmpeg.setFfprobePath(ffprobePath)
-}
+if (typeof ffmpegPath === 'string') ffmpeg.setFfmpegPath(ffmpegPath)
+if (typeof ffprobePath === 'string') ffmpeg.setFfprobePath(ffprobePath)
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message
@@ -35,7 +31,6 @@ function normalizeCombineError(error: unknown): Error {
   ) {
     return new Error('ffmpeg binary not found')
   }
-
   if (
     lower.includes('enospc') ||
     lower.includes('no space left on device') ||
@@ -44,7 +39,6 @@ function normalizeCombineError(error: unknown): Error {
   ) {
     return new Error('Insufficient disk space while combining video')
   }
-
   if (
     lower.includes('eacces') ||
     lower.includes('permission denied') ||
@@ -52,7 +46,6 @@ function normalizeCombineError(error: unknown): Error {
   ) {
     return new Error('Permission denied while combining video')
   }
-
   if (
     lower.includes('invalid data found when processing input') ||
     lower.includes('moov atom not found') ||
@@ -62,7 +55,6 @@ function normalizeCombineError(error: unknown): Error {
   ) {
     return new Error('Invalid media file provided to combiner')
   }
-
   if (lower.includes('error reinitializing filters') || lower.includes('subtitle') || lower.includes('encoding')) {
     return new Error(`Video combination failed: ${message}`)
   }
@@ -77,13 +69,11 @@ function getDuration(videoPath: string): Promise<number> {
         reject(normalizeCombineError(error))
         return
       }
-
       const duration = data.format?.duration
       if (typeof duration !== 'number' || !Number.isFinite(duration) || duration <= 0) {
         reject(new Error('Unable to determine video duration'))
         return
       }
-
       resolve(duration)
     })
   })
@@ -92,13 +82,10 @@ function getDuration(videoPath: string): Promise<number> {
 function timeMarkToSeconds(timemark: string): number {
   const parts = timemark.split(':')
   if (parts.length !== 3) return 0
-
   const hours = Number(parts[0])
   const minutes = Number(parts[1])
   const seconds = Number(parts[2])
-
   if (![hours, minutes, seconds].every(Number.isFinite)) return 0
-
   return hours * 3600 + minutes * 60 + seconds
 }
 
@@ -120,11 +107,8 @@ function getFontsDir(): string | null {
         : ['/usr/share/fonts', '/usr/local/share/fonts']
 
   for (const candidate of candidates) {
-    if (existsSync(candidate)) {
-      return candidate
-    }
+    if (existsSync(candidate)) return candidate
   }
-
   return null
 }
 
@@ -132,62 +116,62 @@ function buildSubtitleFilter(subtitlePath: string): string {
   // subtitles 滤镜参数用冒号分隔，路径中的特殊字符必须先转义，否则会被 ffmpeg 当作选项边界。
   const filterParts = [`subtitles=${escapeSubtitleFilterPath(subtitlePath)}`]
   const fontsDir = getFontsDir()
-
-  if (fontsDir) {
-    filterParts.push(`fontsdir=${escapeSubtitleFilterPath(fontsDir)}`)
-  }
-
+  if (fontsDir) filterParts.push(`fontsdir=${escapeSubtitleFilterPath(fontsDir)}`)
   filterParts.push("force_style='Alignment=2,MarginV=60'")
   return `[0:v]${filterParts.join(':')}[v]`
 }
 
-export async function combine(
-  videoPath: string,
-  audioPath: string,
-  subtitlePath: string,
-  outputPath: string,
-  onProgress: (pct: number) => void
-): Promise<string> {
-  if (!ffmpegPath || !ffprobePath) {
-    throw new Error('ffmpeg binary not found')
+export default class FfmpegCombiner implements CombinerStrategy {
+  readonly name = 'ffmpeg'
+  constructor(private readonly config: AppConfig) {}
+
+  async combine(input: {
+    videoPath: string
+    audioPath: string
+    subtitlePath: string
+    outputPath: string
+    onProgress: (pct: number) => void
+  }): Promise<CombineResult> {
+    const { videoPath, audioPath, subtitlePath, outputPath, onProgress } = input
+
+    if (!ffmpegPath || !ffprobePath) throw new Error('ffmpeg binary not found')
+
+    const duration = await getDuration(videoPath)
+    await fs.mkdir(path.dirname(outputPath), { recursive: true })
+    const subtitleFilter = buildSubtitleFilter(subtitlePath)
+
+    await new Promise<void>((resolve, reject) => {
+      ffmpeg()
+        .input(videoPath)
+        .input(audioPath)
+        .outputOptions([
+          // filter_complex 将 0 号视频流烧录字幕后命名为 [v]，再与 1 号中文音轨重新映射输出。
+          '-filter_complex', subtitleFilter,
+          '-map', '[v]',
+          '-map', '1:a:0',
+          '-c:v', 'libx264',
+          '-crf', '23',
+          '-pix_fmt', 'yuv420p',
+          '-c:a', 'aac',
+          '-movflags', '+faststart',
+          // 合成音轨可能因静音填充略长，-shortest 可避免输出尾部出现无画面或黑场。
+          '-shortest'
+        ])
+        .on('progress', (info) => {
+          const currentTime = info.timemark ? timeMarkToSeconds(info.timemark) : 0
+          const pct = Math.max(0, Math.min(100, (currentTime / duration) * 100))
+          onProgress(pct)
+        })
+        .on('end', () => {
+          onProgress(100)
+          resolve()
+        })
+        .on('error', (error) => {
+          reject(normalizeCombineError(error))
+        })
+        .save(outputPath)
+    })
+
+    return { outputPath }
   }
-
-  const duration = await getDuration(videoPath)
-  await fs.mkdir(path.dirname(outputPath), { recursive: true })
-
-  const subtitleFilter = buildSubtitleFilter(subtitlePath)
-
-  await new Promise<void>((resolve, reject) => {
-    ffmpeg()
-      .input(videoPath)
-      .input(audioPath)
-      .outputOptions([
-        // filter_complex 将 0 号视频流烧录字幕后命名为 [v]，再与 1 号中文音轨重新映射输出。
-        '-filter_complex', subtitleFilter,
-        '-map', '[v]',
-        '-map', '1:a:0',
-        '-c:v', 'libx264',
-        '-crf', '23',
-        '-pix_fmt', 'yuv420p',
-        '-c:a', 'aac',
-        '-movflags', '+faststart',
-        // 合成音轨可能因静音填充略长，-shortest 可避免输出尾部出现无画面或黑场。
-        '-shortest'
-      ])
-      .on('progress', (info) => {
-        const currentTime = info.timemark ? timeMarkToSeconds(info.timemark) : 0
-        const pct = Math.max(0, Math.min(100, (currentTime / duration) * 100))
-        onProgress(pct)
-      })
-      .on('end', () => {
-        onProgress(100)
-        resolve()
-      })
-      .on('error', (error) => {
-        reject(normalizeCombineError(error))
-      })
-      .save(outputPath)
-  })
-
-  return outputPath
 }

@@ -4,15 +4,9 @@ import { createRequire } from 'node:module'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 
-import { extractAudio } from './audio.js'
-import { combine } from './combiner.js'
 import { getConfig } from './config.js'
-import { downloadVideo } from './downloader.js'
 import { generateAss } from './subtitle.js'
-import { synthesize } from './tts.js'
-import { transcribe } from './transcriber.js'
-import { translate } from './translator.js'
-import type { AppConfig, PipelineStage, PipelineState, Segment, TranslatedSegment } from './types.js'
+import type { AppConfig, PipelineStage, PipelineState, PipelineStrategies, TranscriptSegment, TranslatedSegment } from './types.js'
 import { getVideoStorageKey } from './video-key.js'
 
 const require = createRequire(import.meta.url)
@@ -59,7 +53,7 @@ function createFingerprint(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex')
 }
 
-function isSegment(value: unknown): value is Segment {
+function isTranscriptSegment(value: unknown): value is TranscriptSegment {
   if (typeof value !== 'object' || value === null) {
     return false
   }
@@ -68,17 +62,24 @@ function isSegment(value: unknown): value is Segment {
   return (
     typeof candidate.start === 'number' &&
     typeof candidate.end === 'number' &&
-    typeof candidate.text === 'string'
+    typeof candidate.text === 'string' &&
+    typeof candidate.speaker === 'string'
   )
 }
 
 function isTranslatedSegment(value: unknown): value is TranslatedSegment {
-  if (!isSegment(value)) {
+  if (typeof value !== 'object' || value === null) {
     return false
   }
 
-  const candidate = value as { en?: unknown; cn?: unknown }
-  return typeof candidate.en === 'string' && typeof candidate.cn === 'string'
+  const candidate = value as Record<string, unknown>
+  return (
+    typeof candidate.start === 'number' &&
+    typeof candidate.end === 'number' &&
+    typeof candidate.sourceText === 'string' &&
+    typeof candidate.targetText === 'string' &&
+    typeof candidate.speaker === 'string'
+  )
 }
 
 function isCachedSegmentsFile<T>(
@@ -190,7 +191,7 @@ function getTranslationModel(config: AppConfig): string {
   }
 }
 
-function createTranslationFingerprint(segments: Segment[], config: AppConfig): string {
+function createTranslationFingerprint(segments: TranscriptSegment[], config: AppConfig): string {
   // 翻译缓存绑定转录结果和模型配置，允许转录不变时独立复用翻译阶段。
   return createFingerprint({
     segments,
@@ -239,7 +240,7 @@ export class PipelineOrchestrator {
   private cancelled: boolean
   private workDir: string
 
-  constructor() {
+  constructor(private readonly strategies: PipelineStrategies) {
     this.state = {
       stage: 'idle',
       progress: 0,
@@ -259,7 +260,9 @@ export class PipelineOrchestrator {
       await fs.mkdir(this.workDir, { recursive: true })
 
       this.assertNotCancelled()
-      const download = await this.runStep('downloading', 0, (onProgress) => downloadVideo(url, outputDir, onProgress))
+      const download = await this.runStep('downloading', 0, (onProgress) =>
+        this.strategies.downloader.download({ url, outputDir, onProgress })
+      )
       this.updateState({ videoTitle: download.title })
 
       this.assertNotCancelled()
@@ -270,69 +273,91 @@ export class PipelineOrchestrator {
           return cachedAudioPath
         }
 
-        return extractAudio(download.filePath, this.workDir, onProgress)
+        const result = await this.strategies.extractor.extract({
+          videoPath: download.videoPath,
+          outputDir: this.workDir,
+          onProgress,
+        })
+        return result.audioPath
       })
 
       this.assertNotCancelled()
-      const segments = await this.runStep('transcribing', 2, async () => {
+      const transcription = await this.runStep('transcribing', 2, async () => {
         const transcriptPath = path.join(this.workDir, 'transcript.json')
-        const transcriptFingerprint = await createTranscriptionFingerprint(download.filePath, config)
-        const cachedSegments = await readCachedSegments(transcriptPath, transcriptFingerprint, isSegment)
+        const transcriptFingerprint = await createTranscriptionFingerprint(download.videoPath, config)
+        const cachedSegments = await readCachedSegments(transcriptPath, transcriptFingerprint, isTranscriptSegment)
         if (cachedSegments) {
           this.updateProgress(2, 100)
           return cachedSegments
         }
 
-        const result = await transcribe(audioPath, config)
-        await writeCachedSegments(transcriptPath, transcriptFingerprint, result)
+        const result = await this.strategies.transcriber.transcribe({ audioPath })
+        await writeCachedSegments(transcriptPath, transcriptFingerprint, result.segments)
         this.updateProgress(2, 100)
-        return result
+        return result.segments
       })
 
       this.assertNotCancelled()
-      const translatedSegments = await this.runStep('translating', 3, async () => {
+      const translationResult = await this.runStep('translating', 3, async () => {
         const translationPath = path.join(this.workDir, 'translated_segments.json')
-        const translationFingerprint = createTranslationFingerprint(segments, config)
+        const translationFingerprint = createTranslationFingerprint(transcription, config)
         const cachedSegments = await readCachedSegments(translationPath, translationFingerprint, isTranslatedSegment)
         if (cachedSegments) {
           this.updateProgress(3, 100)
           return cachedSegments
         }
 
-        const result = await translate(segments, config)
-        await writeCachedSegments(translationPath, translationFingerprint, result)
+        const result = await this.strategies.translator.translate({
+          segments: transcription,
+          sourceLanguage: 'English',
+          targetLanguage: 'Chinese',
+        })
+        await writeCachedSegments(translationPath, translationFingerprint, result.segments)
         this.updateProgress(3, 100)
-        return result
+        return result.segments
       })
-      this.updateState({ translatedSegments })
+      this.updateState({ translatedSegments: translationResult })
 
       this.assertNotCancelled()
       const cnAudioPath = await this.runStep('synthesizing', 4, async (onProgress) => {
         const ttsCachePath = path.join(this.workDir, 'tts.json')
-        const ttsFingerprint = createTtsFingerprint(translatedSegments, config)
+        const ttsFingerprint = createTtsFingerprint(translationResult, config)
         const cachedOutput = await readCachedOutput(ttsCachePath, ttsFingerprint)
         if (cachedOutput) {
           onProgress(100)
           return cachedOutput
         }
 
-        const outputPath = await synthesize(translatedSegments, this.workDir, config, onProgress)
-        await writeCachedOutput(ttsCachePath, ttsFingerprint, outputPath)
-        return outputPath
+        const speakers = [...new Set(translationResult.map((s) => s.speaker))]
+        const result = await this.strategies.synthesizer.synthesize({
+          segments: translationResult,
+          workDir: this.workDir,
+          speakers,
+          onProgress,
+        })
+        await writeCachedOutput(ttsCachePath, ttsFingerprint, result.audioPath)
+        return result.audioPath
       })
 
       this.assertNotCancelled()
       const outputPath = await this.runStep('recombining', 5, async (onProgress) => {
-        const { width, height } = await getVideoDimensions(download.filePath)
+        const { width, height } = await getVideoDimensions(download.videoPath)
         this.assertNotCancelled()
 
-        const assContent = generateAss(translatedSegments, config.subtitleStyle, width, height)
+        const assContent = generateAss(translationResult, config.subtitleStyle, width, height)
         const subtitlePath = path.join(this.workDir, 'subtitles.ass')
         await fs.writeFile(subtitlePath, assContent, 'utf8')
         this.assertNotCancelled()
 
         const finalOutputPath = path.join(outputDir, `${sanitizeFileName(download.title)}_translated.mp4`)
-        return combine(download.filePath, cnAudioPath, subtitlePath, finalOutputPath, onProgress)
+        const result = await this.strategies.combiner.combine({
+          videoPath: download.videoPath,
+          audioPath: cnAudioPath,
+          subtitlePath,
+          outputPath: finalOutputPath,
+          onProgress,
+        })
+        return result.outputPath
       })
 
       this.assertNotCancelled()
@@ -342,7 +367,7 @@ export class PipelineOrchestrator {
         overallProgress: 100,
         videoTitle: download.title,
         outputPath,
-        translatedSegments,
+        translatedSegments: translationResult,
       })
     } catch (error) {
       this.setState({

@@ -110,8 +110,8 @@ export function generateAss(
     '[Events]',
     'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
     ...translatedSegments.flatMap((segment) => [
-      buildDialogueLine(segment.start, segment.end, 'English', segment.en, centerX, enY, bgAlpha),
-      buildDialogueLine(segment.start, segment.end, 'Chinese', segment.cn, centerX, cnY, bgAlpha),
+      buildDialogueLine(segment.start, segment.end, 'English', segment.sourceText, centerX, enY, bgAlpha),
+      buildDialogueLine(segment.start, segment.end, 'Chinese', segment.targetText, centerX, cnY, bgAlpha),
     ]),
   ]
 

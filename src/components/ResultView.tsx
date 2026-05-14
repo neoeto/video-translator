@@ -108,11 +108,11 @@ export const ResultView: React.FC = () => {
                   >
                     <div className="flex gap-4 text-on-surface-variant">
                       <span className="text-outline shrink-0">{formatTime(segment.start)}</span>
-                      <span>{segment.en}</span>
+                      <span>{segment.sourceText}</span>
                     </div>
                     <div className="flex gap-4 text-on-surface">
                       <span className="text-outline shrink-0 opacity-0">{formatTime(segment.start)}</span>
-                      <span className="text-primary-fixed-dim">{segment.cn}</span>
+                      <span className="text-primary-fixed-dim">{segment.targetText}</span>
                     </div>
                   </div>
                 ))}
