@@ -282,7 +282,7 @@ export class PipelineOrchestrator {
       })
 
       this.assertNotCancelled()
-      const transcription = await this.runStep('transcribing', 2, async () => {
+      const transcription = await this.runStep('transcribing', 2, async (onProgress) => {
         const transcriptPath = path.join(this.workDir, 'transcript.json')
         const transcriptFingerprint = await createTranscriptionFingerprint(download.videoPath, config)
         const cachedSegments = await readCachedSegments(transcriptPath, transcriptFingerprint, isTranscriptSegment)
@@ -291,14 +291,14 @@ export class PipelineOrchestrator {
           return cachedSegments
         }
 
-        const result = await this.strategies.transcriber.transcribe({ audioPath })
+        const result = await this.strategies.transcriber.transcribe({ audioPath, onProgress })
         await writeCachedSegments(transcriptPath, transcriptFingerprint, result.segments)
         this.updateProgress(2, 100)
         return result.segments
       })
 
       this.assertNotCancelled()
-      const translationResult = await this.runStep('translating', 3, async () => {
+      const translationResult = await this.runStep('translating', 3, async (onProgress) => {
         const translationPath = path.join(this.workDir, 'translated_segments.json')
         const translationFingerprint = createTranslationFingerprint(transcription, config)
         const cachedSegments = await readCachedSegments(translationPath, translationFingerprint, isTranslatedSegment)
@@ -311,6 +311,7 @@ export class PipelineOrchestrator {
           segments: transcription,
           sourceLanguage: 'English',
           targetLanguage: 'Chinese',
+          onProgress,
         })
         await writeCachedSegments(translationPath, translationFingerprint, result.segments)
         this.updateProgress(3, 100)

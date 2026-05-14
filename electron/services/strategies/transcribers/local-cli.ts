@@ -12,12 +12,13 @@ export default class LocalCliTranscriber implements TranscriberStrategy {
 
   constructor(private readonly config: AppConfig) {}
 
-  async transcribe(input: { audioPath: string }): Promise<TranscriptionResult> {
-    const { audioPath } = input
+  async transcribe(input: { audioPath: string; onProgress?: (pct: number) => void }): Promise<TranscriptionResult> {
+    const { audioPath, onProgress } = input
     const whisperPath = path.resolve(this.config.localWhisperCliPath)
     const outputDir = path.dirname(audioPath)
 
     try {
+      onProgress?.(10)
       await runWhisperCli(
         whisperPath,
         [
@@ -48,6 +49,7 @@ export default class LocalCliTranscriber implements TranscriberStrategy {
       const parsed = JSON.parse(rawContent) as WhisperCliJsonResponse
       const segments = normalizeSegments(parsed.segments)
 
+      onProgress?.(100)
       return { language: 'en', segments }
     } catch (error) {
       if (typeof error === 'object' && error !== null) {

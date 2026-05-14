@@ -126,8 +126,9 @@ export default class OpenAICompatibleTranslator implements TranslatorStrategy {
     segments: TranscriptSegment[]
     sourceLanguage: string
     targetLanguage: string
+    onProgress?: (pct: number) => void
   }): Promise<TranslationResult> {
-    const { segments, sourceLanguage, targetLanguage } = input
+    const { segments, sourceLanguage, targetLanguage, onProgress } = input
     const provider = getProviderSettings(this.config)
     const client = new OpenAI({
       apiKey: provider.apiKey,
@@ -141,9 +142,10 @@ export default class OpenAICompatibleTranslator implements TranslatorStrategy {
     const translatedSegments: TranslatedSegment[] = []
     const systemPrompt = buildSystemPrompt(sourceLanguage, targetLanguage)
 
-    for (const batch of batches) {
-      const batchTranslations = await this.translateBatch(client, batch, provider.model, systemPrompt)
+    for (let i = 0; i < batches.length; i++) {
+      const batchTranslations = await this.translateBatch(client, batches[i], provider.model, systemPrompt)
       translatedSegments.push(...batchTranslations)
+      onProgress?.(((i + 1) / batches.length) * 100)
     }
 
     return { sourceLanguage, targetLanguage, segments: translatedSegments }

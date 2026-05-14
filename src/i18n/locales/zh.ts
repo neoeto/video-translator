@@ -64,9 +64,9 @@ export const zh: Record<TranslationKey, string> = {
 
   'settings.heading': '设置',
   'settings.description': '配置处理环境和 API 集成。',
-  'settings.tabs.aiServices': 'AI 服务',
+  'settings.tabs.aiServices': '语音转文字',
   'settings.tabs.translation': '翻译',
-  'settings.tabs.tts': '语音引擎',
+  'settings.tabs.tts': '文字转语音',
   'settings.tabs.system': '系统',
   'settings.aiServices.transcriptionEngine': '转录引擎',
   'settings.aiServices.transcriptionDescription': '选择并配置用于音频提取的核心模型。',

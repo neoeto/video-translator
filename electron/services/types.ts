@@ -81,6 +81,7 @@ export interface TranscriberStrategy {
   readonly name: string
   transcribe(input: {
     audioPath: string
+    onProgress?: (pct: number) => void
   }): Promise<TranscriptionResult>
 }
 
@@ -90,6 +91,7 @@ export interface TranslatorStrategy {
     segments: TranscriptSegment[]
     sourceLanguage: string
     targetLanguage: string
+    onProgress?: (pct: number) => void
   }): Promise<TranslationResult>
 }
 

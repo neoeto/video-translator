@@ -62,9 +62,9 @@ export const en = {
 
   'settings.heading': 'Settings',
   'settings.description': 'Configure your processing environment and API integrations.',
-  'settings.tabs.aiServices': 'AI Services',
+  'settings.tabs.aiServices': 'Speech to Text',
   'settings.tabs.translation': 'Translation',
-  'settings.tabs.tts': 'TTS Engine',
+  'settings.tabs.tts': 'Text to Speech',
   'settings.tabs.system': 'System',
   'settings.aiServices.transcriptionEngine': 'Transcription Engine',
   'settings.aiServices.transcriptionDescription': 'Select and configure the core model used for audio extraction.',
