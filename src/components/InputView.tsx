@@ -12,7 +12,7 @@ export interface InputViewProps {
 }
 
 export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
-  const { config, startPipeline, isLoadingConfig } = usePipelineStore()
+  const { config, saveConfig, startPipeline, isLoadingConfig } = usePipelineStore()
   const t = useI18n((s) => s.t)
   const [url, setUrl] = useState('')
 
@@ -32,10 +32,10 @@ export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
     if (config.translateMode === 'glm' && !config.glmApiKey) {
       return { valid: false, error: t('input.validation.glmKeyRequired'), isConfigError: true }
     }
-    if (config.ttsMode === 'openai' && !config.openaiApiKey) {
+    if (config.pipelineMode !== 'subtitleOnly' && config.ttsMode === 'openai' && !config.openaiApiKey) {
       return { valid: false, error: t('input.validation.openaiTtsKeyRequired'), isConfigError: true }
     }
-    if (config.ttsMode === 'indextts' && !config.indexttsApiUrl) {
+    if (config.pipelineMode !== 'subtitleOnly' && config.ttsMode === 'indextts' && !config.indexttsApiUrl) {
       return { valid: false, error: t('input.validation.indexttsApiUrlRequired'), isConfigError: true }
     }
     if (config.transcribeMode === 'whisperx') {
@@ -77,6 +77,38 @@ export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
           {t('input.description')}
         </p>
       </div>
+
+      <div className="flex justify-center mb-6">
+        <div className="inline-flex bg-[#181818] border border-[#333333] rounded-lg p-1">
+          <button
+            type="button"
+            onClick={() => saveConfig({ pipelineMode: 'full' })}
+            className={`px-4 py-2 rounded-md text-sm font-semibold transition-all flex items-center gap-2 ${
+              config.pipelineMode !== 'subtitleOnly'
+                ? 'bg-primary text-on-primary shadow-sm'
+                : 'text-outline hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">record_voice_over</span>
+            {t('pipeline.modeFull')}
+          </button>
+          <button
+            type="button"
+            onClick={() => saveConfig({ pipelineMode: 'subtitleOnly' })}
+            className={`px-4 py-2 rounded-md text-sm font-semibold transition-all flex items-center gap-2 ${
+              config.pipelineMode === 'subtitleOnly'
+                ? 'bg-primary text-on-primary shadow-sm'
+                : 'text-outline hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">subtitles</span>
+            {t('pipeline.modeSubtitleOnly')}
+          </button>
+        </div>
+      </div>
+      <p className="text-center text-xs text-outline mb-6">
+        {config.pipelineMode === 'subtitleOnly' ? t('pipeline.modeSubtitleOnlyHelp') : t('pipeline.modeFullHelp')}
+      </p>
 
       <form onSubmit={handleSubmit} className="relative w-full max-w-2xl mx-auto">
         <div className="relative flex items-center w-full bg-[#181818] border border-[#333333] rounded-xl focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all p-1.5 sharp-shadow">

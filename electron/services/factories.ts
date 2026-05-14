@@ -19,6 +19,7 @@ import EdgeTtsSynthesizer from './strategies/synthesizers/edge-tts.js'
 import OpenAITtsSynthesizer from './strategies/synthesizers/openai-tts.js'
 import IndexTtsSynthesizer from './strategies/synthesizers/indextts.js'
 import FfmpegCombiner from './strategies/combiners/ffmpeg.js'
+import FfmpegSubtitleOnlyCombiner from './strategies/combiners/ffmpeg-subtitle-only.js'
 
 export function createDownloader(config: AppConfig): DownloaderStrategy {
   return new YtDlpDownloader(config)
@@ -56,6 +57,9 @@ export function createSynthesizer(config: AppConfig): SynthesizerStrategy {
 }
 
 export function createCombiner(config: AppConfig): CombinerStrategy {
+  if (config.pipelineMode === 'subtitleOnly') {
+    return new FfmpegSubtitleOnlyCombiner(config)
+  }
   return new FfmpegCombiner(config)
 }
 

@@ -17,7 +17,8 @@ if (typeof ffprobePath === 'string') {
   ffmpeg.setFfprobePath(ffprobePath)
 }
 
-const TOTAL_STEPS = 6
+const TOTAL_STEPS_FULL = 6
+const TOTAL_STEPS_SUBTITLE_ONLY = 5
 
 interface VideoDimensions {
   width: number
@@ -255,6 +256,7 @@ export class PipelineOrchestrator {
   private cancelled: boolean
   private abortController: AbortController | null
   private workDir: string
+  private totalSteps: number
 
   constructor(private readonly strategies: PipelineStrategies) {
     this.state = {
@@ -266,6 +268,7 @@ export class PipelineOrchestrator {
     this.cancelled = false
     this.abortController = null
     this.workDir = ''
+    this.totalSteps = TOTAL_STEPS_FULL
   }
 
   async start(url: string, outputDir: string): Promise<void> {
@@ -273,6 +276,8 @@ export class PipelineOrchestrator {
     this.abortController = new AbortController()
     this.workDir = path.join(outputDir, '.tmp', getVideoStorageKey(url))
     const config = getConfig()
+    const isSubtitleOnly = config.pipelineMode === 'subtitleOnly'
+    this.totalSteps = isSubtitleOnly ? TOTAL_STEPS_SUBTITLE_ONLY : TOTAL_STEPS_FULL
 
     try {
       await fs.mkdir(this.workDir, { recursive: true })
@@ -350,40 +355,52 @@ export class PipelineOrchestrator {
       })
       this.updateState({ translatedSegments: translationResult })
 
-      this.assertNotCancelled()
-      const synthesisResult = await this.runStep('synthesizing', 4, async (onProgress, signal) => {
-        const ttsCachePath = path.join(this.workDir, 'tts.json')
-        const ttsFingerprint = createTtsFingerprint(translationResult, config)
-        const cachedOutput = await readCachedOutput(ttsCachePath, ttsFingerprint)
-        if (cachedOutput) {
-          onProgress(100)
-          return { audioPath: cachedOutput, segmentTimings: translationResult.map(s => ({ start: s.start, end: s.end, actualDuration: s.end - s.start })) }
-        }
+      let subtitleSegments = translationResult
+      let synthesizedAudioPath: string | undefined
 
-        const speakers = [...new Set(translationResult.map((s) => s.speaker))]
-        const result = await this.strategies.synthesizer.synthesize({
-          segments: translationResult,
-          workDir: this.workDir,
-          speakers,
-          onProgress,
-          signal,
-          syncMode: config.syncMode,
+      if (isSubtitleOnly) {
+        // Subtitle-only mode: skip TTS, use original translation timestamps
+        subtitleSegments = translationResult
+      } else {
+        // Full translation mode: synthesize TTS audio
+        this.assertNotCancelled()
+        const synthesisResult = await this.runStep('synthesizing', 4, async (onProgress, signal) => {
+          const ttsCachePath = path.join(this.workDir, 'tts.json')
+          const ttsFingerprint = createTtsFingerprint(translationResult, config)
+          const cachedOutput = await readCachedOutput(ttsCachePath, ttsFingerprint)
+          if (cachedOutput) {
+            onProgress(100)
+            return { audioPath: cachedOutput, segmentTimings: translationResult.map(s => ({ start: s.start, end: s.end, actualDuration: s.end - s.start })) }
+          }
+
+          const speakers = [...new Set(translationResult.map((s) => s.speaker))]
+          const result = await this.strategies.synthesizer.synthesize({
+            segments: translationResult,
+            workDir: this.workDir,
+            speakers,
+            onProgress,
+            signal,
+            syncMode: config.syncMode,
+          })
+          await writeCachedOutput(ttsCachePath, ttsFingerprint, result.audioPath)
+          return result
         })
-        await writeCachedOutput(ttsCachePath, ttsFingerprint, result.audioPath)
-        return result
-      })
 
-      // In natural mode, adjust subtitle timestamps to match actual TTS audio timing
-      const subtitleSegments = config.syncMode === 'natural' && synthesisResult.segmentTimings.length === translationResult.length
-        ? translationResult.map((seg, i) => ({
-            ...seg,
-            start: synthesisResult.segmentTimings[i].start,
-            end: synthesisResult.segmentTimings[i].end,
-          }))
-        : translationResult
+        synthesizedAudioPath = synthesisResult.audioPath
 
+        // In natural mode, adjust subtitle timestamps to match actual TTS audio timing
+        subtitleSegments = config.syncMode === 'natural' && synthesisResult.segmentTimings.length === translationResult.length
+          ? translationResult.map((seg, i) => ({
+              ...seg,
+              start: synthesisResult.segmentTimings[i].start,
+              end: synthesisResult.segmentTimings[i].end,
+            }))
+          : translationResult
+      }
+
+      const recombineStep = isSubtitleOnly ? 4 : 5
       this.assertNotCancelled()
-      const outputPath = await this.runStep('recombining', 5, async (onProgress, signal) => {
+      const outputPath = await this.runStep('recombining', recombineStep, async (onProgress, signal) => {
         const { width, height } = await getVideoDimensions(download.videoPath)
         this.assertNotCancelled()
 
@@ -392,10 +409,11 @@ export class PipelineOrchestrator {
         await fs.writeFile(subtitlePath, assContent, 'utf8')
         this.assertNotCancelled()
 
-        const finalOutputPath = path.join(outputDir, `${sanitizeFileName(download.title)}_translated.mp4`)
+        const suffix = isSubtitleOnly ? '_subtitled' : '_translated'
+        const finalOutputPath = path.join(outputDir, `${sanitizeFileName(download.title)}${suffix}.mp4`)
         const result = await this.strategies.combiner.combine({
           videoPath: download.videoPath,
-          audioPath: synthesisResult.audioPath,
+          audioPath: synthesizedAudioPath,
           subtitlePath,
           outputPath: finalOutputPath,
           onProgress,
@@ -479,8 +497,8 @@ export class PipelineOrchestrator {
   }
 
   private calculateOverallProgress(completedSteps: number, currentStepProgress: number): number {
-    // 总进度 = 已完成阶段的均分进度 + 当前阶段在 1/TOTAL_STEPS 中的占比。
-    return (completedSteps / TOTAL_STEPS) * 100 + currentStepProgress / TOTAL_STEPS
+    // 总进度 = 已完成阶段的均分进度 + 当前阶段在 1/totalSteps 中的占比。
+    return (completedSteps / this.totalSteps) * 100 + currentStepProgress / this.totalSteps
   }
 
   private assertNotCancelled(): void {

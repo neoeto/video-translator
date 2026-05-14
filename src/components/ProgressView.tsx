@@ -3,7 +3,7 @@ import { usePipelineStore } from '../store/usePipelineStore'
 import type { PipelineStage } from '../types'
 import { useI18n } from '../i18n'
 
-const STAGES: { id: PipelineStage; nameKey: string }[] = [
+const ALL_STAGES: { id: PipelineStage; nameKey: string }[] = [
   { id: 'downloading', nameKey: 'progress.stages.downloading' },
   { id: 'extracting', nameKey: 'progress.stages.extracting' },
   { id: 'transcribing', nameKey: 'progress.stages.transcribing' },
@@ -13,8 +13,15 @@ const STAGES: { id: PipelineStage; nameKey: string }[] = [
 ]
 
 export const ProgressView: React.FC = () => {
-  const { state, cancelPipeline, reset } = usePipelineStore()
+  const { state, config, cancelPipeline, reset } = usePipelineStore()
   const t = useI18n((s) => s.t)
+
+  const STAGES = useMemo(() =>
+    config.pipelineMode === 'subtitleOnly'
+      ? ALL_STAGES.filter(s => s.id !== 'synthesizing')
+      : ALL_STAGES,
+    [config.pipelineMode]
+  )
   const currentStage = STAGES.find(s => s.id === state.stage)
   const taskId = useMemo(() => Date.now().toString().slice(-6), [])
 

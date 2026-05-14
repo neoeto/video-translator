@@ -67,6 +67,7 @@ const defaultConfig: AppConfig = {
   glmModel: 'glm-4-flash',
   ttsMode: 'edge',
   syncMode: 'natural',
+  pipelineMode: 'full',
   indexttsApiUrl: 'http://localhost:8080',
   indexttsReferenceAudio: '',
   subtitleStyle: {
@@ -165,6 +166,11 @@ const store = new Store<AppConfig>({
       enum: ['natural', 'strict'],
       default: defaultConfig.syncMode,
     },
+    pipelineMode: {
+      type: 'string',
+      enum: ['full', 'subtitleOnly'],
+      default: defaultConfig.pipelineMode,
+    },
     indexttsApiUrl: {
       type: 'string',
       default: defaultConfig.indexttsApiUrl,
@@ -222,6 +228,8 @@ export function setConfig(partial: Partial<AppConfig>): void {
     'glmApiKey',
     'glmModel',
     'ttsMode',
+    'syncMode',
+    'pipelineMode',
     'indexttsApiUrl',
     'indexttsReferenceAudio',
   ] as const
