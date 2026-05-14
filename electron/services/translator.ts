@@ -104,6 +104,7 @@ function parseAndValidateResponse(
       text: segment.text,
       en: item.en,
       cn: item.cn,
+      ...(segment.speaker ? { speaker: segment.speaker } : {}),
     }
   })
 }

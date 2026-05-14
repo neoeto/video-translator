@@ -6,7 +6,7 @@ import path from 'node:path'
 import OpenAI from 'openai'
 import { fetch as undiciFetch, ProxyAgent } from 'undici'
 import { getConfig } from './config.js'
-import type { AppConfig, TranslatedSegment } from './types.js'
+import type { AppConfig, TranslatedSegment, TtsMode } from './types.js'
 
 const require = createRequire(import.meta.url)
 const ffprobeStatic = require('ffprobe-static') as { path?: string }
@@ -27,6 +27,22 @@ ffmpeg.setFfmpegPath(ffmpegPath)
 ffmpeg.setFfprobePath(ffprobePath)
 
 const DEFAULT_VOICE = 'zh-CN-YunxiNeural'
+const EDGE_TTS_SPEAKER_VOICES: string[] = [
+  'zh-CN-YunxiNeural',
+  'zh-CN-XiaoxiaoNeural',
+  'zh-CN-YunjianNeural',
+  'zh-CN-XiaoyiNeural',
+  'zh-CN-YunyangNeural',
+  'zh-CN-XiaozhenNeural',
+]
+const OPENAI_TTS_SPEAKER_VOICES: string[] = [
+  'alloy',
+  'nova',
+  'echo',
+  'shimmer',
+  'fable',
+  'onyx',
+]
 const MAX_RATE_ADJUSTMENT = 50
 const DURATION_TOLERANCE = 0.3
 const MAX_TTS_RETRIES = 3
@@ -64,6 +80,21 @@ function isRetryableTtsError(error: unknown): boolean {
 function isRetryableEdgeTtsError(error: unknown): boolean {
   const message = toErrorMessage(error)
   return /noaudioreceived|timeout|network|connection|proxy|temporar|503|502|429|websocket|econnreset|etimedout/i.test(message)
+}
+
+function getVoiceForSpeaker(speaker: string | undefined, ttsMode: TtsMode): string {
+  if (!speaker) return DEFAULT_VOICE
+
+  const match = speaker.match(/(\d+)/)
+  if (!match) return DEFAULT_VOICE
+
+  const index = parseInt(match[1], 10)
+
+  if (ttsMode === 'openai') {
+    return OPENAI_TTS_SPEAKER_VOICES[index % OPENAI_TTS_SPEAKER_VOICES.length] || 'alloy'
+  }
+
+  return EDGE_TTS_SPEAKER_VOICES[index % EDGE_TTS_SPEAKER_VOICES.length] || DEFAULT_VOICE
 }
 
 type FfmpegCommand = ReturnType<typeof ffmpeg>
@@ -205,12 +236,18 @@ async function createSilenceFile(duration: number, outputFile: string): Promise<
   })
 }
 
-async function synthesizeEdgeTextToFile(text: string, rate: number, outputFile: string, config: AppConfig): Promise<void> {
+async function synthesizeEdgeTextToFile(
+  text: string,
+  rate: number,
+  outputFile: string,
+  config: AppConfig,
+  voice?: string,
+): Promise<void> {
   let lastError: unknown
 
   for (let attempt = 1; attempt <= MAX_TTS_RETRIES; attempt += 1) {
     try {
-      await runEdgeTtsCli(text, DEFAULT_VOICE, formatRate(rate), outputFile, config)
+      await runEdgeTtsCli(text, voice || DEFAULT_VOICE, formatRate(rate), outputFile, config)
       return
     } catch (error) {
       lastError = error
@@ -237,6 +274,7 @@ async function synthesizeOpenAITextToFile(
   text: string,
   outputFile: string,
   client: OpenAI,
+  voice: string = 'alloy',
 ): Promise<void> {
   let lastError: unknown
 
@@ -244,7 +282,7 @@ async function synthesizeOpenAITextToFile(
     try {
       const response = await client.audio.speech.create({
         model: 'tts-1',
-        voice: 'alloy',
+        voice,
         input: text,
       })
 
@@ -427,6 +465,7 @@ async function finalizeSegmentAudio(
   const baseFile = path.join(workDir, `segment-${segmentIndex}.mp3`)
   const adjustedFile = path.join(workDir, `segment-${segmentIndex}-adjusted.mp3`)
   const finalFile = path.join(workDir, `segment-${segmentIndex}-final.mp3`)
+  const voice = getVoiceForSpeaker(segment.speaker, config.ttsMode)
 
   if (!text) {
     await createSilenceFile(targetDuration, finalFile)
@@ -438,11 +477,11 @@ async function finalizeSegmentAudio(
       throw new Error('OpenAI TTS client was not initialized.')
     }
 
-    await synthesizeOpenAITextToFile(text, baseFile, openAIClient)
+    await synthesizeOpenAITextToFile(text, baseFile, openAIClient, voice)
   } else if (config.ttsMode === 'indextts') {
     await synthesizeIndexTtsTextToFile(text, baseFile, config)
   } else {
-    await synthesizeEdgeTextToFile(text, 0, baseFile, config)
+    await synthesizeEdgeTextToFile(text, 0, baseFile, config, voice)
   }
 
   let actualDuration = await probeDuration(baseFile)
@@ -451,7 +490,7 @@ async function finalizeSegmentAudio(
     // 先按原始/目标时长比例重合成，再对仍偏短的片段补静音，兼顾语速自然和时间线对齐。
     const rawRate = Math.round((actualDuration / targetDuration) * 100 - 100)
     const adjustedRate = clampRate(rawRate)
-    await synthesizeEdgeTextToFile(text, adjustedRate, adjustedFile, config)
+    await synthesizeEdgeTextToFile(text, adjustedRate, adjustedFile, config, voice)
     actualDuration = await probeDuration(adjustedFile)
 
     if (actualDuration < targetDuration - DURATION_TOLERANCE) {

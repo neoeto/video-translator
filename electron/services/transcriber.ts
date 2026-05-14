@@ -22,6 +22,10 @@ interface WhisperCliJsonResponse {
   segments?: unknown
 }
 
+interface WhisperXJsonResponse {
+  segments?: unknown
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms)
@@ -106,6 +110,7 @@ function normalizeSegments(segments: unknown): Segment[] {
       start: item.start,
       end: item.end,
       text: item.text,
+      ...(typeof item.speaker === 'string' ? { speaker: item.speaker } : {}),
     }
   })
 }
@@ -233,10 +238,71 @@ async function transcribeWithLocalCli(audioPath: string, config: AppConfig): Pro
     throw error
   }
 }
+
+async function transcribeWithWhisperX(audioPath: string, config: AppConfig): Promise<Segment[]> {
+  const whisperxPath = path.resolve(config.whisperxPath)
+  const outputDir = path.dirname(audioPath)
+
+  try {
+    const args = [
+      audioPath,
+      '--model',
+      'large-v3',
+      '--diarize',
+      '--language',
+      'en',
+      '--output_format',
+      'json',
+      '--output_dir',
+      outputDir,
+    ]
+
+    if (config.whisperxHfToken.trim()) {
+      args.splice(4, 0, '--hf_token', config.whisperxHfToken.trim())
+    }
+
+    await runWhisperCli(whisperxPath, args, outputDir)
+
+    const expectedName = `${path.parse(audioPath).name}.json`
+    const parsedPath = path.join(outputDir, expectedName)
+
+    if (!fs.existsSync(parsedPath)) {
+      const outputContents = await fs.promises.readdir(outputDir).catch(() => [] as string[])
+      const foundFiles = outputContents.length > 0
+        ? ` Found: ${outputContents.join(', ')}`
+        : ' No files found in output directory.'
+      throw new Error(
+        `WhisperX CLI did not produce expected output file "${expectedName}" in ${outputDir}.${foundFiles}` +
+          `\nWhisperX path: ${whisperxPath}\nAudio path: ${audioPath}`
+      )
+    }
+
+    const rawContent = await fs.promises.readFile(parsedPath, 'utf8')
+    const parsed = JSON.parse(rawContent) as WhisperXJsonResponse
+
+    return normalizeSegments(parsed.segments)
+  } catch (error) {
+    if (typeof error === 'object' && error !== null) {
+      const candidate = error as { code?: string; message?: string }
+      if (candidate.code === 'ENOENT') {
+        throw new Error(`WhisperX CLI not found at "${whisperxPath}". Please configure the correct path in Settings.`)
+      }
+      if (candidate.message) {
+        throw new Error(`WhisperX CLI failed: ${candidate.message}`)
+      }
+    }
+
+    throw error
+  }
+}
+
 async function transcribeOnce(audioPath: string, config: AppConfig): Promise<Segment[]> {
-  // 三种模式中 local-cli 走进程调用，openai 和 local-api 共享 OpenAI-compatible HTTP 路径。
   if (config.transcribeMode === 'local-cli') {
     return transcribeWithLocalCli(audioPath, config)
+  }
+
+  if (config.transcribeMode === 'whisperx') {
+    return transcribeWithWhisperX(audioPath, config)
   }
 
   return transcribeWithOpenAICompatibleApi(audioPath, config)

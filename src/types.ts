@@ -13,6 +13,7 @@ export interface Segment {
   start: number
   end: number
   text: string
+  speaker?: string
 }
 
 export interface TranslatedSegment extends Segment {
@@ -42,7 +43,7 @@ export interface SubtitleStyle {
   fontFamily: string
 }
 
-export type TranscribeMode = 'openai' | 'local-api' | 'local-cli'
+export type TranscribeMode = 'openai' | 'local-api' | 'local-cli' | 'whisperx'
 export type TranslateMode = 'openai' | 'deepseek' | 'glm'
 export type TtsMode = 'edge' | 'openai' | 'indextts'
 export type Locale = 'en' | 'zh'
@@ -57,6 +58,8 @@ export interface AppConfig {
   transcribeMode: TranscribeMode
   localWhisperApiUrl: string
   localWhisperCliPath: string
+  whisperxPath: string
+  whisperxHfToken: string
   translateMode: TranslateMode
   openaiModel: string
   deepseekApiKey: string

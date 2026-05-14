@@ -28,6 +28,26 @@ function detectWhisperPath(): string {
   return 'whisper'
 }
 
+function detectWhisperxPath(): string {
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url))
+  const projectRoot = path.resolve(moduleDir, '..', '..', '..')
+  const venvWhisperx = path.join(projectRoot, '.venv', 'bin', 'whisperx')
+  if (fs.existsSync(venvWhisperx)) {
+    return venvWhisperx
+  }
+
+  try {
+    const whichResult = execSync('which whisperx', { encoding: 'utf8', timeout: 3000 }).trim()
+    if (whichResult && fs.existsSync(whichResult)) {
+      return whichResult
+    }
+  } catch {
+    // not found on PATH
+  }
+
+  return 'whisperx'
+}
+
 const defaultConfig: AppConfig = {
   locale: 'en',
   openaiApiKey: '',
@@ -37,6 +57,8 @@ const defaultConfig: AppConfig = {
   transcribeMode: 'openai',
   localWhisperApiUrl: 'http://localhost:9000',
   localWhisperCliPath: detectWhisperPath(),
+  whisperxPath: detectWhisperxPath(),
+  whisperxHfToken: '',
   translateMode: 'openai',
   openaiModel: 'gpt-4o',
   deepseekApiKey: '',
@@ -88,7 +110,7 @@ const store = new Store<AppConfig>({
     },
     transcribeMode: {
       type: 'string',
-      enum: ['openai', 'local-api', 'local-cli'],
+      enum: ['openai', 'local-api', 'local-cli', 'whisperx'],
       default: defaultConfig.transcribeMode,
     },
     localWhisperApiUrl: {
@@ -98,6 +120,14 @@ const store = new Store<AppConfig>({
     localWhisperCliPath: {
       type: 'string',
       default: defaultConfig.localWhisperCliPath,
+    },
+    whisperxPath: {
+      type: 'string',
+      default: defaultConfig.whisperxPath,
+    },
+    whisperxHfToken: {
+      type: 'string',
+      default: defaultConfig.whisperxHfToken,
     },
     translateMode: {
       type: 'string',
@@ -177,6 +207,8 @@ export function setConfig(partial: Partial<AppConfig>): void {
     'transcribeMode',
     'localWhisperApiUrl',
     'localWhisperCliPath',
+    'whisperxPath',
+    'whisperxHfToken',
     'translateMode',
     'openaiModel',
     'deepseekApiKey',

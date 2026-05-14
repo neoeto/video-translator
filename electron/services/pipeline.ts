@@ -174,6 +174,8 @@ async function createTranscriptionFingerprint(videoPath: string, config: AppConf
     transcribeMode: config.transcribeMode,
     localWhisperApiUrl: config.localWhisperApiUrl,
     localWhisperCliPath: config.localWhisperCliPath,
+    whisperxPath: config.whisperxPath,
+    whisperxHfToken: config.whisperxHfToken,
   })
 }
 

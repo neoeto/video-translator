@@ -38,6 +38,14 @@ export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
     if (config.ttsMode === 'indextts' && !config.indexttsApiUrl) {
       return { valid: false, error: t('input.validation.indexttsApiUrlRequired'), isConfigError: true }
     }
+    if (config.transcribeMode === 'whisperx') {
+      if (!config.whisperxPath) {
+        return { valid: false, error: t('input.validation.whisperxPathRequired'), isConfigError: true }
+      }
+      if (!config.whisperxHfToken) {
+        return { valid: false, error: t('input.validation.whisperxHfTokenRequired'), isConfigError: true }
+      }
+    }
 
     return { valid: true, error: null, isConfigError: false }
   }

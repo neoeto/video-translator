@@ -34,6 +34,8 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
     transcribeMode: 'openai' as const,
     localWhisperApiUrl: 'http://localhost:9000',
     localWhisperCliPath: 'whisper',
+    whisperxPath: 'whisperx',
+    whisperxHfToken: '',
     translateMode: 'openai' as const,
     openaiModel: 'gpt-4o',
     deepseekApiKey: '',

@@ -107,6 +107,16 @@ export const SettingsView: React.FC = () => {
                   >
                     {t('settings.aiServices.localCli')}
                   </button>
+                  <button
+                    onClick={() => saveConfig({ transcribeMode: 'whisperx' })}
+                    className={`flex-1 py-2 px-4 rounded-md text-[13px] font-semibold transition-all ${
+                      config.transcribeMode === 'whisperx'
+                        ? 'bg-surface-variant text-on-surface shadow-sm border border-outline-variant/50'
+                        : 'text-on-surface-variant hover:text-on-surface'
+                    }`}
+                  >
+                    {t('settings.aiServices.whisperx')}
+                  </button>
                 </div>
               </div>
 
@@ -169,6 +179,41 @@ export const SettingsView: React.FC = () => {
                       placeholder="whisper"
                       className="w-full bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono text-xs focus:border-primary focus:outline-none transition-colors"
                     />
+                  </div>
+                </div>
+              )}
+
+              {config.transcribeMode === 'whisperx' && (
+                <div className="space-y-4 max-w-2xl">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-on-surface-variant mb-2 uppercase tracking-wider">
+                      {t('settings.aiServices.whisperxPath')}
+                    </label>
+                    <input
+                      type="text"
+                      value={config.whisperxPath || ''}
+                      onChange={(e) => saveConfig({ whisperxPath: e.target.value })}
+                      placeholder="whisperx"
+                      className="w-full bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono text-xs focus:border-primary focus:outline-none transition-colors"
+                    />
+                    <p className="text-[12px] text-on-surface-variant mt-1">
+                      {t('settings.aiServices.whisperxPathHelp')}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-on-surface-variant mb-2 uppercase tracking-wider">
+                      {t('settings.aiServices.whisperxHfToken')}
+                    </label>
+                    <input
+                      type="password"
+                      value={config.whisperxHfToken || ''}
+                      onChange={(e) => saveConfig({ whisperxHfToken: e.target.value })}
+                      placeholder="hf_xxxxxxxxxxxxxxxx"
+                      className="w-full bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono text-xs focus:border-primary focus:outline-none transition-colors"
+                    />
+                    <p className="text-[12px] text-on-surface-variant mt-1">
+                      {t('settings.aiServices.whisperxHfTokenHelp')}
+                    </p>
                   </div>
                 </div>
               )}
