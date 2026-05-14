@@ -442,6 +442,37 @@ export const SettingsView: React.FC = () => {
                     </div>
                   </div>
                 )}
+
+                <div className="mt-6 pt-6 border-t border-outline-variant/30">
+                  <label className="block text-[11px] font-semibold text-on-surface-variant mb-2 uppercase tracking-wider">
+                    {t('settings.tts.syncMode')}
+                  </label>
+                  <div className="flex bg-surface-container-lowest rounded-lg p-1 border border-outline-variant/50">
+                    <button
+                      onClick={() => saveConfig({ syncMode: 'natural' })}
+                      className={`flex-1 py-2 px-4 rounded-md text-[13px] font-semibold transition-all ${
+                        config.syncMode === 'natural' || !config.syncMode
+                          ? 'bg-surface-variant text-on-surface shadow-sm border border-outline-variant/50'
+                          : 'text-on-surface-variant hover:text-on-surface'
+                      }`}
+                    >
+                      {t('settings.tts.syncNatural')}
+                    </button>
+                    <button
+                      onClick={() => saveConfig({ syncMode: 'strict' })}
+                      className={`flex-1 py-2 px-4 rounded-md text-[13px] font-semibold transition-all ${
+                        config.syncMode === 'strict'
+                          ? 'bg-surface-variant text-on-surface shadow-sm border border-outline-variant/50'
+                          : 'text-on-surface-variant hover:text-on-surface'
+                      }`}
+                    >
+                      {t('settings.tts.syncStrict')}
+                    </button>
+                  </div>
+                  <p className="text-[12px] text-on-surface-variant mt-2">
+                    {config.syncMode === 'strict' ? t('settings.tts.syncStrictHelp') : t('settings.tts.syncNaturalHelp')}
+                  </p>
+                </div>
               </div>
             </section>
           )}

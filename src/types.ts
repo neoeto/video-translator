@@ -51,6 +51,7 @@ export interface SubtitleStyle {
 export type TranscribeMode = 'openai' | 'local-api' | 'local-cli' | 'whisperx'
 export type TranslateMode = 'openai' | 'deepseek' | 'glm'
 export type TtsMode = 'edge' | 'openai' | 'indextts'
+export type SyncMode = 'natural' | 'strict'
 export type Locale = 'en' | 'zh'
 
 export interface AppConfig {
@@ -72,6 +73,7 @@ export interface AppConfig {
   glmApiKey: string
   glmModel: string
   ttsMode: TtsMode
+  syncMode: SyncMode
   indexttsApiUrl: string
   indexttsReferenceAudio: string
 }

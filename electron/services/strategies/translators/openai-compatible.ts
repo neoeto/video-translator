@@ -31,8 +31,8 @@ function chunkSegments(segments: TranscriptSegment[]): TranscriptSegment[][] {
   return batches
 }
 
-function buildSystemPrompt(sourceLanguage: string, targetLanguage: string): string {
-  return `You are a professional ${sourceLanguage}-to-${targetLanguage} translator specializing in video content.
+function buildSystemPrompt(sourceLanguage: string, targetLanguage: string, strictSync = false): string {
+  const base = `You are a professional ${sourceLanguage}-to-${targetLanguage} translator specializing in video content.
 Translate each segment naturally and fluently into ${targetLanguage}.
 Return a JSON object with a "translations" array where each element has:
 - "sourceText": the original ${sourceLanguage} text (exact copy)
@@ -41,6 +41,12 @@ Return a JSON object with a "translations" array where each element has:
 - "end": the end timestamp (exact copy)
 Maintain the exact same array order. Handle colloquialisms, slang, and technical terms appropriately.
 Do NOT add any extra text, explanations, or notes — only return the JSON.`
+
+  if (strictSync) {
+    return base + `\n\nIMPORTANT: Each segment has a "duration" field (in seconds). The translated text will be synthesized as speech that must fit within this duration. Adjust translation length so that the ${targetLanguage} speech duration roughly matches the original. As a guideline, approximately 4 Chinese characters per second of speech. Prioritize natural translation, but avoid overly long or short translations relative to the duration.`
+  }
+
+  return base
 }
 
 function isTranslationResponseItem(value: unknown): value is TranslationResponseItem {
@@ -128,8 +134,10 @@ export default class OpenAICompatibleTranslator implements TranslatorStrategy {
     targetLanguage: string
     onProgress?: (pct: number) => void
     signal?: AbortSignal
+    syncMode?: import('../../types.js').SyncMode
   }): Promise<TranslationResult> {
-    const { segments, sourceLanguage, targetLanguage, onProgress, signal } = input
+    const { segments, sourceLanguage, targetLanguage, onProgress, signal, syncMode } = input
+    const strictSync = syncMode === 'strict'
     const provider = getProviderSettings(this.config)
     const client = new OpenAI({
       apiKey: provider.apiKey,
@@ -141,11 +149,11 @@ export default class OpenAICompatibleTranslator implements TranslatorStrategy {
 
     const batches = chunkSegments(segments)
     const translatedSegments: TranslatedSegment[] = []
-    const systemPrompt = buildSystemPrompt(sourceLanguage, targetLanguage)
+    const systemPrompt = buildSystemPrompt(sourceLanguage, targetLanguage, strictSync)
 
     for (let i = 0; i < batches.length; i++) {
       if (signal?.aborted) throw new Error('Pipeline cancelled')
-      const batchTranslations = await this.translateBatch(client, batches[i], provider.model, systemPrompt)
+      const batchTranslations = await this.translateBatch(client, batches[i], provider.model, systemPrompt, strictSync)
       translatedSegments.push(...batchTranslations)
       onProgress?.(((i + 1) / batches.length) * 100)
     }
@@ -157,9 +165,15 @@ export default class OpenAICompatibleTranslator implements TranslatorStrategy {
     client: OpenAI,
     segments: TranscriptSegment[],
     model: string,
-    systemPrompt: string
+    systemPrompt: string,
+    strictSync = false,
   ): Promise<TranslatedSegment[]> {
     let lastError: unknown
+
+    // In strict sync mode, include duration for each segment so LLM can control translation length
+    const userContent = strictSync
+      ? JSON.stringify({ segments: segments.map(s => ({ ...s, duration: +(s.end - s.start).toFixed(2) })) })
+      : JSON.stringify({ segments })
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt += 1) {
       try {
@@ -168,7 +182,7 @@ export default class OpenAICompatibleTranslator implements TranslatorStrategy {
           response_format: { type: 'json_object' },
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: JSON.stringify({ segments }) },
+            { role: 'user', content: userContent },
           ],
         })
 

@@ -2,7 +2,7 @@ import ffmpeg from 'fluent-ffmpeg'
 import { createRequire } from 'node:module'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import type { TranslatedSegment } from '../../types.js'
+import type { SyncMode, TranslatedSegment } from '../../types.js'
 
 const require = createRequire(import.meta.url)
 const ffprobeStatic = require('ffprobe-static') as { path?: string }
@@ -125,9 +125,110 @@ export async function concatAudioFiles(filePaths: string[], outputFile: string, 
   })
 }
 
+// ffmpeg atempo filter range is [0.5, 2.0]; chain multiple filters for rates outside that range
+const ATEMPO_MIN = 0.5
+const ATEMPO_MAX = 2.0
+
+export function buildAtempoFilter(playbackRate: number): string {
+  const filters: number[] = []
+  let remainingRate = playbackRate
+
+  while (remainingRate > ATEMPO_MAX) {
+    filters.push(ATEMPO_MAX)
+    remainingRate /= ATEMPO_MAX
+  }
+  while (remainingRate < ATEMPO_MIN) {
+    filters.push(ATEMPO_MIN)
+    remainingRate /= ATEMPO_MIN
+  }
+
+  filters.push(remainingRate)
+  return filters.map((rate) => `atempo=${rate.toFixed(6)}`).join(',')
+}
+
+export async function adjustAudioTempo(
+  inputFile: string,
+  outputFile: string,
+  actualDuration: number,
+  targetDuration: number,
+): Promise<void> {
+  const playbackRate = actualDuration / targetDuration
+  await runFfmpeg((command) => {
+    command
+      .input(inputFile)
+      .audioFilters(buildAtempoFilter(playbackRate))
+      .audioCodec('libmp3lame')
+      .format('mp3')
+      .output(outputFile)
+  })
+}
+
+// Natural mode: comfortable speed range — beyond this, speech sounds unnatural
+const NATURAL_MIN_RATE = 0.77
+const NATURAL_MAX_RATE = 1.3
+
+export interface SegmentTiming {
+  start: number
+  end: number
+  actualDuration: number
+}
+
+export interface TimelineResult {
+  audioPath: string
+  segmentTimings: SegmentTiming[]
+}
+
 /**
- * Assembles per-segment audio files into a single timeline with leading silence and gap fillers.
- * The `synthesizeSegment` callback handles engine-specific TTS and duration adjustment.
+ * Adjust a TTS segment's duration to match the target window.
+ * - strict mode: force-fit to exact target via atempo + pad
+ * - natural mode: adjust within comfortable range, accept remaining difference
+ * Returns the path to the adjusted file and its actual duration.
+ */
+async function adjustSegmentDuration(
+  rawFile: string,
+  index: number,
+  workDir: string,
+  targetDuration: number,
+  syncMode: SyncMode,
+): Promise<{ file: string; duration: number }> {
+  const actualDuration = await probeDuration(rawFile)
+
+  if (Math.abs(actualDuration - targetDuration) <= DURATION_TOLERANCE) {
+    return { file: rawFile, duration: actualDuration }
+  }
+
+  const ratio = actualDuration / targetDuration
+  const adjustedFile = path.join(workDir, `segment-${index}-adjusted.mp3`)
+  const finalFile = path.join(workDir, `segment-${index}-final.mp3`)
+
+  if (syncMode === 'strict') {
+    // Strict: force to exact target duration
+    await adjustAudioTempo(rawFile, adjustedFile, actualDuration, targetDuration)
+    const adjustedDuration = await probeDuration(adjustedFile)
+    if (adjustedDuration < targetDuration - DURATION_TOLERANCE) {
+      await padAudioToDuration(adjustedFile, finalFile, targetDuration)
+      return { file: finalFile, duration: targetDuration }
+    }
+    return { file: adjustedFile, duration: adjustedDuration }
+  }
+
+  // Natural: clamp speed to comfortable range
+  const clampedRate = Math.max(NATURAL_MIN_RATE, Math.min(NATURAL_MAX_RATE, ratio))
+  if (Math.abs(clampedRate - 1.0) < 0.02) {
+    // Rate is essentially 1x, no adjustment needed
+    return { file: rawFile, duration: actualDuration }
+  }
+
+  const adjustedTarget = actualDuration / clampedRate
+  await adjustAudioTempo(rawFile, adjustedFile, actualDuration, adjustedTarget)
+  const adjustedDuration = await probeDuration(adjustedFile)
+  return { file: adjustedFile, duration: adjustedDuration }
+}
+
+/**
+ * Assembles per-segment audio files into a single timeline with leading silence and
+ * compensating gap fillers. Uses sync mode to determine duration adjustment behavior.
+ * Returns the output audio path and per-segment actual timing information.
  */
 export async function buildTimeline(
   segments: TranslatedSegment[],
@@ -135,41 +236,60 @@ export async function buildTimeline(
   synthesizeSegment: (segment: TranslatedSegment, index: number, workDir: string) => Promise<string>,
   onProgress: (pct: number) => void,
   signal?: AbortSignal,
-): Promise<string> {
+  syncMode: SyncMode = 'natural',
+): Promise<TimelineResult> {
   const outputPath = path.join(workDir, '..', 'cn_audio.mp3')
 
   if (segments.length === 0) {
     await createSilenceFile(0.1, outputPath)
     onProgress(100)
-    return outputPath
+    return { audioPath: outputPath, segmentTimings: [] }
   }
 
   const files: string[] = []
+  const segmentTimings: SegmentTiming[] = []
+  let cumulativePosition = 0
 
   for (let index = 0; index < segments.length; index += 1) {
     if (signal?.aborted) throw new Error('Pipeline cancelled')
     const segment = segments[index]
-    const segmentFile = await synthesizeSegment(segment, index, workDir)
+    const rawFile = await synthesizeSegment(segment, index, workDir)
 
+    const targetDuration = Math.max(0.05, segment.end - segment.start)
+    const { file: adjustedFile, duration: actualDuration } = await adjustSegmentDuration(
+      rawFile, index, workDir, targetDuration, syncMode
+    )
+
+    // Leading silence before first segment
     if (index === 0 && segment.start > 0) {
-      // 首段前导静音保留原视频开头空白，避免中文音轨整体提前。
       const leadingSilence = path.join(workDir, 'leading-silence.mp3')
       await createSilenceFile(segment.start, leadingSilence)
       files.push(leadingSilence)
+      cumulativePosition = segment.start
     }
 
-    files.push(segmentFile)
-
-    const next = segments[index + 1]
-    if (next) {
-      const gap = next.start - segment.end
-      if (gap > DURATION_TOLERANCE) {
-        // 段落间隔用静音占位，防止拼接后的语音压缩掉原始停顿节奏。
+    // Compensating gap: place segment at its original start time, adjusting for drift
+    if (index > 0) {
+      const expectedGap = segment.start - cumulativePosition
+      if (expectedGap > DURATION_TOLERANCE) {
         const gapFile = path.join(workDir, `gap-${index}.mp3`)
-        await createSilenceFile(gap, gapFile)
+        await createSilenceFile(expectedGap, gapFile)
         files.push(gapFile)
+        cumulativePosition += expectedGap
+      } else if (expectedGap < -DURATION_TOLERANCE) {
+        // Previous segment overran; no gap to insert, accept minor overlap
       }
     }
+
+    const segStart = cumulativePosition
+    files.push(adjustedFile)
+    cumulativePosition += actualDuration
+
+    segmentTimings.push({
+      start: segStart,
+      end: segStart + actualDuration,
+      actualDuration,
+    })
 
     onProgress(((index + 1) / segments.length) * 100)
   }
@@ -181,5 +301,5 @@ export async function buildTimeline(
   }
 
   onProgress(100)
-  return outputPath
+  return { audioPath: outputPath, segmentTimings }
 }

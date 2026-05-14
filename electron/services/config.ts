@@ -66,6 +66,7 @@ const defaultConfig: AppConfig = {
   glmApiKey: '',
   glmModel: 'glm-4-flash',
   ttsMode: 'edge',
+  syncMode: 'natural',
   indexttsApiUrl: 'http://localhost:8080',
   indexttsReferenceAudio: '',
   subtitleStyle: {
@@ -158,6 +159,11 @@ const store = new Store<AppConfig>({
       type: 'string',
       enum: ['edge', 'openai', 'indextts'],
       default: defaultConfig.ttsMode,
+    },
+    syncMode: {
+      type: 'string',
+      enum: ['natural', 'strict'],
+      default: defaultConfig.syncMode,
     },
     indexttsApiUrl: {
       type: 'string',

@@ -51,6 +51,7 @@ export interface AudioResult {
 
 export interface SynthesisResult {
   audioPath: string
+  segmentTimings: { start: number; end: number; actualDuration: number }[]
 }
 
 export interface CombineResult {
@@ -96,6 +97,7 @@ export interface TranslatorStrategy {
     targetLanguage: string
     onProgress?: (pct: number) => void
     signal?: AbortSignal
+    syncMode?: SyncMode
   }): Promise<TranslationResult>
 }
 
@@ -107,6 +109,7 @@ export interface SynthesizerStrategy {
     speakers: string[]
     onProgress: (pct: number) => void
     signal?: AbortSignal
+    syncMode?: SyncMode
   }): Promise<SynthesisResult>
 }
 
@@ -164,6 +167,7 @@ export interface SubtitleStyle {
 export type TranscribeMode = 'openai' | 'local-api' | 'local-cli' | 'whisperx'
 export type TranslateMode = 'openai' | 'deepseek' | 'glm'
 export type TtsMode = 'edge' | 'openai' | 'indextts'
+export type SyncMode = 'natural' | 'strict'
 export type Locale = 'en' | 'zh'
 
 export interface ProxyConfig {
@@ -190,6 +194,7 @@ export interface AppConfig {
   glmApiKey: string
   glmModel: string
   ttsMode: TtsMode
+  syncMode: SyncMode
   indexttsApiUrl: string
   indexttsReferenceAudio: string
 }

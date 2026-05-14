@@ -192,19 +192,19 @@ function getTranslationModel(config: AppConfig): string {
 }
 
 function createTranslationFingerprint(segments: TranscriptSegment[], config: AppConfig): string {
-  // 翻译缓存绑定转录结果和模型配置，允许转录不变时独立复用翻译阶段。
   return createFingerprint({
     segments,
     translateMode: config.translateMode,
     model: getTranslationModel(config),
+    syncMode: config.syncMode,
   })
 }
 
 function createTtsFingerprint(translatedSegments: TranslatedSegment[], config: AppConfig): string {
-  // TTS 只依赖译文和合成引擎，独立指纹可让下游失败后跳过昂贵的语音合成。
   return createFingerprint({
     translatedSegments,
     ttsMode: config.ttsMode,
+    syncMode: config.syncMode,
   })
 }
 
@@ -342,6 +342,7 @@ export class PipelineOrchestrator {
           targetLanguage: 'Chinese',
           onProgress,
           signal,
+          syncMode: config.syncMode,
         })
         await writeCachedSegments(translationPath, translationFingerprint, result.segments)
         this.updateProgress(3, 100)
@@ -350,13 +351,13 @@ export class PipelineOrchestrator {
       this.updateState({ translatedSegments: translationResult })
 
       this.assertNotCancelled()
-      const cnAudioPath = await this.runStep('synthesizing', 4, async (onProgress, signal) => {
+      const synthesisResult = await this.runStep('synthesizing', 4, async (onProgress, signal) => {
         const ttsCachePath = path.join(this.workDir, 'tts.json')
         const ttsFingerprint = createTtsFingerprint(translationResult, config)
         const cachedOutput = await readCachedOutput(ttsCachePath, ttsFingerprint)
         if (cachedOutput) {
           onProgress(100)
-          return cachedOutput
+          return { audioPath: cachedOutput, segmentTimings: translationResult.map(s => ({ start: s.start, end: s.end, actualDuration: s.end - s.start })) }
         }
 
         const speakers = [...new Set(translationResult.map((s) => s.speaker))]
@@ -366,17 +367,27 @@ export class PipelineOrchestrator {
           speakers,
           onProgress,
           signal,
+          syncMode: config.syncMode,
         })
         await writeCachedOutput(ttsCachePath, ttsFingerprint, result.audioPath)
-        return result.audioPath
+        return result
       })
+
+      // In natural mode, adjust subtitle timestamps to match actual TTS audio timing
+      const subtitleSegments = config.syncMode === 'natural' && synthesisResult.segmentTimings.length === translationResult.length
+        ? translationResult.map((seg, i) => ({
+            ...seg,
+            start: synthesisResult.segmentTimings[i].start,
+            end: synthesisResult.segmentTimings[i].end,
+          }))
+        : translationResult
 
       this.assertNotCancelled()
       const outputPath = await this.runStep('recombining', 5, async (onProgress, signal) => {
         const { width, height } = await getVideoDimensions(download.videoPath)
         this.assertNotCancelled()
 
-        const assContent = generateAss(translationResult, config.subtitleStyle, width, height)
+        const assContent = generateAss(subtitleSegments, config.subtitleStyle, width, height)
         const subtitlePath = path.join(this.workDir, 'subtitles.ass')
         await fs.writeFile(subtitlePath, assContent, 'utf8')
         this.assertNotCancelled()
@@ -384,7 +395,7 @@ export class PipelineOrchestrator {
         const finalOutputPath = path.join(outputDir, `${sanitizeFileName(download.title)}_translated.mp4`)
         const result = await this.strategies.combiner.combine({
           videoPath: download.videoPath,
-          audioPath: cnAudioPath,
+          audioPath: synthesisResult.audioPath,
           subtitlePath,
           outputPath: finalOutputPath,
           onProgress,

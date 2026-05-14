@@ -41,20 +41,22 @@ export default class OpenAITtsSynthesizer implements SynthesizerStrategy {
     speakers: string[]
     onProgress: (pct: number) => void
     signal?: AbortSignal
+    syncMode?: import('../../types.js').SyncMode
   }): Promise<SynthesisResult> {
-    const { segments, workDir, onProgress, signal } = input
+    const { segments, workDir, onProgress, signal, syncMode } = input
     const ttsWorkDir = path.join(workDir, '.tts-temp')
     await fs.mkdir(ttsWorkDir, { recursive: true })
 
     try {
-      const audioPath = await buildTimeline(
+      const result = await buildTimeline(
         segments,
         ttsWorkDir,
         async (segment, index, wd) => this.synthesizeSegment(segment, index, wd),
         onProgress,
-        signal
+        signal,
+        syncMode,
       )
-      return { audioPath }
+      return { audioPath: result.audioPath, segmentTimings: result.segmentTimings }
     } catch (error) {
       throw new Error(`Failed to synthesize audio: ${toErrorMessage(error)}`)
     } finally {

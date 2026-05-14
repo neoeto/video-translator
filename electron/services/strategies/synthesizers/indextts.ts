@@ -3,48 +3,12 @@ import path from 'node:path'
 import { fetch as undiciFetch, ProxyAgent } from 'undici'
 import type { AppConfig, SynthesizerStrategy, SynthesisResult, TranslatedSegment } from '../../types.js'
 import {
-  buildTimeline, createSilenceFile, probeDuration, padAudioToDuration,
-  runFfmpeg, sleep, toErrorMessage, isRetryableTtsError,
-  DURATION_TOLERANCE, MAX_TTS_RETRIES, INITIAL_TTS_BACKOFF_MS,
+  buildTimeline, createSilenceFile, runFfmpeg,
+  sleep, toErrorMessage, isRetryableTtsError,
+  MAX_TTS_RETRIES, INITIAL_TTS_BACKOFF_MS,
 } from './tts-helpers.js'
 
 const INDEXTTS_DEFAULT_API_URL = 'http://localhost:8080'
-const INDEXTTS_ATEMPO_MIN = 0.5
-const INDEXTTS_ATEMPO_MAX = 2
-
-function buildAtempoFilter(playbackRate: number): string {
-  const filters: number[] = []
-  let remainingRate = playbackRate
-
-  while (remainingRate > INDEXTTS_ATEMPO_MAX) {
-    filters.push(INDEXTTS_ATEMPO_MAX)
-    remainingRate /= INDEXTTS_ATEMPO_MAX
-  }
-  while (remainingRate < INDEXTTS_ATEMPO_MIN) {
-    filters.push(INDEXTTS_ATEMPO_MIN)
-    remainingRate /= INDEXTTS_ATEMPO_MIN
-  }
-
-  filters.push(remainingRate)
-  return filters.map((rate) => `atempo=${rate.toFixed(6)}`).join(',')
-}
-
-async function adjustAudioTempoToDuration(
-  inputFile: string,
-  outputFile: string,
-  actualDuration: number,
-  targetDuration: number
-): Promise<void> {
-  const playbackRate = actualDuration / targetDuration
-  await runFfmpeg((command) => {
-    command
-      .input(inputFile)
-      .audioFilters(buildAtempoFilter(playbackRate))
-      .audioCodec('libmp3lame')
-      .format('mp3')
-      .output(outputFile)
-  })
-}
 
 function isMp3Response(contentType: string, outputFile: string): boolean {
   return /audio\/mpeg|audio\/mp3/i.test(contentType) || outputFile.toLowerCase().endsWith('.mp3')
@@ -71,20 +35,22 @@ export default class IndexTtsSynthesizer implements SynthesizerStrategy {
     speakers: string[]
     onProgress: (pct: number) => void
     signal?: AbortSignal
+    syncMode?: import('../../types.js').SyncMode
   }): Promise<SynthesisResult> {
-    const { segments, workDir, onProgress, signal } = input
+    const { segments, workDir, onProgress, signal, syncMode } = input
     const ttsWorkDir = path.join(workDir, '.tts-temp')
     await fs.mkdir(ttsWorkDir, { recursive: true })
 
     try {
-      const audioPath = await buildTimeline(
+      const result = await buildTimeline(
         segments,
         ttsWorkDir,
         async (segment, index, wd) => this.synthesizeSegment(segment, index, wd),
         onProgress,
-        signal
+        signal,
+        syncMode,
       )
-      return { audioPath }
+      return { audioPath: result.audioPath, segmentTimings: result.segmentTimings }
     } catch (error) {
       throw new Error(`Failed to synthesize audio: ${toErrorMessage(error)}`)
     } finally {
@@ -95,32 +61,15 @@ export default class IndexTtsSynthesizer implements SynthesizerStrategy {
   private async synthesizeSegment(segment: TranslatedSegment, index: number, workDir: string): Promise<string> {
     const targetDuration = Math.max(0.05, segment.end - segment.start)
     const text = segment.targetText.trim() || segment.sourceText.trim()
-    const baseFile = path.join(workDir, `segment-${index}.mp3`)
-    const adjustedFile = path.join(workDir, `segment-${index}-adjusted.mp3`)
-    const finalFile = path.join(workDir, `segment-${index}-final.mp3`)
+    const rawFile = path.join(workDir, `segment-${index}-raw.mp3`)
 
     if (!text) {
-      await createSilenceFile(targetDuration, finalFile)
-      return finalFile
+      await createSilenceFile(targetDuration, rawFile)
+      return rawFile
     }
 
-    await this.synthesizeToFile(text, baseFile)
-    const actualDuration = await probeDuration(baseFile)
-
-    if (Math.abs(actualDuration - targetDuration) > DURATION_TOLERANCE) {
-      await adjustAudioTempoToDuration(baseFile, adjustedFile, actualDuration, targetDuration)
-      const adjustedDuration = await probeDuration(adjustedFile)
-
-      if (adjustedDuration < targetDuration - DURATION_TOLERANCE) {
-        await padAudioToDuration(adjustedFile, finalFile, targetDuration)
-      } else {
-        await fs.copyFile(adjustedFile, finalFile)
-      }
-    } else {
-      await fs.copyFile(baseFile, finalFile)
-    }
-
-    return finalFile
+    await this.synthesizeToFile(text, rawFile)
+    return rawFile
   }
 
   private async synthesizeToFile(text: string, outputFile: string): Promise<void> {
