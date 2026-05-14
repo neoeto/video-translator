@@ -31,6 +31,8 @@ export interface PipelineState {
   videoTitle?: string
   error?: string
   outputPath?: string
+  thumbnailDataUrl?: string
+  completedAt?: number
   translatedSegments?: TranslatedSegment[]
 }
 

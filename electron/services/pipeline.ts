@@ -234,6 +234,21 @@ function getVideoDimensions(videoPath: string): Promise<VideoDimensions> {
   })
 }
 
+function generateThumbnail(videoPath: string, outputPath: string): Promise<void> {
+  return new Promise((resolve) => {
+    ffmpeg(videoPath)
+      .screenshots({
+        count: 1,
+        timemarks: ['00:00:03'],
+        folder: path.dirname(outputPath),
+        filename: path.basename(outputPath),
+        size: '640x?',
+      })
+      .on('end', () => resolve())
+      .on('error', () => resolve()) // Non-critical: silently skip if thumbnail fails
+  })
+}
+
 export class PipelineOrchestrator {
   private state: PipelineState
   private callbacks: Set<(state: PipelineState) => void>
@@ -263,13 +278,23 @@ export class PipelineOrchestrator {
       await fs.mkdir(this.workDir, { recursive: true })
 
       this.assertNotCancelled()
-      const download = await this.runStep('downloading', 0, (onProgress, _signal) =>
-        this.strategies.downloader.download({ url, outputDir, onProgress })
+      const download = await this.runStep('downloading', 0, (onProgress, signal) =>
+        this.strategies.downloader.download({ url, outputDir, onProgress, signal })
       )
       this.updateState({ videoTitle: download.title })
 
+      // Generate thumbnail from source video for progress display
+      const thumbnailPath = path.join(this.workDir, 'thumbnail.jpg')
+      await generateThumbnail(download.videoPath, thumbnailPath)
+      try {
+        const buf = await fs.readFile(thumbnailPath)
+        this.updateState({ thumbnailDataUrl: `data:image/jpeg;base64,${buf.toString('base64')}` })
+      } catch {
+        // Non-critical
+      }
+
       this.assertNotCancelled()
-      const audioPath = await this.runStep('extracting', 1, async (onProgress, _signal) => {
+      const audioPath = await this.runStep('extracting', 1, async (onProgress, signal) => {
         const cachedAudioPath = path.join(this.workDir, 'audio.wav')
         if (await fileExists(cachedAudioPath)) {
           onProgress(100)
@@ -280,6 +305,7 @@ export class PipelineOrchestrator {
           videoPath: download.videoPath,
           outputDir: this.workDir,
           onProgress,
+          signal,
         })
         return result.audioPath
       })
@@ -346,7 +372,7 @@ export class PipelineOrchestrator {
       })
 
       this.assertNotCancelled()
-      const outputPath = await this.runStep('recombining', 5, async (onProgress, _signal) => {
+      const outputPath = await this.runStep('recombining', 5, async (onProgress, signal) => {
         const { width, height } = await getVideoDimensions(download.videoPath)
         this.assertNotCancelled()
 
@@ -362,6 +388,7 @@ export class PipelineOrchestrator {
           subtitlePath,
           outputPath: finalOutputPath,
           onProgress,
+          signal,
         })
         return result.outputPath
       })
@@ -373,14 +400,24 @@ export class PipelineOrchestrator {
         overallProgress: 100,
         videoTitle: download.title,
         outputPath,
+        thumbnailDataUrl: this.state.thumbnailDataUrl,
+        completedAt: Date.now(),
         translatedSegments: translationResult,
       })
     } catch (error) {
-      this.setState({
-        ...this.state,
-        stage: 'error',
-        error: toErrorMessage(error),
-      })
+      if (this.cancelled) {
+        this.setState({
+          stage: 'idle',
+          progress: 0,
+          overallProgress: 0,
+        })
+      } else {
+        this.setState({
+          ...this.state,
+          stage: 'error',
+          error: toErrorMessage(error),
+        })
+      }
     }
   }
 

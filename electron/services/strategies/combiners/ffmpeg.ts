@@ -131,8 +131,9 @@ export default class FfmpegCombiner implements CombinerStrategy {
     subtitlePath: string
     outputPath: string
     onProgress: (pct: number) => void
+    signal?: AbortSignal
   }): Promise<CombineResult> {
-    const { videoPath, audioPath, subtitlePath, outputPath, onProgress } = input
+    const { videoPath, audioPath, subtitlePath, outputPath, onProgress, signal } = input
 
     if (!ffmpegPath || !ffprobePath) throw new Error('ffmpeg binary not found')
 
@@ -141,11 +142,15 @@ export default class FfmpegCombiner implements CombinerStrategy {
     const subtitleFilter = buildSubtitleFilter(subtitlePath)
 
     await new Promise<void>((resolve, reject) => {
-      ffmpeg()
+      if (signal?.aborted) {
+        reject(new Error('Pipeline cancelled'))
+        return
+      }
+
+      const command = ffmpeg()
         .input(videoPath)
         .input(audioPath)
         .outputOptions([
-          // filter_complex: 烧录字幕到视频，apad 将音轨静音填充到与视频等长。
           '-filter_complex', `${subtitleFilter};[1:a]apad=whole_dur=${duration}[a]`,
           '-map', '[v]',
           '-map', '[a]',
@@ -161,13 +166,21 @@ export default class FfmpegCombiner implements CombinerStrategy {
           onProgress(pct)
         })
         .on('end', () => {
+          signal?.removeEventListener('abort', onAbort)
           onProgress(100)
           resolve()
         })
         .on('error', (error) => {
+          signal?.removeEventListener('abort', onAbort)
           reject(normalizeCombineError(error))
         })
         .save(outputPath)
+
+      const onAbort = () => {
+        command.kill('SIGTERM')
+        reject(new Error('Pipeline cancelled'))
+      }
+      signal?.addEventListener('abort', onAbort, { once: true })
     })
 
     return { outputPath }

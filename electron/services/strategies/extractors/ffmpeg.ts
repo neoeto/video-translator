@@ -74,16 +74,21 @@ export default class FfmpegExtractor implements AudioExtractorStrategy {
     videoPath: string
     outputDir: string
     onProgress: (pct: number) => void
+    signal?: AbortSignal
   }): Promise<AudioResult> {
-    const { videoPath, outputDir, onProgress } = input
+    const { videoPath, outputDir, onProgress, signal } = input
     const duration = await getDuration(videoPath)
     await fs.mkdir(outputDir, { recursive: true })
     const outputPath = path.join(outputDir, 'audio.wav')
 
     await new Promise<void>((resolve, reject) => {
-      ffmpeg(videoPath)
+      if (signal?.aborted) {
+        reject(new Error('Pipeline cancelled'))
+        return
+      }
+
+      const command = ffmpeg(videoPath)
         .noVideo()
-        // Whisper 对 16kHz 单声道 16-bit PCM 适配最好，统一格式也让后续文件大小更可控。
         .audioCodec('pcm_s16le')
         .audioFrequency(16000)
         .audioChannels(1)
@@ -94,13 +99,21 @@ export default class FfmpegExtractor implements AudioExtractorStrategy {
           onProgress(pct)
         })
         .on('end', () => {
+          signal?.removeEventListener('abort', onAbort)
           onProgress(100)
           resolve()
         })
         .on('error', (error) => {
+          signal?.removeEventListener('abort', onAbort)
           reject(normalizeExtractionError(error))
         })
         .save(outputPath)
+
+      const onAbort = () => {
+        command.kill('SIGTERM')
+        reject(new Error('Pipeline cancelled'))
+      }
+      signal?.addEventListener('abort', onAbort, { once: true })
     })
 
     return { audioPath: outputPath }

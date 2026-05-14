@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { PipelineState, AppConfig } from './services/types.js'
+import type { HistoryEntry } from './services/history.js'
 
 const electronAPI = {
   pipelineStart: (url: string, outputDir: string): Promise<void> =>
@@ -16,6 +17,10 @@ const electronAPI = {
     ipcRenderer.invoke('config:get'),
   setConfig: (config: Partial<AppConfig>): Promise<void> =>
     ipcRenderer.invoke('config:set', config),
+  getHistory: (): Promise<HistoryEntry[]> =>
+    ipcRenderer.invoke('history:get'),
+  deleteHistory: (id: string): Promise<void> =>
+    ipcRenderer.invoke('history:delete', id),
   selectDirectory: (): Promise<string | null> =>
     ipcRenderer.invoke('dialog:selectDirectory'),
   openPath: (path: string): Promise<void> =>

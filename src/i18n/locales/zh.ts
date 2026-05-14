@@ -49,6 +49,7 @@ export const zh: Record<TranslationKey, string> = {
   'progress.unknownError': '处理过程中发生未知错误。',
   'progress.backToHome': '返回首页',
   'progress.cancelPipeline': '取消任务',
+  'progress.noActiveTask': '暂无进行中的任务',
 
   'result.heading': '视频库',
   'result.newTranslation': '新建翻译',
@@ -61,6 +62,8 @@ export const zh: Record<TranslationKey, string> = {
   'result.hideDetails': '隐藏详情',
   'result.translatedSegments': '翻译片段',
   'result.noSegments': '暂无翻译片段',
+  'result.delete': '删除记录',
+  'result.noHistory': '暂无翻译记录',
 
   'settings.heading': '设置',
   'settings.description': '配置处理环境和 API 集成。',

@@ -47,6 +47,7 @@ export const en = {
   'progress.unknownError': 'Unknown error occurred during processing.',
   'progress.backToHome': 'Back to Home',
   'progress.cancelPipeline': 'Cancel Pipeline',
+  'progress.noActiveTask': 'No active task',
 
   'result.heading': 'Video Library',
   'result.newTranslation': 'New Translation',
@@ -59,6 +60,8 @@ export const en = {
   'result.hideDetails': 'Hide Details',
   'result.translatedSegments': 'Translated Segments',
   'result.noSegments': 'No translation segments available',
+  'result.delete': 'Delete',
+  'result.noHistory': 'No translation history',
 
   'settings.heading': 'Settings',
   'settings.description': 'Configure your processing environment and API integrations.',

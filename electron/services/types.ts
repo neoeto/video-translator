@@ -65,6 +65,7 @@ export interface DownloaderStrategy {
     url: string
     outputDir: string
     onProgress: (pct: number) => void
+    signal?: AbortSignal
   }): Promise<DownloadResult>
 }
 
@@ -74,6 +75,7 @@ export interface AudioExtractorStrategy {
     videoPath: string
     outputDir: string
     onProgress: (pct: number) => void
+    signal?: AbortSignal
   }): Promise<AudioResult>
 }
 
@@ -116,6 +118,7 @@ export interface CombinerStrategy {
     subtitlePath: string
     outputPath: string
     onProgress: (pct: number) => void
+    signal?: AbortSignal
   }): Promise<CombineResult>
 }
 
@@ -137,6 +140,8 @@ export interface PipelineState {
   videoTitle?: string
   error?: string
   outputPath?: string
+  thumbnailDataUrl?: string
+  completedAt?: number
   translatedSegments?: TranslatedSegment[]
 }
 

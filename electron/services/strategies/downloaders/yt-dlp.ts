@@ -123,9 +123,15 @@ function toDescriptiveError(message: string, stderr = ''): Error {
 function runYtDlp(
   args: string[],
   onStdoutLine?: (line: string) => void,
-  proxyUrl?: string
+  proxyUrl?: string,
+  signal?: AbortSignal,
 ): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new Error('Pipeline cancelled'))
+      return
+    }
+
     let stdout = ''
     let stderr = ''
     let stdoutBuffer = ''
@@ -141,9 +147,19 @@ function runYtDlp(
     ytDlpArgs.push(...args)
     const child = spawn('yt-dlp', ytDlpArgs, { stdio: ['ignore', 'pipe', 'pipe'] })
 
+    const onAbort = () => {
+      child.kill('SIGTERM')
+      if (!settled) {
+        settled = true
+        reject(new Error('Pipeline cancelled'))
+      }
+    }
+    signal?.addEventListener('abort', onAbort, { once: true })
+
     child.on('error', (error) => {
       if (settled) return
       settled = true
+      signal?.removeEventListener('abort', onAbort)
       reject(error)
     })
 
@@ -174,6 +190,7 @@ function runYtDlp(
     child.on('close', (code) => {
       if (settled) return
       settled = true
+      signal?.removeEventListener('abort', onAbort)
       if (stdoutBuffer) {
         onStdoutLine?.(stdoutBuffer)
       }
@@ -187,9 +204,9 @@ function runYtDlp(
   })
 }
 
-async function getVideoTitle(url: string, proxyUrl?: string): Promise<string> {
+async function getVideoTitle(url: string, proxyUrl?: string, signal?: AbortSignal): Promise<string> {
   try {
-    const { stdout } = await runYtDlp(['--print', 'title', url], undefined, proxyUrl)
+    const { stdout } = await runYtDlp(['--print', 'title', url], undefined, proxyUrl, signal)
     const title = normalizeTitle(stdout.split(/\r?\n/).find(Boolean) ?? stdout)
     if (!title) {
       throw new Error('Failed to determine video title.')
@@ -233,8 +250,9 @@ export default class YtDlpDownloader implements DownloaderStrategy {
     url: string
     outputDir: string
     onProgress: (pct: number) => void
+    signal?: AbortSignal
   }): Promise<DownloadResult> {
-    const { url, outputDir, onProgress } = input
+    const { url, outputDir, onProgress, signal } = input
 
     try {
       const cacheDir = getCacheDir(outputDir, url)
@@ -246,7 +264,7 @@ export default class YtDlpDownloader implements DownloaderStrategy {
       }
 
       await fs.mkdir(cacheDir, { recursive: true })
-      const title = await getVideoTitle(url, this.config.proxyUrl)
+      const title = await getVideoTitle(url, this.config.proxyUrl, signal)
 
       let actualFilePath = path.join(cacheDir, 'video.mp4')
       let mergedFilePath: string | null = null
@@ -268,7 +286,8 @@ export default class YtDlpDownloader implements DownloaderStrategy {
             mergedFilePath = mergedDestination
           }
         },
-        this.config.proxyUrl
+        this.config.proxyUrl,
+        signal,
       )
 
       const lines = `${stdout}\n${stderr}`.split(/\r?\n/)

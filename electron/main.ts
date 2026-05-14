@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { is } from '@electron-toolkit/utils'
 import { getConfig, setConfig } from './services/config.js'
 import { createPipelineStrategies } from './services/factories.js'
+import { addHistoryEntry, deleteHistoryEntry, getHistory, type HistoryEntry } from './services/history.js'
 import { PipelineOrchestrator } from './services/pipeline.js'
 import type { AppConfig } from './services/types.js'
 
@@ -69,6 +70,17 @@ function registerIpcHandlers(): void {
 
     pipeline.onProgress((state) => {
       mainWindow?.webContents.send('pipeline:progress', state)
+
+      // Persist completed translations to history
+      if (state.stage === 'completed' && state.outputPath) {
+        addHistoryEntry({
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          videoTitle: state.videoTitle || 'Untitled',
+          outputPath: state.outputPath,
+          thumbnailDataUrl: state.thumbnailDataUrl,
+          completedAt: state.completedAt || Date.now(),
+        })
+      }
     })
 
     try {
@@ -86,6 +98,12 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('config:set', (_event, config: Partial<AppConfig>): void => {
     setConfig(config)
+  })
+
+  ipcMain.handle('history:get', (): HistoryEntry[] => getHistory())
+
+  ipcMain.handle('history:delete', (_event, id: string): void => {
+    deleteHistoryEntry(id)
   })
 
   ipcMain.handle('dialog:selectDirectory', async (): Promise<string | null> => {

@@ -41,6 +41,12 @@ export const ProgressView: React.FC = () => {
 
   return (
     <div className="w-full max-w-5xl mx-auto pt-10 px-6">
+      {state.stage === 'idle' ? (
+        <div className="flex flex-col items-center justify-center py-32 text-outline">
+          <span className="material-symbols-outlined text-[48px] mb-4 opacity-50">hourglass_empty</span>
+          <p className="text-sm">{t('progress.noActiveTask')}</p>
+        </div>
+      ) : (
       <div className="bg-surface-container rounded-xl border border-surface-variant overflow-hidden sharp-shadow flex flex-col">
         
         <div className="p-6 border-b border-surface-variant flex justify-between items-start">
@@ -67,7 +73,11 @@ export const ProgressView: React.FC = () => {
         <div className="flex flex-col lg:flex-row min-h-[300px]">
           <div className="w-full lg:w-1/3 bg-surface-container-lowest p-6 flex items-center justify-center border-r border-surface-variant">
             <div className="aspect-video w-full max-w-xs bg-surface-variant rounded-lg flex items-center justify-center border border-outline-variant overflow-hidden relative">
-              <span className="material-symbols-outlined text-[48px] text-outline opacity-50">movie</span>
+              {state.thumbnailDataUrl ? (
+                <img src={state.thumbnailDataUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              ) : (
+                <span className="material-symbols-outlined text-[48px] text-outline opacity-50">movie</span>
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e]/80 to-transparent flex items-end p-4">
                  <span className="text-xs text-on-surface font-mono bg-black/60 px-2 py-1 rounded">{t('progress.target')}</span>
               </div>
@@ -162,6 +172,7 @@ export const ProgressView: React.FC = () => {
         </div>
 
       </div>
+      )}
     </div>
   )
 }
