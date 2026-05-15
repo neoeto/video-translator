@@ -7,6 +7,7 @@ import path from 'node:path'
 import { getConfig } from './config.js'
 import { generateAss } from './subtitle.js'
 import { extractSpeakerSamples } from './speaker-sample.js'
+import { separateVocals } from './strategies/vocal-separator.js'
 import type { AppConfig, PipelineStage, PipelineState, PipelineStrategies, SpeakerProfile, TranscriptSegment, TranslatedSegment } from './types.js'
 import { getVideoStorageKey } from './video-key.js'
 
@@ -20,6 +21,7 @@ if (typeof ffprobePath === 'string') {
 
 const TOTAL_STEPS_FULL = 6
 const TOTAL_STEPS_SUBTITLE_ONLY = 5
+const TOTAL_STEPS_VOCAL_REMOVAL = 7
 
 interface VideoDimensions {
   width: number
@@ -281,7 +283,10 @@ export class PipelineOrchestrator {
     this.workDir = path.join(outputDir, '.tmp', getVideoStorageKey(url))
     const config = getConfig()
     const isSubtitleOnly = config.pipelineMode === 'subtitleOnly'
-    this.totalSteps = isSubtitleOnly ? TOTAL_STEPS_SUBTITLE_ONLY : TOTAL_STEPS_FULL
+    const useVocalRemoval = !isSubtitleOnly && config.audioMixMode === 'mix-vocal-removal'
+    this.totalSteps = isSubtitleOnly
+      ? TOTAL_STEPS_SUBTITLE_ONLY
+      : useVocalRemoval ? TOTAL_STEPS_VOCAL_REMOVAL : TOTAL_STEPS_FULL
 
     try {
       await fs.mkdir(this.workDir, { recursive: true })
@@ -434,7 +439,22 @@ export class PipelineOrchestrator {
           : translationResult
       }
 
-      const recombineStep = isSubtitleOnly ? 4 : 5
+      let instrumentalPath: string | undefined
+      if (!isSubtitleOnly && config.audioMixMode === 'mix-vocal-removal') {
+        this.assertNotCancelled()
+        instrumentalPath = await this.runStep('separating-vocals', 5, async (onProgress, signal) => {
+          const result = await separateVocals({
+            audioPath,
+            workDir: this.workDir,
+            audioSeparatorPath: config.audioSeparatorPath,
+            onProgress,
+            signal,
+          })
+          return result.instrumentalPath
+        })
+      }
+
+      const recombineStep = isSubtitleOnly ? 4 : (config.audioMixMode === 'mix-vocal-removal' ? 6 : 5)
       this.assertNotCancelled()
       const outputPath = await this.runStep('recombining', recombineStep, async (onProgress, signal) => {
         const { width, height } = await getVideoDimensions(download.videoPath)
@@ -454,6 +474,10 @@ export class PipelineOrchestrator {
           outputPath: finalOutputPath,
           onProgress,
           signal,
+          speechSegments: config.audioMixMode === 'mix-gate' && !isSubtitleOnly
+            ? subtitleSegments.map(s => ({ start: s.start, end: s.end }))
+            : undefined,
+          instrumentalPath,
         })
         return result.outputPath
       })

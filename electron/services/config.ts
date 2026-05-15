@@ -48,6 +48,30 @@ function detectWhisperxPath(): string {
   return 'whisperx'
 }
 
+function detectAudioSeparatorPath(): string {
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url))
+  const projectRoot = path.resolve(moduleDir, '..', '..', '..')
+  const binName = process.platform === 'win32' ? 'audio-separator.exe' : 'audio-separator'
+  const venvDir = process.platform === 'win32' ? 'Scripts' : 'bin'
+  const venvPath = path.join(projectRoot, '.venv', venvDir, binName)
+  if (fs.existsSync(venvPath)) {
+    return venvPath
+  }
+
+  try {
+    const whichCmd = process.platform === 'win32' ? 'where audio-separator' : 'which audio-separator'
+    const result = execSync(whichCmd, { encoding: 'utf8', timeout: 3000 }).trim()
+    const firstLine = result.split(/\r?\n/)[0]
+    if (firstLine && fs.existsSync(firstLine)) {
+      return firstLine
+    }
+  } catch {
+    // not found on PATH
+  }
+
+  return 'audio-separator'
+}
+
 const defaultConfig: AppConfig = {
   locale: 'en',
   openaiApiKey: '',
@@ -68,8 +92,10 @@ const defaultConfig: AppConfig = {
   ttsMode: 'edge',
   syncMode: 'natural',
   pipelineMode: 'full',
+  audioMixMode: 'replace',
   indexttsApiUrl: 'http://localhost:8080',
   indexttsReferenceAudio: '',
+  audioSeparatorPath: detectAudioSeparatorPath(),
   subtitleStyle: {
     enFontSize: 16,
     cnFontSize: 22,
@@ -171,6 +197,11 @@ const store = new Store<AppConfig>({
       enum: ['full', 'subtitleOnly'],
       default: defaultConfig.pipelineMode,
     },
+    audioMixMode: {
+      type: 'string',
+      enum: ['replace', 'mix-gate', 'mix-vocal-removal'],
+      default: defaultConfig.audioMixMode,
+    },
     indexttsApiUrl: {
       type: 'string',
       default: defaultConfig.indexttsApiUrl,
@@ -178,6 +209,10 @@ const store = new Store<AppConfig>({
     indexttsReferenceAudio: {
       type: 'string',
       default: defaultConfig.indexttsReferenceAudio,
+    },
+    audioSeparatorPath: {
+      type: 'string',
+      default: defaultConfig.audioSeparatorPath,
     },
     subtitleStyle: {
       type: 'object',
@@ -230,8 +265,10 @@ export function setConfig(partial: Partial<AppConfig>): void {
     'ttsMode',
     'syncMode',
     'pipelineMode',
+    'audioMixMode',
     'indexttsApiUrl',
     'indexttsReferenceAudio',
+    'audioSeparatorPath',
   ] as const
 
   for (const key of simpleKeys) {

@@ -46,8 +46,10 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
     ttsMode: 'edge' as const,
     syncMode: 'natural' as const,
     pipelineMode: 'full' as const,
+    audioMixMode: 'replace' as const,
     indexttsApiUrl: 'http://localhost:8080',
     indexttsReferenceAudio: '',
+    audioSeparatorPath: '',
     subtitleStyle: {
       enFontSize: 16,
       cnFontSize: 22,

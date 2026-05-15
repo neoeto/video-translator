@@ -497,7 +497,7 @@
     <div class="feature-card">
       <div class="icon green">🎬</div>
       <h4>视频合成</h4>
-      <p>FFmpeg 自动替换音轨 + 烧录 ASS 双语字幕，输出最终 MP4 文件。</p>
+      <p>FFmpeg 合成最终视频：支持音轨替换、背景音保留（Volume Gate）、人声分离混音三种模式，烧录 ASS 双语字幕。</p>
     </div>
     <div class="feature-card">
       <div class="icon orange">💾</div>
@@ -509,13 +509,18 @@
       <h4>仅字幕模式</h4>
       <p>保留原始音频，只生成双语字幕并烧录到视频。适合不需要配音的场景。</p>
     </div>
+    <div class="feature-card">
+      <div class="icon red">🎵</div>
+      <h4>音频混合模式</h4>
+      <p>三种音频处理模式：替换原声、保留背景音（静音原始语音段）、AI 人声分离（需安装 audio-separator）。灵活保留原视频的环境音和背景音乐。</p>
+    </div>
   </div>
 </section>
 
 <!-- Pipeline -->
 <section id="pipeline">
   <h2>处理流程</h2>
-  <p>完整翻译模式包含 6 个步骤，仅字幕模式跳过语音合成步骤（5 步）。</p>
+  <p>完整翻译模式包含 6 个步骤，仅字幕模式跳过语音合成步骤（5 步）。启用人声分离模式时增加 1 步（共 7 步）。</p>
 
   <div class="pipeline">
     <div class="pipeline-step">
@@ -558,8 +563,8 @@
     <div class="mode-card active">
       <h4>🎙️ 语音翻译模式（Full）</h4>
       <ul>
-        <li>下载 → 提取音频 → 语音识别 → 声纹标注 → 翻译 → 语音合成 → 视频合成</li>
-        <li>替换原始音轨为中文配音</li>
+        <li>下载 → 提取音频 → 语音识别 → 声纹标注 → 翻译 → 语音合成 → [人声分离] → 视频合成</li>
+        <li>三种音频混合：替换原声 / 保留背景音 / AI 人声分离</li>
         <li>烧录中英双语字幕</li>
         <li>说话人音色智能匹配</li>
       </ul>
@@ -685,7 +690,7 @@
       <!-- Combiner -->
       <rect x="500" y="300" width="400" height="54" rx="10" fill="#FFFFFF" stroke="#7EDBA7" stroke-width="1.5" filter="url(#shadow1)"/>
       <text x="700" y="323" text-anchor="middle" font-size="11" font-weight="600" fill="#059048">CombinerStrategy</text>
-      <text x="700" y="340" text-anchor="middle" font-size="9" fill="#5C5C5C">combine(video, audio, subtitle) → outputPath</text>
+      <text x="700" y="340" text-anchor="middle" font-size="9" fill="#5C5C5C">combine(video, audio, subtitle, instrumental?) → outputPath</text>
 
       <!-- Arrow synth → combiner -->
       <line x1="450" y1="327" x2="498" y2="327" stroke="#9CA3AF" stroke-width="1.5" marker-end="url(#arrowhead)"/>
@@ -929,6 +934,7 @@
       <tr><td><code>edge-tts</code></td><td>微软 Edge TTS 引擎（免费）</td><td><code>pip install edge-tts</code></td></tr>
       <tr><td><code>whisperx</code></td><td>高精度语音识别 + 说话人分离</td><td><code>pip install whisperx</code></td></tr>
       <tr><td><code>whisper</code></td><td>OpenAI Whisper 本地 CLI</td><td><code>pip install openai-whisper</code></td></tr>
+      <tr><td><code>audio-separator</code></td><td>AI 人声分离（人声分离模式需要）</td><td><code>pip install "audio-separator[cpu]"</code></td></tr>
     </tbody>
   </table>
 </section>
@@ -965,6 +971,11 @@
         <td><strong>管线模式</strong></td>
         <td>语音翻译 / 仅字幕</td>
         <td>仅字幕模式保留原始音频</td>
+      </tr>
+      <tr>
+        <td><strong>音频混合</strong></td>
+        <td>替换原声 / 保留背景音 / 人声分离</td>
+        <td>保留背景音会在语音段静音原声；人声分离使用 AI 提取伴奏轨（需安装 audio-separator）</td>
       </tr>
       <tr>
         <td><strong>输出目录</strong></td>

@@ -1,0 +1,95 @@
+import { spawn } from 'node:child_process'
+import { promises as fs } from 'node:fs'
+import path from 'node:path'
+
+const DEFAULT_MODEL = 'model_mel_band_roformer_ep_3005_sdr_11.4360.ckpt'
+
+export async function separateVocals(input: {
+  audioPath: string
+  workDir: string
+  audioSeparatorPath: string
+  onProgress?: (pct: number) => void
+  signal?: AbortSignal
+}): Promise<{ instrumentalPath: string }> {
+  const { audioPath, workDir, audioSeparatorPath, onProgress, signal } = input
+  const resolvedPath = path.resolve(audioSeparatorPath)
+
+  await fs.mkdir(workDir, { recursive: true })
+
+  await new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new Error('Pipeline cancelled'))
+      return
+    }
+
+    const args = [
+      audioPath,
+      '--model_filename', DEFAULT_MODEL,
+      '--output_dir', workDir,
+    ]
+
+    const proc = spawn(resolvedPath, args, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+
+    let stderr = ''
+
+    proc.stderr.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString()
+      const match = chunk.toString().match(/(\d+)%/)
+      if (match) {
+        onProgress?.(Math.min(99, parseInt(match[1], 10)))
+      }
+    })
+
+    proc.stdout.on('data', (chunk: Buffer) => {
+      const match = chunk.toString().match(/(\d+)%/)
+      if (match) {
+        onProgress?.(Math.min(99, parseInt(match[1], 10)))
+      }
+    })
+
+    proc.on('error', (err) => {
+      signal?.removeEventListener('abort', onAbort)
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+        reject(new Error(
+          `audio-separator not found at "${resolvedPath}". ` +
+          `Install with: pip install "audio-separator[cpu]" and configure the path in Settings.`
+        ))
+      } else {
+        reject(err)
+      }
+    })
+
+    proc.on('close', (code) => {
+      signal?.removeEventListener('abort', onAbort)
+      if (code === 0) {
+        resolve()
+      } else {
+        reject(new Error(
+          `audio-separator exited with code ${code}.\n${stderr.slice(-2000)}`
+        ))
+      }
+    })
+
+    const onAbort = () => {
+      proc.kill('SIGTERM')
+      reject(new Error('Pipeline cancelled'))
+    }
+    signal?.addEventListener('abort', onAbort, { once: true })
+  })
+
+  // Find the instrumental output file
+  const files = await fs.readdir(workDir)
+  const instrumentalFile = files.find(f => f.includes('(Instrumental)'))
+
+  if (!instrumentalFile) {
+    const outputFiles = files.length > 0 ? ` Found: ${files.join(', ')}` : ' No files found.'
+    throw new Error(
+      `audio-separator did not produce an instrumental track in ${workDir}.${outputFiles}`
+    )
+  }
+
+  onProgress?.(100)
+  return { instrumentalPath: path.join(workDir, instrumentalFile) }
+}

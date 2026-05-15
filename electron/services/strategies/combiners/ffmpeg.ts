@@ -5,6 +5,8 @@ import type { AppConfig, CombinerStrategy, CombineResult } from '../../types.js'
 import {
   ffmpegPath, ffprobePath,
   normalizeCombineError, getDuration, timeMarkToSeconds, buildSubtitleFilter,
+  buildMixGateFilterComplex,
+  buildVocalRemovalFilterComplex,
 } from './combiner-helpers.js'
 
 export default class FfmpegCombiner implements CombinerStrategy {
@@ -18,8 +20,10 @@ export default class FfmpegCombiner implements CombinerStrategy {
     outputPath: string
     onProgress: (pct: number) => void
     signal?: AbortSignal
+    speechSegments?: { start: number; end: number }[]
+    instrumentalPath?: string
   }): Promise<CombineResult> {
-    const { videoPath, audioPath, subtitlePath, outputPath, onProgress, signal } = input
+    const { videoPath, audioPath, subtitlePath, outputPath, onProgress, signal, speechSegments, instrumentalPath } = input
 
     if (!audioPath) throw new Error('FfmpegCombiner requires audioPath for full translation mode')
     if (!ffmpegPath || !ffprobePath) throw new Error('ffmpeg binary not found')
@@ -27,6 +31,15 @@ export default class FfmpegCombiner implements CombinerStrategy {
     const duration = await getDuration(videoPath)
     await fs.mkdir(path.dirname(outputPath), { recursive: true })
     const subtitleFilter = buildSubtitleFilter(subtitlePath)
+
+    const useMixGate = this.config.audioMixMode === 'mix-gate' && speechSegments && speechSegments.length > 0
+    const useVocalRemoval = this.config.audioMixMode === 'mix-vocal-removal' && !!instrumentalPath
+
+    const filterComplex = useMixGate
+      ? buildMixGateFilterComplex(subtitleFilter, speechSegments, duration)
+      : useVocalRemoval
+        ? buildVocalRemovalFilterComplex(subtitleFilter, duration)
+        : `${subtitleFilter};[1:a]apad=whole_dur=${duration}[a]`
 
     await new Promise<void>((resolve, reject) => {
       if (signal?.aborted) {
@@ -37,8 +50,14 @@ export default class FfmpegCombiner implements CombinerStrategy {
       const command = ffmpeg()
         .input(videoPath)
         .input(audioPath)
+
+      if (useVocalRemoval && instrumentalPath) {
+        command.input(instrumentalPath)
+      }
+
+      command
         .outputOptions([
-          '-filter_complex', `${subtitleFilter};[1:a]apad=whole_dur=${duration}[a]`,
+          '-filter_complex', filterComplex,
           '-map', '[v]',
           '-map', '[a]',
           '-c:v', 'libx264',

@@ -119,3 +119,104 @@ export function buildSubtitleFilter(subtitlePath: string): string {
   filterParts.push("force_style='Alignment=2,MarginV=60'")
   return `[0:v]${filterParts.join(':')}[v]`
 }
+
+/**
+ * Merges overlapping or nearly-adjacent speech segments into non-overlapping intervals.
+ * Segments within `gap` seconds of each other are merged to avoid tiny unmuted windows.
+ */
+export function mergeOverlappingSegments(
+  segments: { start: number; end: number }[],
+  gap = 0.06,
+): { start: number; end: number }[] {
+  if (segments.length === 0) return []
+
+  const sorted = [...segments].sort((a, b) => a.start - b.start)
+  const merged: { start: number; end: number }[] = [{ ...sorted[0] }]
+
+  for (let i = 1; i < sorted.length; i++) {
+    const current = sorted[i]
+    const last = merged[merged.length - 1]
+
+    if (current.start <= last.end + gap) {
+      last.end = Math.max(last.end, current.end)
+    } else {
+      merged.push({ ...current })
+    }
+  }
+
+  return merged
+}
+
+const FADE_DURATION = 0.03 // 30ms fade at segment boundaries
+
+/**
+ * Builds a volume expression that mutes the original audio during speech segments
+ * with 30ms linear fades at each boundary to prevent audio pops.
+ *
+ * The expression creates a trapezoidal envelope per segment:
+ *   volume = 1 outside speech, fades to 0 over 30ms at start, stays 0, fades back to 1 over 30ms at end.
+ *
+ * @returns The full volume filter string, e.g. `volume='<expr>':eval=frame`
+ */
+function buildVolumeExpression(segments: { start: number; end: number }[]): string {
+  if (segments.length === 0) return "volume=1"
+
+  // Build per-segment trapezoidal gate expressions
+  // Gate(t, s, e) = rampUp(t, s-fade, s) * rampDown(t, e, e+fade)
+  //   rampUp   = min(1, max(0, (t - (s - fade)) / fade))
+  //   rampDown = min(1, max(0, ((e + fade) - t) / fade))
+  // Gate is 1 during segment, 0 outside, linear ramp at edges
+  const gateExprs = segments.map(({ start, end }) => {
+    const fadeInStart = Math.max(0, start - FADE_DURATION).toFixed(4)
+    const fadeOutEnd = (end + FADE_DURATION).toFixed(4)
+    const invFade = (1 / FADE_DURATION).toFixed(2)
+    const rampUp = `min(1,max(0,(t-${fadeInStart})*${invFade}))`
+    const rampDown = `min(1,max(0,(${fadeOutEnd}-t)*${invFade}))`
+    return `${rampUp}*${rampDown}`
+  })
+
+  // Combine gates with nested max() — union of all speech windows
+  let combined = gateExprs[0]
+  for (let i = 1; i < gateExprs.length; i++) {
+    combined = `max(${combined},${gateExprs[i]})`
+  }
+
+  // Volume = 1 - gate (invert: mute during speech, pass during non-speech)
+  return `volume='1-${combined}':eval=frame`
+}
+
+/**
+ * Builds the full filter_complex string for mix-gate mode.
+ * Mutes original audio during speech, pads TTS to video duration, and mixes both.
+ */
+export function buildMixGateFilterComplex(
+  subtitleFilter: string,
+  speechSegments: { start: number; end: number }[],
+  duration: number,
+): string {
+  const merged = mergeOverlappingSegments(speechSegments)
+  const volumeFilter = buildVolumeExpression(merged)
+
+  return [
+    subtitleFilter,
+    `[0:a]${volumeFilter}[bg]`,
+    `[1:a]apad=whole_dur=${duration}[tts]`,
+    `[bg][tts]amix=inputs=2:duration=first:dropout_transition=0[a]`,
+  ].join(';')
+}
+
+/**
+ * Builds the full filter_complex string for mix-vocal-removal mode.
+ * Pads instrumental track and TTS to video duration, then mixes both.
+ */
+export function buildVocalRemovalFilterComplex(
+  subtitleFilter: string,
+  duration: number,
+): string {
+  return [
+    subtitleFilter,
+    `[2:a]apad=whole_dur=${duration}[bg]`,
+    `[1:a]apad=whole_dur=${duration}[tts]`,
+    `[bg][tts]amix=inputs=2:duration=first:dropout_transition=0[a]`,
+  ].join(';')
+}

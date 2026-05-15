@@ -9,6 +9,7 @@ const ALL_STAGES: { id: PipelineStage; nameKey: string }[] = [
   { id: 'transcribing', nameKey: 'progress.stages.transcribing' },
   { id: 'translating', nameKey: 'progress.stages.translating' },
   { id: 'synthesizing', nameKey: 'progress.stages.synthesizing' },
+  { id: 'separating-vocals', nameKey: 'progress.stages.separatingVocals' },
   { id: 'recombining', nameKey: 'progress.stages.recombining' },
 ]
 

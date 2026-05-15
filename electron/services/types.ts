@@ -8,6 +8,7 @@ export type PipelineStage =
   | 'awaiting-speaker-labels'
   | 'translating'
   | 'synthesizing'
+  | 'separating-vocals'
   | 'recombining'
   | 'completed'
   | 'error'
@@ -135,6 +136,8 @@ export interface CombinerStrategy {
     outputPath: string
     onProgress: (pct: number) => void
     signal?: AbortSignal
+    speechSegments?: { start: number; end: number }[]
+    instrumentalPath?: string
   }): Promise<CombineResult>
 }
 
@@ -183,6 +186,7 @@ export type TranslateMode = 'openai' | 'deepseek' | 'glm'
 export type TtsMode = 'edge' | 'openai' | 'indextts'
 export type SyncMode = 'natural' | 'strict'
 export type PipelineMode = 'full' | 'subtitleOnly'
+export type AudioMixMode = 'replace' | 'mix-gate' | 'mix-vocal-removal'
 export type Locale = 'en' | 'zh'
 
 export interface ProxyConfig {
@@ -211,6 +215,8 @@ export interface AppConfig {
   ttsMode: TtsMode
   syncMode: SyncMode
   pipelineMode: PipelineMode
+  audioMixMode: AudioMixMode
   indexttsApiUrl: string
   indexttsReferenceAudio: string
+  audioSeparatorPath: string
 }

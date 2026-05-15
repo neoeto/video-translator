@@ -473,6 +473,69 @@ export const SettingsView: React.FC = () => {
                     {config.syncMode === 'strict' ? t('settings.tts.syncStrictHelp') : t('settings.tts.syncNaturalHelp')}
                   </p>
                 </div>
+
+                <div className="mt-6 pt-6 border-t border-outline-variant/30">
+                  <label className="block text-[11px] font-semibold text-on-surface-variant mb-2 uppercase tracking-wider">
+                    {t('settings.tts.audioMixMode')}
+                  </label>
+                  <div className="flex bg-surface-container-lowest rounded-lg p-1 border border-outline-variant/50">
+                    <button
+                      onClick={() => saveConfig({ audioMixMode: 'replace' })}
+                      className={`flex-1 py-2 px-3 rounded-md text-[13px] font-semibold transition-all ${
+                        config.audioMixMode === 'replace'
+                          ? 'bg-surface-variant text-on-surface shadow-sm border border-outline-variant/50'
+                          : 'text-on-surface-variant hover:text-on-surface'
+                      }`}
+                    >
+                      {t('settings.tts.audioMixReplace')}
+                    </button>
+                    <button
+                      onClick={() => saveConfig({ audioMixMode: 'mix-gate' })}
+                      className={`flex-1 py-2 px-3 rounded-md text-[13px] font-semibold transition-all ${
+                        config.audioMixMode === 'mix-gate'
+                          ? 'bg-surface-variant text-on-surface shadow-sm border border-outline-variant/50'
+                          : 'text-on-surface-variant hover:text-on-surface'
+                      }`}
+                    >
+                      {t('settings.tts.audioMixGate')}
+                    </button>
+                    <button
+                      onClick={() => saveConfig({ audioMixMode: 'mix-vocal-removal' })}
+                      className={`flex-1 py-2 px-3 rounded-md text-[13px] font-semibold transition-all ${
+                        config.audioMixMode === 'mix-vocal-removal'
+                          ? 'bg-surface-variant text-on-surface shadow-sm border border-outline-variant/50'
+                          : 'text-on-surface-variant hover:text-on-surface'
+                      }`}
+                    >
+                      {t('settings.tts.audioMixVocalRemoval')}
+                    </button>
+                  </div>
+                  <p className="text-[12px] text-on-surface-variant mt-2">
+                    {config.audioMixMode === 'mix-gate'
+                      ? t('settings.tts.audioMixGateHelp')
+                      : config.audioMixMode === 'mix-vocal-removal'
+                        ? t('settings.tts.audioMixVocalRemovalHelp')
+                        : t('settings.tts.audioMixReplaceHelp')}
+                  </p>
+
+                  {config.audioMixMode === 'mix-vocal-removal' && (
+                    <div className="mt-4">
+                      <label className="block text-[11px] font-semibold text-on-surface-variant mb-2 uppercase tracking-wider">
+                        {t('settings.tts.audioSeparatorPath')}
+                      </label>
+                      <input
+                        type="text"
+                        value={config.audioSeparatorPath || ''}
+                        onChange={(e) => saveConfig({ audioSeparatorPath: e.target.value })}
+                        placeholder="audio-separator"
+                        className="w-full bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono text-xs focus:border-primary focus:outline-none transition-colors"
+                      />
+                      <p className="text-[12px] text-on-surface-variant mt-1">
+                        {t('settings.tts.audioSeparatorPathHelp')}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             </section>
           )}
