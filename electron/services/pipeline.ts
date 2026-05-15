@@ -6,7 +6,8 @@ import path from 'node:path'
 
 import { getConfig } from './config.js'
 import { generateAss } from './subtitle.js'
-import type { AppConfig, PipelineStage, PipelineState, PipelineStrategies, TranscriptSegment, TranslatedSegment } from './types.js'
+import { extractSpeakerSamples } from './speaker-sample.js'
+import type { AppConfig, PipelineStage, PipelineState, PipelineStrategies, SpeakerProfile, TranscriptSegment, TranslatedSegment } from './types.js'
 import { getVideoStorageKey } from './video-key.js'
 
 const require = createRequire(import.meta.url)
@@ -201,11 +202,12 @@ function createTranslationFingerprint(segments: TranscriptSegment[], config: App
   })
 }
 
-function createTtsFingerprint(translatedSegments: TranslatedSegment[], config: AppConfig): string {
+function createTtsFingerprint(translatedSegments: TranslatedSegment[], config: AppConfig, speakerProfiles?: SpeakerProfile[]): string {
   return createFingerprint({
     translatedSegments,
     ttsMode: config.ttsMode,
     syncMode: config.syncMode,
+    speakerProfiles: speakerProfiles?.map(p => ({ id: p.id, gender: p.gender })),
   })
 }
 
@@ -257,6 +259,7 @@ export class PipelineOrchestrator {
   private abortController: AbortController | null
   private workDir: string
   private totalSteps: number
+  private speakerLabelsResolver: ((profiles: SpeakerProfile[]) => void) | null
 
   constructor(private readonly strategies: PipelineStrategies) {
     this.state = {
@@ -269,6 +272,7 @@ export class PipelineOrchestrator {
     this.abortController = null
     this.workDir = ''
     this.totalSteps = TOTAL_STEPS_FULL
+    this.speakerLabelsResolver = null
   }
 
   async start(url: string, outputDir: string): Promise<void> {
@@ -332,6 +336,37 @@ export class PipelineOrchestrator {
       })
 
       this.assertNotCancelled()
+
+      // Speaker labeling pause (skip for subtitle-only mode)
+      let speakerProfiles: SpeakerProfile[] | undefined
+      if (!isSubtitleOnly) {
+        // Try to load cached speaker profiles
+        const profilesCachePath = path.join(this.workDir, 'speaker-profiles.json')
+        const cachedProfiles = await this.loadSpeakerProfiles(profilesCachePath, transcription)
+
+        if (cachedProfiles) {
+          speakerProfiles = cachedProfiles
+        } else {
+          // Extract voice samples and pause for user labeling
+          const profiles = await extractSpeakerSamples(audioPath, transcription, this.workDir)
+          this.updateState({
+            stage: 'awaiting-speaker-labels',
+            progress: 0,
+            speakerProfiles: profiles,
+          })
+
+          // Wait for user to submit speaker labels
+          speakerProfiles = await new Promise<SpeakerProfile[]>((resolve) => {
+            this.speakerLabelsResolver = resolve
+          })
+          this.speakerLabelsResolver = null
+
+          // Cache the labeled profiles
+          await this.saveSpeakerProfiles(profilesCachePath, transcription, speakerProfiles)
+        }
+        this.assertNotCancelled()
+      }
+
       const translationResult = await this.runStep('translating', 3, async (onProgress, signal) => {
         const translationPath = path.join(this.workDir, 'translated_segments.json')
         const translationFingerprint = createTranslationFingerprint(transcription, config)
@@ -366,7 +401,7 @@ export class PipelineOrchestrator {
         this.assertNotCancelled()
         const synthesisResult = await this.runStep('synthesizing', 4, async (onProgress, signal) => {
           const ttsCachePath = path.join(this.workDir, 'tts.json')
-          const ttsFingerprint = createTtsFingerprint(translationResult, config)
+          const ttsFingerprint = createTtsFingerprint(translationResult, config, speakerProfiles)
           const cachedOutput = await readCachedOutput(ttsCachePath, ttsFingerprint)
           if (cachedOutput) {
             onProgress(100)
@@ -378,6 +413,7 @@ export class PipelineOrchestrator {
             segments: translationResult,
             workDir: this.workDir,
             speakers,
+            speakerProfiles,
             onProgress,
             signal,
             syncMode: config.syncMode,
@@ -455,6 +491,12 @@ export class PipelineOrchestrator {
     this.abortController?.abort()
   }
 
+  submitSpeakerLabels(profiles: SpeakerProfile[]): void {
+    if (this.speakerLabelsResolver) {
+      this.speakerLabelsResolver(profiles)
+    }
+  }
+
   onProgress(callback: (state: PipelineState) => void): () => void {
     this.callbacks.add(callback)
     callback(this.state)
@@ -466,6 +508,36 @@ export class PipelineOrchestrator {
 
   getState(): PipelineState {
     return { ...this.state }
+  }
+
+  private async loadSpeakerProfiles(
+    cachePath: string,
+    segments: TranscriptSegment[]
+  ): Promise<SpeakerProfile[] | null> {
+    try {
+      const raw = await fs.readFile(cachePath, 'utf8')
+      const cached = JSON.parse(raw) as { fingerprint: string; profiles: SpeakerProfile[] }
+      const speakers = [...new Set(segments.map((s) => s.speaker))].sort()
+      const fingerprint = createFingerprint(speakers)
+      if (cached.fingerprint === fingerprint && Array.isArray(cached.profiles) && cached.profiles.length > 0) {
+        return cached.profiles
+      }
+    } catch {
+      // No cache or invalid
+    }
+    return null
+  }
+
+  private async saveSpeakerProfiles(
+    cachePath: string,
+    segments: TranscriptSegment[],
+    profiles: SpeakerProfile[]
+  ): Promise<void> {
+    const speakers = [...new Set(segments.map((s) => s.speaker))].sort()
+    const fingerprint = createFingerprint(speakers)
+    // Strip sampleDataUrl to avoid saving large base64 data
+    const stripped = profiles.map(({ sampleDataUrl: _, ...rest }) => rest)
+    await fs.writeFile(cachePath, JSON.stringify({ fingerprint, profiles: stripped }, null, 2), 'utf8')
   }
 
   private async runStep<T>(

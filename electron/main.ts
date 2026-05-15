@@ -6,7 +6,7 @@ import { getConfig, setConfig } from './services/config.js'
 import { createPipelineStrategies } from './services/factories.js'
 import { addHistoryEntry, deleteHistoryEntry, getHistory, type HistoryEntry } from './services/history.js'
 import { PipelineOrchestrator } from './services/pipeline.js'
-import type { AppConfig } from './services/types.js'
+import type { AppConfig, SpeakerProfile } from './services/types.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 let mainWindow: BrowserWindow | null = null
@@ -92,6 +92,10 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('pipeline:cancel', async (): Promise<void> => {
     currentPipeline?.cancel()
+  })
+
+  ipcMain.handle('pipeline:submit-speaker-labels', (_event, profiles: SpeakerProfile[]): void => {
+    currentPipeline?.submitSpeakerLabels(profiles)
   })
 
   ipcMain.handle('config:get', (): AppConfig => getConfig())

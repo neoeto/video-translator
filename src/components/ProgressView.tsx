@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { usePipelineStore } from '../store/usePipelineStore'
-import type { PipelineStage } from '../types'
+import type { PipelineStage, SpeakerGender, SpeakerProfile } from '../types'
 import { useI18n } from '../i18n'
 
 const ALL_STAGES: { id: PipelineStage; nameKey: string }[] = [
@@ -12,8 +12,75 @@ const ALL_STAGES: { id: PipelineStage; nameKey: string }[] = [
   { id: 'recombining', nameKey: 'progress.stages.recombining' },
 ]
 
+const GENDER_OPTIONS: { value: SpeakerGender; labelKey: string }[] = [
+  { value: 'adult-male', labelKey: 'speaker.adultMale' },
+  { value: 'adult-female', labelKey: 'speaker.adultFemale' },
+  { value: 'child-male', labelKey: 'speaker.childMale' },
+  { value: 'child-female', labelKey: 'speaker.childFemale' },
+]
+
+const SpeakerLabelingPanel: React.FC<{
+  profiles: SpeakerProfile[]
+  onSubmit: (profiles: SpeakerProfile[]) => void
+  t: (key: string) => string
+}> = ({ profiles, onSubmit, t }) => {
+  const [labels, setLabels] = useState<Record<string, SpeakerGender>>(() => {
+    const init: Record<string, SpeakerGender> = {}
+    for (const p of profiles) {
+      init[p.id] = p.gender
+    }
+    return init
+  })
+
+  const allLabeled = profiles.every(p => labels[p.id])
+
+  const handleSubmit = () => {
+    const labeled = profiles.map(p => ({ ...p, gender: labels[p.id] }))
+    onSubmit(labeled)
+  }
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-base font-bold text-on-surface mb-2">{t('speaker.title')}</h3>
+      <p className="text-sm text-on-surface-variant mb-4">{t('speaker.description')}</p>
+      {profiles.map(profile => (
+        <div key={profile.id} className="flex items-center gap-4 p-3 bg-surface-container-lowest rounded-lg border border-surface-variant">
+          <div className="flex-shrink-0">
+            <span className="text-sm font-bold text-on-surface">{profile.id}</span>
+          </div>
+          {profile.sampleDataUrl && (
+            <audio controls src={profile.sampleDataUrl} className="h-8 flex-shrink-0" />
+          )}
+          <div className="flex gap-2 flex-wrap flex-1">
+            {GENDER_OPTIONS.map(opt => (
+              <label key={opt.value} className="flex items-center gap-1 cursor-pointer">
+                <input
+                  type="radio"
+                  name={`gender-${profile.id}`}
+                  value={opt.value}
+                  checked={labels[profile.id] === opt.value}
+                  onChange={() => setLabels(prev => ({ ...prev, [profile.id]: opt.value }))}
+                  className="accent-primary"
+                />
+                <span className="text-xs text-on-surface-variant">{t(opt.labelKey)}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      ))}
+      <button
+        onClick={handleSubmit}
+        disabled={!allLabeled}
+        className="mt-4 px-6 py-2 bg-primary text-on-primary hover:bg-primary/90 disabled:bg-surface-variant disabled:text-outline rounded-lg font-semibold transition-colors"
+      >
+        {t('speaker.continue')}
+      </button>
+    </div>
+  )
+}
+
 export const ProgressView: React.FC = () => {
-  const { state, config, cancelPipeline, reset } = usePipelineStore()
+  const { state, config, cancelPipeline, submitSpeakerLabels, reset } = usePipelineStore()
   const t = useI18n((s) => s.t)
 
   const STAGES = useMemo(() =>
@@ -101,6 +168,12 @@ export const ProgressView: React.FC = () => {
                   <p className="text-sm text-error/80">{state.error || t('progress.unknownError')}</p>
                 </div>
               </div>
+            ) : state.stage === 'awaiting-speaker-labels' ? (
+              <SpeakerLabelingPanel
+                profiles={state.speakerProfiles || []}
+                onSubmit={submitSpeakerLabels}
+                t={t}
+              />
             ) : (
               <div className="mb-10">
                 <div className="flex justify-between mb-2">

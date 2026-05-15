@@ -1,7 +1,7 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { fetch as undiciFetch, ProxyAgent } from 'undici'
-import type { AppConfig, SynthesizerStrategy, SynthesisResult, TranslatedSegment } from '../../types.js'
+import type { AppConfig, SpeakerProfile, SynthesizerStrategy, SynthesisResult, TranslatedSegment } from '../../types.js'
 import {
   buildTimeline, createSilenceFile, runFfmpeg,
   sleep, toErrorMessage, isRetryableTtsError,
@@ -26,6 +26,7 @@ async function convertAudioToMp3(inputFile: string, outputFile: string): Promise
 
 export default class IndexTtsSynthesizer implements SynthesizerStrategy {
   readonly name = 'indextts'
+  private speakerProfiles?: SpeakerProfile[]
 
   constructor(private readonly config: AppConfig) {}
 
@@ -33,11 +34,13 @@ export default class IndexTtsSynthesizer implements SynthesizerStrategy {
     segments: TranslatedSegment[]
     workDir: string
     speakers: string[]
+    speakerProfiles?: SpeakerProfile[]
     onProgress: (pct: number) => void
     signal?: AbortSignal
     syncMode?: import('../../types.js').SyncMode
   }): Promise<SynthesisResult> {
-    const { segments, workDir, onProgress, signal, syncMode } = input
+    const { segments, workDir, onProgress, signal, syncMode, speakerProfiles } = input
+    this.speakerProfiles = speakerProfiles
     const ttsWorkDir = path.join(workDir, '.tts-temp')
     await fs.mkdir(ttsWorkDir, { recursive: true })
 
@@ -68,15 +71,18 @@ export default class IndexTtsSynthesizer implements SynthesizerStrategy {
       return rawFile
     }
 
-    await this.synthesizeToFile(text, rawFile)
+    // Use speaker's sample as reference audio for voice cloning
+    const profile = this.speakerProfiles?.find(p => p.id === segment.speaker)
+    const referenceAudio = profile?.samplePath || this.config.indexttsReferenceAudio.trim()
+    await this.synthesizeToFile(text, rawFile, referenceAudio)
     return rawFile
   }
 
-  private async synthesizeToFile(text: string, outputFile: string): Promise<void> {
+  private async synthesizeToFile(text: string, outputFile: string, referenceAudio?: string): Promise<void> {
     const baseUrl = this.config.indexttsApiUrl.trim() || INDEXTTS_DEFAULT_API_URL
     const apiUrl = new URL('/tts', baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`).toString()
-    const referenceAudio = this.config.indexttsReferenceAudio.trim()
-    const body = referenceAudio ? { text, reference_audio: referenceAudio } : { text }
+    const ref = referenceAudio || ''
+    const body = ref ? { text, reference_audio: ref } : { text }
     const fetchOptions = this.config.proxyEnabled && this.config.proxyUrl
       ? { dispatcher: new ProxyAgent(this.config.proxyUrl) }
       : {}

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { PipelineState, AppConfig } from '../types'
+import type { PipelineState, AppConfig, SpeakerProfile } from '../types'
 
 interface PipelineStore {
   // Pipeline state (updated from main process via IPC)
@@ -13,6 +13,7 @@ interface PipelineStore {
   saveConfig: (partial: Partial<AppConfig>) => Promise<void>
   startPipeline: (url: string) => Promise<void>
   cancelPipeline: () => Promise<void>
+  submitSpeakerLabels: (profiles: SpeakerProfile[]) => Promise<void>
   reset: () => void
   updateState: (state: Partial<PipelineState>) => void
 }
@@ -88,6 +89,10 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
 
   cancelPipeline: async () => {
     await window.electronAPI.pipelineCancel()
+  },
+
+  submitSpeakerLabels: async (profiles: SpeakerProfile[]) => {
+    await window.electronAPI.submitSpeakerLabels(profiles)
   },
 
   reset: () => {

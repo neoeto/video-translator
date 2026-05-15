@@ -5,11 +5,23 @@ export type PipelineStage =
   | 'downloading'
   | 'extracting'
   | 'transcribing'
+  | 'awaiting-speaker-labels'
   | 'translating'
   | 'synthesizing'
   | 'recombining'
   | 'completed'
   | 'error'
+
+// ─── Speaker profile ────────────────────────────────────────────
+
+export type SpeakerGender = 'adult-male' | 'adult-female' | 'child-male' | 'child-female'
+
+export interface SpeakerProfile {
+  id: string
+  gender: SpeakerGender
+  samplePath: string
+  sampleDataUrl?: string
+}
 
 // ─── Node data contracts ────────────────────────────────────────
 
@@ -107,6 +119,7 @@ export interface SynthesizerStrategy {
     segments: TranslatedSegment[]
     workDir: string
     speakers: string[]
+    speakerProfiles?: SpeakerProfile[]
     onProgress: (pct: number) => void
     signal?: AbortSignal
     syncMode?: SyncMode
@@ -146,6 +159,7 @@ export interface PipelineState {
   thumbnailDataUrl?: string
   completedAt?: number
   translatedSegments?: TranslatedSegment[]
+  speakerProfiles?: SpeakerProfile[]
 }
 
 // ─── Subtitle style ─────────────────────────────────────────────

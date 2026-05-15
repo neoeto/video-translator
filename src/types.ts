@@ -3,11 +3,21 @@ export type PipelineStage =
   | 'downloading'
   | 'extracting'
   | 'transcribing'
+  | 'awaiting-speaker-labels'
   | 'translating'
   | 'synthesizing'
   | 'recombining'
   | 'completed'
   | 'error'
+
+export type SpeakerGender = 'adult-male' | 'adult-female' | 'child-male' | 'child-female'
+
+export interface SpeakerProfile {
+  id: string
+  gender: SpeakerGender
+  samplePath: string
+  sampleDataUrl?: string
+}
 
 export interface Segment {
   start: number
@@ -34,6 +44,7 @@ export interface PipelineState {
   thumbnailDataUrl?: string
   completedAt?: number
   translatedSegments?: TranslatedSegment[]
+  speakerProfiles?: SpeakerProfile[]
 }
 
 export interface SubtitleStyle {

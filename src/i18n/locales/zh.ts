@@ -56,6 +56,14 @@ export const zh: Record<TranslationKey, string> = {
   'progress.cancelPipeline': '取消任务',
   'progress.noActiveTask': '暂无进行中的任务',
 
+  'speaker.title': '说话人音色标注',
+  'speaker.description': '请为每位说话人选择性别/年龄，以匹配合适的语音音色。',
+  'speaker.adultMale': '成年男性',
+  'speaker.adultFemale': '成年女性',
+  'speaker.childMale': '少年男性',
+  'speaker.childFemale': '少年女性',
+  'speaker.continue': '继续翻译',
+
   'result.heading': '视频库',
   'result.newTranslation': '新建翻译',
   'result.playVideo': '播放视频',

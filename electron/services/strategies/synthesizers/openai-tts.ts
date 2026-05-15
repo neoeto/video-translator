@@ -2,19 +2,24 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import OpenAI from 'openai'
 import { ProxyAgent } from 'undici'
-import type { AppConfig, SynthesizerStrategy, SynthesisResult, TranslatedSegment } from '../../types.js'
+import type { AppConfig, SpeakerGender, SpeakerProfile, SynthesizerStrategy, SynthesisResult, TranslatedSegment } from '../../types.js'
 import {
   buildTimeline, createSilenceFile,
   sleep, toErrorMessage, isRetryableTtsError,
   MAX_TTS_RETRIES, INITIAL_TTS_BACKOFF_MS,
 } from './tts-helpers.js'
 
-const VOICE_POOL = ['alloy', 'nova', 'echo', 'shimmer', 'fable', 'onyx']
+const VOICE_POOL_BY_GENDER: Record<SpeakerGender, string[]> = {
+  'adult-male': ['echo', 'onyx'],
+  'adult-female': ['nova', 'shimmer'],
+  'child-male': ['fable', 'alloy'],
+  'child-female': ['alloy', 'fable'],
+}
 
 export default class OpenAITtsSynthesizer implements SynthesizerStrategy {
   readonly name = 'openai-tts'
   private readonly speakerVoiceMap = new Map<string, string>()
-  private voiceIndex = 0
+  private readonly genderVoiceIndex = new Map<SpeakerGender, number>()
   private readonly client: OpenAI
 
   constructor(private readonly config: AppConfig) {
@@ -26,11 +31,16 @@ export default class OpenAITtsSynthesizer implements SynthesizerStrategy {
     })
   }
 
-  private getVoice(speaker: string): string {
+  private getVoice(speaker: string, speakerProfiles?: SpeakerProfile[]): string {
     const existing = this.speakerVoiceMap.get(speaker)
     if (existing) return existing
-    const voice = VOICE_POOL[this.voiceIndex % VOICE_POOL.length]
-    this.voiceIndex++
+
+    const profile = speakerProfiles?.find(p => p.id === speaker)
+    const gender: SpeakerGender = profile?.gender ?? 'adult-male'
+    const pool = VOICE_POOL_BY_GENDER[gender]
+    const idx = this.genderVoiceIndex.get(gender) ?? 0
+    const voice = pool[idx % pool.length]
+    this.genderVoiceIndex.set(gender, idx + 1)
     this.speakerVoiceMap.set(speaker, voice)
     return voice
   }
@@ -39,11 +49,12 @@ export default class OpenAITtsSynthesizer implements SynthesizerStrategy {
     segments: TranslatedSegment[]
     workDir: string
     speakers: string[]
+    speakerProfiles?: SpeakerProfile[]
     onProgress: (pct: number) => void
     signal?: AbortSignal
     syncMode?: import('../../types.js').SyncMode
   }): Promise<SynthesisResult> {
-    const { segments, workDir, onProgress, signal, syncMode } = input
+    const { segments, workDir, onProgress, signal, syncMode, speakerProfiles } = input
     const ttsWorkDir = path.join(workDir, '.tts-temp')
     await fs.mkdir(ttsWorkDir, { recursive: true })
 
@@ -51,7 +62,7 @@ export default class OpenAITtsSynthesizer implements SynthesizerStrategy {
       const result = await buildTimeline(
         segments,
         ttsWorkDir,
-        async (segment, index, wd) => this.synthesizeSegment(segment, index, wd),
+        async (segment, index, wd) => this.synthesizeSegment(segment, index, wd, speakerProfiles),
         onProgress,
         signal,
         syncMode,
@@ -64,11 +75,11 @@ export default class OpenAITtsSynthesizer implements SynthesizerStrategy {
     }
   }
 
-  private async synthesizeSegment(segment: TranslatedSegment, index: number, workDir: string): Promise<string> {
+  private async synthesizeSegment(segment: TranslatedSegment, index: number, workDir: string, speakerProfiles?: SpeakerProfile[]): Promise<string> {
     const targetDuration = Math.max(0.05, segment.end - segment.start)
     const text = segment.targetText.trim() || segment.sourceText.trim()
     const finalFile = path.join(workDir, `segment-${index}-final.mp3`)
-    const voice = this.getVoice(segment.speaker)
+    const voice = this.getVoice(segment.speaker, speakerProfiles)
 
     if (!text) {
       await createSilenceFile(targetDuration, finalFile)

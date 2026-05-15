@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { PipelineState, AppConfig } from './services/types.js'
+import type { PipelineState, AppConfig, SpeakerProfile } from './services/types.js'
 import type { HistoryEntry } from './services/history.js'
 
 const electronAPI = {
@@ -7,10 +7,11 @@ const electronAPI = {
     ipcRenderer.invoke('pipeline:start', url, outputDir),
   pipelineCancel: (): Promise<void> =>
     ipcRenderer.invoke('pipeline:cancel'),
+  submitSpeakerLabels: (profiles: SpeakerProfile[]): Promise<void> =>
+    ipcRenderer.invoke('pipeline:submit-speaker-labels', profiles),
   onProgress: (callback: (state: PipelineState) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, state: PipelineState) => callback(state)
     ipcRenderer.on('pipeline:progress', handler)
-    // 返回清理函数交给 React/zustand 调用方释放监听，避免重复启动流水线后累积 IPC listener。
     return () => ipcRenderer.removeListener('pipeline:progress', handler)
   },
   getConfig: (): Promise<AppConfig> =>

@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VidiTranslate — 技术文档</title>
+  <style>
+    :root {
+      --primary: #07C160;
+      --primary-light: #4CD964;
+      --primary-dark: #059048;
+      --surface: #F7F7F7;
+      --surface-alt: #F0F0F0;
+      --surface-card: #FFFFFF;
+      --text: #1A1A1A;
+      --text-secondary: #5C5C5C;
+      --text-muted: #999999;
+      --border: #E6E6E6;
+      --accent-green: #07C160;
+      --accent-orange: #FA9D3B;
+      --accent-red: #FA5151;
+      --accent-blue: #576B95;
+      --radius: 12px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.03);
+      --shadow-lg: 0 8px 16px -4px rgba(0,0,0,0.08), 0 4px 8px -4px rgba(0,0,0,0.04);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      color: var(--text);
+      background: var(--surface);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Header */
+    .hero {
+      background: linear-gradient(135deg, #035A2E 0%, #07C160 50%, #4CD964 100%);
+      color: white;
+      padding: 80px 24px 60px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
+      background-size: 30px 30px;
+    }
+
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+      position: relative;
+    }
+
+    .hero .subtitle {
+      font-size: 1.25rem;
+      opacity: 0.9;
+      max-width: 600px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .hero .badge {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 6px 16px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 20px;
+      font-size: 0.85rem;
+      backdrop-filter: blur(4px);
+      position: relative;
+    }
+
+    /* Nav */
+    .nav {
+      position: sticky;
+      top: 0;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+      padding: 0 24px;
+    }
+
+    .nav-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 12px 0;
+    }
+
+    .nav a {
+      text-decoration: none;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: 6px;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .nav a:hover {
+      color: var(--primary);
+      background: rgba(7, 193, 96, 0.06);
+    }
+
+    /* Main content */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 48px 24px;
+    }
+
+    section {
+      margin-bottom: 64px;
+    }
+
+    h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border);
+      letter-spacing: -0.01em;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 24px 0 12px;
+      color: var(--text);
+    }
+
+    p {
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+    }
+
+    /* Feature grid */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 24px;
+    }
+
+    .feature-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .feature-card .icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      margin-bottom: 12px;
+    }
+
+    .feature-card .icon.blue { background: #E8F8EF; color: #07C160; }
+    .feature-card .icon.green { background: #E8F8EF; color: #059048; }
+    .feature-card .icon.orange { background: #FFF8EB; color: var(--accent-orange); }
+    .feature-card .icon.red { background: #FFF0F0; color: var(--accent-red); }
+
+    .feature-card h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .feature-card p {
+      font-size: 0.875rem;
+      margin: 0;
+      line-height: 1.6;
+    }
+
+    /* Pipeline visualization */
+    .pipeline {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 32px 0;
+      justify-content: center;
+    }
+
+    .pipeline-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pipeline-step .node {
+      width: 80px;
+      height: 80px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      box-shadow: var(--shadow);
+      border: 2px solid transparent;
+    }
+
+    .pipeline-step .label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+
+    .pipeline-arrow {
+      font-size: 1.25rem;
+      color: var(--text-muted);
+      margin: 0 4px;
+    }
+
+    .node-dl { background: #E8F8EF; border-color: #A3E4BE; }
+    .node-ext { background: #FFF8EB; border-color: #FDDEA0; }
+    .node-stt { background: #E0F7EC; border-color: #7EDBA7; }
+    .node-spk { background: #F0FDF4; border-color: #86EFAC; }
+    .node-tl { background: #EDF5F0; border-color: #A8D8BD; }
+    .node-tts { background: #FFF4E6; border-color: #FDB97E; }
+    .node-cmb { background: #E8F8EF; border-color: #6EE7A0; }
+
+    /* Tech stack table */
+    .tech-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      background: var(--surface-card);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .tech-table th {
+      background: var(--surface-alt);
+      text-align: left;
+      padding: 14px 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tech-table td {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+
+    .tech-table tr:last-child td { border-bottom: none; }
+
+    .tech-table .tag {
+      display: inline-block;
+      padding: 2px 10px;
+      background: #E8F8EF;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #059048;
+    }
+
+    /* Code blocks */
+    pre {
+      background: #1E293B;
+      color: #E2E8F0;
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+      font-size: 0.85rem;
+      line-height: 1.8;
+      margin: 16px 0;
+      box-shadow: var(--shadow-lg);
+    }
+
+    pre .comment { color: #64748B; }
+    pre .keyword { color: #4CD964; }
+    pre .string { color: #34D399; }
+    pre .cmd { color: #07C160; }
+
+    code {
+      font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+      font-size: 0.85em;
+      background: var(--surface-alt);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    /* Architecture diagram */
+    .arch-container {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      margin: 24px 0;
+      box-shadow: var(--shadow);
+      overflow-x: auto;
+    }
+
+    /* Dependency list */
+    .dep-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    .dep-item {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .dep-item .dep-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: var(--surface-alt);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.9rem;
+    }
+
+    .dep-item .dep-info h5 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .dep-item .dep-info span {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    /* Mode comparison */
+    .mode-compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 20px 0;
+    }
+
+    @media (max-width: 768px) {
+      .mode-compare { grid-template-columns: 1fr; }
+      .pipeline { flex-direction: column; }
+      .pipeline-arrow { transform: rotate(90deg); }
+    }
+
+    .mode-card {
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      background: var(--surface-card);
+    }
+
+    .mode-card.active { border-color: var(--primary); }
+    .mode-card h4 {
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+    }
+
+    .mode-card ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .mode-card li {
+      padding: 4px 0;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .mode-card li::before {
+      content: '✓';
+      color: var(--accent-green);
+      margin-right: 8px;
+      font-weight: bold;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 40px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    /* Alert box */
+    .alert {
+      border-left: 4px solid var(--accent-green);
+      background: #E8F8EF;
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin: 16px 0;
+    }
+
+    .alert p { margin: 0; color: var(--text); font-size: 0.9rem; }
+    .alert strong { color: #059048; }
+  </style>
+</head>
+<body>
+
+<!-- Hero -->
+<header class="hero">
+  <h1>VidiTranslate</h1>
+  <p class="subtitle">YouTube 视频翻译桌面应用 — 从下载到成品视频，全自动流水线</p>
+  <span class="badge">Electron + React + TypeScript &nbsp;|&nbsp; v0.1.0</span>
+</header>
+
+<!-- Navigation -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="#features">功能特性</a>
+    <a href="#pipeline">处理流程</a>
+    <a href="#architecture">系统架构</a>
+    <a href="#install">安装部署</a>
+    <a href="#dependencies">依赖说明</a>
+    <a href="#config">配置指南</a>
+    <a href="#usage">使用说明</a>
+    <a href="#data-contracts">数据契约</a>
+  </div>
+</nav>
+
+<div class="container">
+
+<!-- Features -->
+<section id="features">
+  <h2>功能特性</h2>
+  <p>VidiTranslate 提供端到端的视频翻译工作流，从 YouTube 链接直接输出带双语字幕的翻译视频。</p>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="icon blue">📥</div>
+      <h4>视频下载</h4>
+      <p>输入 YouTube 链接，自动通过 yt-dlp 下载最佳质量视频。支持网络代理环境。</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon green">🎙️</div>
+      <h4>语音识别 (STT)</h4>
+      <p>支持 4 种引擎：OpenAI Whisper API、本地 Whisper API、本地 Whisper CLI、WhisperX。识别精确到句子级时间戳和说话人分离。</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon blue">🗣️</div>
+      <h4>说话人声纹标注</h4>
+      <p>STT 后自动提取每位说话人的语音样本，用户标注性别/年龄后，TTS 自动匹配对应音色。</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon orange">🌐</div>
+      <h4>智能翻译</h4>
+      <p>支持 OpenAI (GPT-4o)、DeepSeek、GLM 智谱三大 LLM 服务商，上下文感知翻译。</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon red">🔊</div>
+      <h4>语音合成 (TTS)</h4>
+      <p>Edge TTS（免费）、OpenAI TTS、IndexTTS（语音克隆）。按说话人性别自动选择音色，支持自然/严格两种时间同步模式。</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon green">🎬</div>
+      <h4>视频合成</h4>
+      <p>FFmpeg 自动替换音轨 + 烧录 ASS 双语字幕，输出最终 MP4 文件。</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon orange">💾</div>
+      <h4>断点缓存</h4>
+      <p>每个处理阶段的结果缓存到本地，基于内容指纹校验。中断后重新运行自动跳过已完成步骤。</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon blue">📝</div>
+      <h4>仅字幕模式</h4>
+      <p>保留原始音频，只生成双语字幕并烧录到视频。适合不需要配音的场景。</p>
+    </div>
+  </div>
+</section>
+
+<!-- Pipeline -->
+<section id="pipeline">
+  <h2>处理流程</h2>
+  <p>完整翻译模式包含 6 个步骤，仅字幕模式跳过语音合成步骤（5 步）。</p>
+
+  <div class="pipeline">
+    <div class="pipeline-step">
+      <div class="node node-dl">📥</div>
+      <span class="label">下载<br>Download</span>
+    </div>
+    <span class="pipeline-arrow">→</span>
+    <div class="pipeline-step">
+      <div class="node node-ext">🎵</div>
+      <span class="label">提取音频<br>Extract</span>
+    </div>
+    <span class="pipeline-arrow">→</span>
+    <div class="pipeline-step">
+      <div class="node node-stt">🎙️</div>
+      <span class="label">语音识别<br>Transcribe</span>
+    </div>
+    <span class="pipeline-arrow">→</span>
+    <div class="pipeline-step">
+      <div class="node node-spk">👤</div>
+      <span class="label">声纹标注<br>Speaker Label</span>
+    </div>
+    <span class="pipeline-arrow">→</span>
+    <div class="pipeline-step">
+      <div class="node node-tl">🌐</div>
+      <span class="label">翻译<br>Translate</span>
+    </div>
+    <span class="pipeline-arrow">→</span>
+    <div class="pipeline-step">
+      <div class="node node-tts">🔊</div>
+      <span class="label">语音合成<br>Synthesize</span>
+    </div>
+    <span class="pipeline-arrow">→</span>
+    <div class="pipeline-step">
+      <div class="node node-cmb">🎬</div>
+      <span class="label">视频合成<br>Recombine</span>
+    </div>
+  </div>
+
+  <div class="mode-compare">
+    <div class="mode-card active">
+      <h4>🎙️ 语音翻译模式（Full）</h4>
+      <ul>
+        <li>下载 → 提取音频 → 语音识别 → 声纹标注 → 翻译 → 语音合成 → 视频合成</li>
+        <li>替换原始音轨为中文配音</li>
+        <li>烧录中英双语字幕</li>
+        <li>说话人音色智能匹配</li>
+      </ul>
+    </div>
+    <div class="mode-card">
+      <h4>📝 仅字幕模式（Subtitle Only）</h4>
+      <ul>
+        <li>下载 → 提取音频 → 语音识别 → 翻译 → 视频合成</li>
+        <li>保留原始音频不变</li>
+        <li>烧录中英双语字幕</li>
+        <li>跳过 TTS 和声纹标注</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- Architecture -->
+<section id="architecture">
+  <h2>系统架构</h2>
+
+  <h3>技术栈</h3>
+  <table class="tech-table">
+    <thead>
+      <tr><th>层级</th><th>技术</th><th>说明</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>桌面框架</td><td><span class="tag">Electron</span></td><td>跨平台桌面应用容器</td></tr>
+      <tr><td>前端框架</td><td><span class="tag">React 19</span></td><td>UI 渲染层</td></tr>
+      <tr><td>构建工具</td><td><span class="tag">electron-vite + Vite 7</span></td><td>快速 HMR 开发体验</td></tr>
+      <tr><td>样式</td><td><span class="tag">Tailwind CSS v4</span></td><td>Material Design 3 风格 Token</td></tr>
+      <tr><td>状态管理</td><td><span class="tag">Zustand</span></td><td>轻量级全局状态</td></tr>
+      <tr><td>语言</td><td><span class="tag">TypeScript</span></td><td>全栈类型安全</td></tr>
+      <tr><td>音视频</td><td><span class="tag">FFmpeg</span></td><td>fluent-ffmpeg + ffmpeg-static</td></tr>
+      <tr><td>配置存储</td><td><span class="tag">electron-store</span></td><td>加密本地持久化</td></tr>
+      <tr><td>国际化</td><td><span class="tag">自研 i18n</span></td><td>基于 Zustand 的轻量方案</td></tr>
+    </tbody>
+  </table>
+
+  <h3>插件化策略架构</h3>
+  <p>核心设计采用 <strong>Strategy Pattern（策略模式）</strong>，每个 Pipeline 节点都是一个接口，可以有多个实现。通过工厂函数根据配置动态组装。</p>
+
+  <div class="arch-container" style="padding: 16px;">
+    <svg viewBox="0 0 960 520" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:auto; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+      <defs>
+        <filter id="shadow1" x="-4%" y="-4%" width="108%" height="112%">
+          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.1"/>
+        </filter>
+        <linearGradient id="grad-orchestrator" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#07C160;stop-opacity:0.08"/>
+          <stop offset="100%" style="stop-color:#4CD964;stop-opacity:0.03"/>
+        </linearGradient>
+        <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#999999"/>
+        </marker>
+      </defs>
+
+      <!-- Orchestrator background -->
+      <rect x="20" y="20" width="920" height="480" rx="16" fill="url(#grad-orchestrator)" stroke="#A3E4BE" stroke-width="1.5" stroke-dasharray="6 3"/>
+      <text x="48" y="50" font-size="13" font-weight="700" fill="#059048">PipelineOrchestrator</text>
+      <text x="48" y="68" font-size="10" fill="#5C5C5C">factories.ts → 根据 AppConfig 动态组装策略</text>
+
+      <!-- Row 1: Strategy interfaces -->
+      <!-- Downloader -->
+      <rect x="50" y="100" width="180" height="54" rx="10" fill="#FFFFFF" stroke="#A3E4BE" stroke-width="1.5" filter="url(#shadow1)"/>
+      <text x="140" y="123" text-anchor="middle" font-size="11" font-weight="600" fill="#059048">DownloaderStrategy</text>
+      <text x="140" y="140" text-anchor="middle" font-size="9" fill="#5C5C5C">download(url) → videoPath</text>
+
+      <!-- Extractor -->
+      <rect x="260" y="100" width="180" height="54" rx="10" fill="#FFFFFF" stroke="#FDDEA0" stroke-width="1.5" filter="url(#shadow1)"/>
+      <text x="350" y="123" text-anchor="middle" font-size="11" font-weight="600" fill="#B8860B">ExtractorStrategy</text>
+      <text x="350" y="140" text-anchor="middle" font-size="9" fill="#5C5C5C">extract(video) → audioPath</text>
+
+      <!-- Transcriber -->
+      <rect x="470" y="100" width="180" height="54" rx="10" fill="#FFFFFF" stroke="#7EDBA7" stroke-width="1.5" filter="url(#shadow1)"/>
+      <text x="560" y="123" text-anchor="middle" font-size="11" font-weight="600" fill="#035A2E">TranscriberStrategy</text>
+      <text x="560" y="140" text-anchor="middle" font-size="9" fill="#5C5C5C">transcribe(audio) → segments</text>
+
+      <!-- Translator -->
+      <rect x="680" y="100" width="180" height="54" rx="10" fill="#FFFFFF" stroke="#A3E4BE" stroke-width="1.5" filter="url(#shadow1)"/>
+      <text x="770" y="123" text-anchor="middle" font-size="11" font-weight="600" fill="#059048">TranslatorStrategy</text>
+      <text x="770" y="140" text-anchor="middle" font-size="9" fill="#5C5C5C">translate(segs) → translated</text>
+
+      <!-- Arrows between strategies -->
+      <line x1="230" y1="127" x2="258" y2="127" stroke="#9CA3AF" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <line x1="440" y1="127" x2="468" y2="127" stroke="#9CA3AF" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <line x1="650" y1="127" x2="678" y2="127" stroke="#9CA3AF" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+      <!-- Row 2: Implementations -->
+      <!-- yt-dlp -->
+      <rect x="90" y="190" width="100" height="36" rx="6" fill="#E8F8EF" stroke="#7EDBA7" stroke-width="1"/>
+      <text x="140" y="213" text-anchor="middle" font-size="10" font-weight="500" fill="#035A2E">yt-dlp</text>
+
+      <!-- ffmpeg extractor -->
+      <rect x="300" y="190" width="100" height="36" rx="6" fill="#FFF8EB" stroke="#FDDEA0" stroke-width="1"/>
+      <text x="350" y="213" text-anchor="middle" font-size="10" font-weight="500" fill="#8B6914">ffmpeg</text>
+
+      <!-- Transcriber impls -->
+      <rect x="480" y="185" width="88" height="30" rx="6" fill="#E0F7EC" stroke="#7EDBA7" stroke-width="1"/>
+      <text x="524" y="205" text-anchor="middle" font-size="9" font-weight="500" fill="#035A2E">openai-api</text>
+      <rect x="480" y="220" width="88" height="30" rx="6" fill="#E0F7EC" stroke="#7EDBA7" stroke-width="1"/>
+      <text x="524" y="240" text-anchor="middle" font-size="9" font-weight="500" fill="#035A2E">local-cli</text>
+      <rect x="580" y="185" width="88" height="30" rx="6" fill="#E0F7EC" stroke="#7EDBA7" stroke-width="1"/>
+      <text x="624" y="205" text-anchor="middle" font-size="9" font-weight="500" fill="#035A2E">whisperx</text>
+
+      <!-- Translator impl -->
+      <rect x="710" y="190" width="110" height="36" rx="6" fill="#E8F8EF" stroke="#7EDBA7" stroke-width="1"/>
+      <text x="765" y="208" text-anchor="middle" font-size="9" font-weight="500" fill="#035A2E">openai-compatible</text>
+      <text x="765" y="220" text-anchor="middle" font-size="8" fill="#5C5C5C">(OpenAI/DeepSeek/GLM)</text>
+
+      <!-- Connector lines to impls -->
+      <line x1="140" y1="154" x2="140" y2="188" stroke="#A3E4BE" stroke-width="1" stroke-dasharray="3 2"/>
+      <line x1="350" y1="154" x2="350" y2="188" stroke="#FDDEA0" stroke-width="1" stroke-dasharray="3 2"/>
+      <line x1="540" y1="154" x2="524" y2="183" stroke="#7EDBA7" stroke-width="1" stroke-dasharray="3 2"/>
+      <line x1="580" y1="154" x2="624" y2="183" stroke="#7EDBA7" stroke-width="1" stroke-dasharray="3 2"/>
+      <line x1="770" y1="154" x2="765" y2="188" stroke="#A3E4BE" stroke-width="1" stroke-dasharray="3 2"/>
+
+      <!-- Row 3: Synthesizer + Combiner -->
+      <!-- Synthesizer -->
+      <rect x="50" y="300" width="400" height="54" rx="10" fill="#FFFFFF" stroke="#FDB97E" stroke-width="1.5" filter="url(#shadow1)"/>
+      <text x="250" y="323" text-anchor="middle" font-size="11" font-weight="600" fill="#C2410C">SynthesizerStrategy</text>
+      <text x="250" y="340" text-anchor="middle" font-size="9" fill="#5C5C5C">synthesize(translated, speakerProfiles) → audioPath + timings</text>
+
+      <!-- Combiner -->
+      <rect x="500" y="300" width="400" height="54" rx="10" fill="#FFFFFF" stroke="#7EDBA7" stroke-width="1.5" filter="url(#shadow1)"/>
+      <text x="700" y="323" text-anchor="middle" font-size="11" font-weight="600" fill="#059048">CombinerStrategy</text>
+      <text x="700" y="340" text-anchor="middle" font-size="9" fill="#5C5C5C">combine(video, audio, subtitle) → outputPath</text>
+
+      <!-- Arrow synth → combiner -->
+      <line x1="450" y1="327" x2="498" y2="327" stroke="#9CA3AF" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+      <!-- Synthesizer impls -->
+      <rect x="60" y="390" width="105" height="36" rx="6" fill="#FFF4E6" stroke="#FDB97E" stroke-width="1"/>
+      <text x="112" y="413" text-anchor="middle" font-size="9" font-weight="500" fill="#9A3412">Edge TTS</text>
+
+      <rect x="180" y="390" width="105" height="36" rx="6" fill="#FFF4E6" stroke="#FDB97E" stroke-width="1"/>
+      <text x="232" y="413" text-anchor="middle" font-size="9" font-weight="500" fill="#9A3412">OpenAI TTS</text>
+
+      <rect x="300" y="390" width="105" height="36" rx="6" fill="#FFF4E6" stroke="#FDB97E" stroke-width="1"/>
+      <text x="352" y="413" text-anchor="middle" font-size="9" font-weight="500" fill="#9A3412">IndexTTS</text>
+      <text x="352" y="424" text-anchor="middle" font-size="7" fill="#5C5C5C">(语音克隆)</text>
+
+      <!-- Combiner impls -->
+      <rect x="540" y="390" width="140" height="36" rx="6" fill="#E8F8EF" stroke="#7EDBA7" stroke-width="1"/>
+      <text x="610" y="408" text-anchor="middle" font-size="9" font-weight="500" fill="#035A2E">FFmpeg Full</text>
+      <text x="610" y="420" text-anchor="middle" font-size="7" fill="#5C5C5C">(替换音轨+字幕)</text>
+
+      <rect x="700" y="390" width="150" height="36" rx="6" fill="#E8F8EF" stroke="#7EDBA7" stroke-width="1"/>
+      <text x="775" y="408" text-anchor="middle" font-size="9" font-weight="500" fill="#035A2E">FFmpeg Subtitle-Only</text>
+      <text x="775" y="420" text-anchor="middle" font-size="7" fill="#5C5C5C">(保留原音+字幕)</text>
+
+      <!-- Connector lines to impls row 3 -->
+      <line x1="112" y1="354" x2="112" y2="388" stroke="#FDB97E" stroke-width="1" stroke-dasharray="3 2"/>
+      <line x1="232" y1="354" x2="232" y2="388" stroke="#FDB97E" stroke-width="1" stroke-dasharray="3 2"/>
+      <line x1="352" y1="354" x2="352" y2="388" stroke="#FDB97E" stroke-width="1" stroke-dasharray="3 2"/>
+      <line x1="610" y1="354" x2="610" y2="388" stroke="#7EDBA7" stroke-width="1" stroke-dasharray="3 2"/>
+      <line x1="775" y1="354" x2="775" y2="388" stroke="#7EDBA7" stroke-width="1" stroke-dasharray="3 2"/>
+
+      <!-- Speaker Profiles badge -->
+      <rect x="60" y="450" width="180" height="32" rx="6" fill="#E8F8EF" stroke="#7EDBA7" stroke-width="1"/>
+      <text x="150" y="470" text-anchor="middle" font-size="9" font-weight="500" fill="#035A2E">🎤 SpeakerProfile → 音色匹配</text>
+
+      <!-- Subtitle gen badge -->
+      <rect x="540" y="450" width="160" height="32" rx="6" fill="#FFF8EB" stroke="#FDDEA0" stroke-width="1"/>
+      <text x="620" y="470" text-anchor="middle" font-size="9" font-weight="500" fill="#8B6914">📝 ASS 字幕生成</text>
+    </svg>
+  </div>
+
+  <h3>进程通信架构</h3>
+
+  <div class="arch-container" style="padding: 16px;">
+    <svg viewBox="0 0 900 400" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:auto; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+      <defs>
+        <linearGradient id="grad-main" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#07C160;stop-opacity:0.06"/>
+          <stop offset="100%" style="stop-color:#07C160;stop-opacity:0.02"/>
+        </linearGradient>
+        <linearGradient id="grad-renderer" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#576B95;stop-opacity:0.06"/>
+          <stop offset="100%" style="stop-color:#576B95;stop-opacity:0.02"/>
+        </linearGradient>
+      </defs>
+
+      <!-- Main Process -->
+      <rect x="30" y="20" width="840" height="160" rx="14" fill="url(#grad-main)" stroke="#A3E4BE" stroke-width="1.5"/>
+      <text x="60" y="48" font-size="13" font-weight="700" fill="#059048">Main Process (Node.js)</text>
+
+      <rect x="60" y="65" width="180" height="90" rx="8" fill="#FFFFFF" stroke="#E6E6E6" stroke-width="1" filter="url(#shadow1)"/>
+      <text x="150" y="90" text-anchor="middle" font-size="10" font-weight="600" fill="#1A1A1A">Pipeline Orchestrator</text>
+      <text x="150" y="106" text-anchor="middle" font-size="8" fill="#5C5C5C">策略调度 / 缓存管理</text>
+      <text x="150" y="120" text-anchor="middle" font-size="8" fill="#5C5C5C">暂停/恢复 (Promise)</text>
+      <text x="150" y="134" text-anchor="middle" font-size="8" fill="#5C5C5C">进度事件推送</text>
+
+      <rect x="270" y="65" width="140" height="90" rx="8" fill="#FFFFFF" stroke="#E6E6E6" stroke-width="1" filter="url(#shadow1)"/>
+      <text x="340" y="90" text-anchor="middle" font-size="10" font-weight="600" fill="#1A1A1A">Config</text>
+      <text x="340" y="108" text-anchor="middle" font-size="8" fill="#5C5C5C">electron-store</text>
+      <text x="340" y="122" text-anchor="middle" font-size="8" fill="#5C5C5C">加密持久化</text>
+
+      <rect x="440" y="65" width="140" height="90" rx="8" fill="#FFFFFF" stroke="#E6E6E6" stroke-width="1" filter="url(#shadow1)"/>
+      <text x="510" y="90" text-anchor="middle" font-size="10" font-weight="600" fill="#1A1A1A">History</text>
+      <text x="510" y="108" text-anchor="middle" font-size="8" fill="#5C5C5C">翻译记录 JSON</text>
+      <text x="510" y="122" text-anchor="middle" font-size="8" fill="#5C5C5C">视频库管理</text>
+
+      <rect x="610" y="65" width="230" height="90" rx="8" fill="#FFFFFF" stroke="#E6E6E6" stroke-width="1" filter="url(#shadow1)"/>
+      <text x="725" y="90" text-anchor="middle" font-size="10" font-weight="600" fill="#1A1A1A">IPC Handlers</text>
+      <text x="725" y="108" text-anchor="middle" font-size="8" fill="#5C5C5C">pipeline:start / cancel</text>
+      <text x="725" y="122" text-anchor="middle" font-size="8" fill="#5C5C5C">pipeline:submit-speaker-labels</text>
+      <text x="725" y="136" text-anchor="middle" font-size="8" fill="#5C5C5C">config:get / set</text>
+
+      <!-- IPC Bridge -->
+      <rect x="350" y="195" width="200" height="30" rx="6" fill="#FFF8EB" stroke="#FA9D3B" stroke-width="1.5"/>
+      <text x="450" y="215" text-anchor="middle" font-size="10" font-weight="600" fill="#8B6914">IPC (contextBridge)</text>
+
+      <!-- Arrows -->
+      <line x1="450" y1="180" x2="450" y2="193" stroke="#FA9D3B" stroke-width="2" marker-end="url(#arrowhead)"/>
+      <line x1="450" y1="227" x2="450" y2="245" stroke="#FA9D3B" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+      <!-- Renderer Process -->
+      <rect x="30" y="240" width="840" height="140" rx="14" fill="url(#grad-renderer)" stroke="#A8B8D0" stroke-width="1.5"/>
+      <text x="60" y="268" font-size="13" font-weight="700" fill="#576B95">Renderer Process (Chromium)</text>
+
+      <rect x="60" y="285" width="200" height="75" rx="8" fill="#FFFFFF" stroke="#E6E6E6" stroke-width="1" filter="url(#shadow1)"/>
+      <text x="160" y="308" text-anchor="middle" font-size="10" font-weight="600" fill="#1A1A1A">window.electronAPI</text>
+      <text x="160" y="324" text-anchor="middle" font-size="8" fill="#5C5C5C">pipelineStart / Cancel</text>
+      <text x="160" y="338" text-anchor="middle" font-size="8" fill="#5C5C5C">submitSpeakerLabels</text>
+      <text x="160" y="352" text-anchor="middle" font-size="8" fill="#5C5C5C">onProgress (事件监听)</text>
+
+      <rect x="290" y="285" width="140" height="75" rx="8" fill="#FFFFFF" stroke="#E6E6E6" stroke-width="1" filter="url(#shadow1)"/>
+      <text x="360" y="308" text-anchor="middle" font-size="10" font-weight="600" fill="#1A1A1A">Zustand Store</text>
+      <text x="360" y="324" text-anchor="middle" font-size="8" fill="#5C5C5C">全局状态管理</text>
+      <text x="360" y="338" text-anchor="middle" font-size="8" fill="#5C5C5C">PipelineState</text>
+      <text x="360" y="352" text-anchor="middle" font-size="8" fill="#5C5C5C">AppConfig</text>
+
+      <rect x="460" y="285" width="380" height="75" rx="8" fill="#FFFFFF" stroke="#E6E6E6" stroke-width="1" filter="url(#shadow1)"/>
+      <text x="650" y="308" text-anchor="middle" font-size="10" font-weight="600" fill="#1A1A1A">React Components</text>
+      <rect x="480" y="318" width="80" height="22" rx="4" fill="#E8F8EF" stroke="#A3E4BE" stroke-width="0.5"/>
+      <text x="520" y="333" text-anchor="middle" font-size="8" fill="#035A2E">InputView</text>
+      <rect x="570" y="318" width="90" height="22" rx="4" fill="#E8F8EF" stroke="#7EDBA7" stroke-width="0.5"/>
+      <text x="615" y="333" text-anchor="middle" font-size="8" fill="#035A2E">ProgressView</text>
+      <rect x="670" y="318" width="85" height="22" rx="4" fill="#FFF4E6" stroke="#FDB97E" stroke-width="0.5"/>
+      <text x="712" y="333" text-anchor="middle" font-size="8" fill="#9A3412">SettingsView</text>
+      <rect x="765" y="318" width="60" height="22" rx="4" fill="#E8F8EF" stroke="#A3E4BE" stroke-width="0.5"/>
+      <text x="795" y="333" text-anchor="middle" font-size="8" fill="#035A2E">Result</text>
+      <rect x="530" y="346" width="120" height="18" rx="4" fill="#E8F8EF" stroke="#7EDBA7" stroke-width="0.5"/>
+      <text x="590" y="358" text-anchor="middle" font-size="7" fill="#035A2E">SpeakerLabelingPanel</text>
+
+      <!-- Connect store to components -->
+      <line x1="430" y1="322" x2="458" y2="322" stroke="#9CA3AF" stroke-width="1" marker-end="url(#arrowhead)"/>
+    </svg>
+  </div>
+</section>
+
+<!-- Installation -->
+<section id="install">
+  <h2>安装部署</h2>
+
+  <h3>环境要求</h3>
+  <table class="tech-table">
+    <thead><tr><th>依赖</th><th>版本</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>Node.js</td><td>≥ 18</td><td>运行时环境</td></tr>
+      <tr><td>npm</td><td>≥ 9</td><td>包管理器</td></tr>
+      <tr><td>yt-dlp</td><td>最新</td><td>视频下载工具，需在 PATH 中</td></tr>
+      <tr><td>Python 3.8+</td><td>可选</td><td>本地 Whisper CLI / WhisperX 模式需要</td></tr>
+      <tr><td>edge-tts (pip)</td><td>可选</td><td>Edge TTS 引擎，需在 PATH 中</td></tr>
+    </tbody>
+  </table>
+
+  <h3>安装步骤</h3>
+  <pre><span class="comment"># 1. 克隆仓库</span>
+<span class="cmd">git clone</span> &lt;repo-url&gt;
+<span class="cmd">cd</span> video-translator
+
+<span class="comment"># 2. 安装 Node.js 依赖</span>
+<span class="cmd">npm install</span>
+
+<span class="comment"># 3. 安装外部工具（macOS 示例）</span>
+<span class="cmd">brew install</span> yt-dlp           <span class="comment"># 视频下载</span>
+<span class="cmd">pip install</span> edge-tts          <span class="comment"># Edge TTS 语音合成（免费）</span>
+
+<span class="comment"># 4. 可选：安装 WhisperX（推荐，支持说话人分离）</span>
+<span class="cmd">pip install</span> whisperx          <span class="comment"># 需要 Python 3.8+ 和 PyTorch</span></pre>
+
+  <h3>开发运行</h3>
+  <pre><span class="comment"># 启动开发模式（支持 HMR 热重载）</span>
+<span class="cmd">npm run dev</span>
+
+<span class="comment"># 类型检查</span>
+<span class="cmd">npm run typecheck</span>
+
+<span class="comment"># 生产构建</span>
+<span class="cmd">npm run build</span></pre>
+
+  <div class="alert">
+    <p><strong>💡 提示：</strong>FFmpeg 和 FFprobe 已内置在 npm 依赖中（<code>ffmpeg-static</code> + <code>ffprobe-static</code>），无需额外安装。</p>
+  </div>
+</section>
+
+<!-- Dependencies -->
+<section id="dependencies">
+  <h2>依赖说明</h2>
+
+  <h3>核心运行时依赖</h3>
+  <div class="dep-grid">
+    <div class="dep-item">
+      <div class="dep-icon">⚡</div>
+      <div class="dep-info">
+        <h5>electron</h5>
+        <span>跨平台桌面应用框架</span>
+      </div>
+    </div>
+    <div class="dep-item">
+      <div class="dep-icon">⚛️</div>
+      <div class="dep-info">
+        <h5>react + react-dom</h5>
+        <span>UI 渲染框架 (v19)</span>
+      </div>
+    </div>
+    <div class="dep-item">
+      <div class="dep-icon">🐻</div>
+      <div class="dep-info">
+        <h5>zustand</h5>
+        <span>轻量级状态管理</span>
+      </div>
+    </div>
+    <div class="dep-item">
+      <div class="dep-icon">🎬</div>
+      <div class="dep-info">
+        <h5>fluent-ffmpeg</h5>
+        <span>FFmpeg Node.js 封装</span>
+      </div>
+    </div>
+    <div class="dep-item">
+      <div class="dep-icon">📦</div>
+      <div class="dep-info">
+        <h5>ffmpeg-static / ffprobe-static</h5>
+        <span>内置 FFmpeg 二进制文件</span>
+      </div>
+    </div>
+    <div class="dep-item">
+      <div class="dep-icon">🤖</div>
+      <div class="dep-info">
+        <h5>openai</h5>
+        <span>OpenAI SDK（STT/翻译/TTS）</span>
+      </div>
+    </div>
+    <div class="dep-item">
+      <div class="dep-icon">💾</div>
+      <div class="dep-info">
+        <h5>electron-store</h5>
+        <span>加密本地配置存储</span>
+      </div>
+    </div>
+    <div class="dep-item">
+      <div class="dep-icon">🌐</div>
+      <div class="dep-info">
+        <h5>undici (ProxyAgent)</h5>
+        <span>HTTP 代理支持</span>
+      </div>
+    </div>
+  </div>
+
+  <h3>外部系统工具</h3>
+  <table class="tech-table">
+    <thead><tr><th>工具</th><th>用途</th><th>安装方式</th></tr></thead>
+    <tbody>
+      <tr><td><code>yt-dlp</code></td><td>YouTube 视频下载</td><td><code>brew install yt-dlp</code> / <code>pip install yt-dlp</code></td></tr>
+      <tr><td><code>edge-tts</code></td><td>微软 Edge TTS 引擎（免费）</td><td><code>pip install edge-tts</code></td></tr>
+      <tr><td><code>whisperx</code></td><td>高精度语音识别 + 说话人分离</td><td><code>pip install whisperx</code></td></tr>
+      <tr><td><code>whisper</code></td><td>OpenAI Whisper 本地 CLI</td><td><code>pip install openai-whisper</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- Configuration -->
+<section id="config">
+  <h2>配置指南</h2>
+  <p>首次启动后进入 Settings 页面进行配置。所有配置加密存储在本地 <code>electron-store</code> 中。</p>
+
+  <table class="tech-table">
+    <thead><tr><th>配置项</th><th>选项</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>语音识别引擎</strong></td>
+        <td>OpenAI API / 本地 API / 本地 CLI / WhisperX</td>
+        <td>WhisperX 推荐（支持说话人分离和词级时间戳）</td>
+      </tr>
+      <tr>
+        <td><strong>翻译服务</strong></td>
+        <td>OpenAI / DeepSeek / GLM 智谱</td>
+        <td>需要对应 API Key</td>
+      </tr>
+      <tr>
+        <td><strong>TTS 引擎</strong></td>
+        <td>Edge TTS / OpenAI TTS / IndexTTS</td>
+        <td>Edge TTS 免费；IndexTTS 支持声音克隆</td>
+      </tr>
+      <tr>
+        <td><strong>同步模式</strong></td>
+        <td>自然 / 严格</td>
+        <td>自然模式允许变速；严格模式强制对齐原始时间轴</td>
+      </tr>
+      <tr>
+        <td><strong>管线模式</strong></td>
+        <td>语音翻译 / 仅字幕</td>
+        <td>仅字幕模式保留原始音频</td>
+      </tr>
+      <tr>
+        <td><strong>输出目录</strong></td>
+        <td>自选路径</td>
+        <td>最终视频和临时文件的存储位置</td>
+      </tr>
+      <tr>
+        <td><strong>网络代理</strong></td>
+        <td>开关 + URL</td>
+        <td>支持 HTTP/HTTPS/SOCKS5 代理</td>
+      </tr>
+      <tr>
+        <td><strong>字幕样式</strong></td>
+        <td>字体、大小、颜色、位置</td>
+        <td>分别设置中英文字幕样式</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- Usage -->
+<section id="usage">
+  <h2>使用说明</h2>
+
+  <h3>基本工作流</h3>
+  <ol style="padding-left: 20px; color: var(--text-secondary); line-height: 2.2;">
+    <li><strong>配置</strong> — 首次使用在 Settings 中配置 API Key、输出目录等</li>
+    <li><strong>输入</strong> — 在首页粘贴 YouTube 视频链接</li>
+    <li><strong>选择模式</strong> — 选择「语音翻译」或「仅字幕」模式</li>
+    <li><strong>开始</strong> — 点击开始按钮，进入自动处理流程</li>
+    <li><strong>标注说话人</strong> — 语音识别完成后，系统会暂停并展示每位说话人的音频样本，选择其性别/年龄（仅语音翻译模式）</li>
+    <li><strong>等待完成</strong> — 翻译和合成过程自动进行，进度条实时展示</li>
+    <li><strong>查看结果</strong> — 完成后在视频库中查看和打开翻译后的视频</li>
+  </ol>
+
+  <h3>说话人标注</h3>
+  <p>当使用支持说话人分离的 STT 引擎（如 WhisperX）时，系统会在语音识别完成后暂停，展示每位说话人的音频样本供试听。用户为每位说话人选择一个音色类别：</p>
+  <ul style="padding-left: 20px; color: var(--text-secondary); line-height: 2;">
+    <li><strong>成年男性</strong> — Edge: 云希/云健/云扬 | OpenAI: echo/onyx</li>
+    <li><strong>成年女性</strong> — Edge: 晓晓/晓伊/晓珍 | OpenAI: nova/shimmer</li>
+    <li><strong>少年男性</strong> — Edge: 云希 | OpenAI: fable/alloy</li>
+    <li><strong>少年女性</strong> — Edge: 晓晓 | OpenAI: alloy/fable</li>
+  </ul>
+  <p>IndexTTS 模式下，系统直接使用该说话人的音频样本作为克隆参考，无需选择预设音色。</p>
+
+  <h3>缓存机制</h3>
+  <p>每个视频的处理结果缓存在 <code>{outputDir}/.tmp/{video-hash}/</code> 目录中：</p>
+  <ul style="padding-left: 20px; color: var(--text-secondary); line-height: 2;">
+    <li><code>audio.wav</code> — 提取的音频文件</li>
+    <li><code>transcript.json</code> — STT 结果（含指纹校验）</li>
+    <li><code>translated_segments.json</code> — 翻译结果</li>
+    <li><code>tts.json</code> — TTS 输出路径</li>
+    <li><code>speaker-profiles.json</code> — 说话人标注缓存</li>
+    <li><code>speaker-samples/</code> — 说话人音频样本 (.wav)</li>
+  </ul>
+  <p>修改配置后相关缓存会自动失效（基于内容指纹变更检测）。</p>
+</section>
+
+<!-- Data Contracts -->
+<section id="data-contracts">
+  <h2>数据契约</h2>
+  <p>各 Pipeline 节点之间通过 TypeScript 接口定义数据契约。以下是核心数据结构规范：</p>
+
+  <h3>TranscriptSegment（STT 输出）</h3>
+  <table class="tech-table">
+    <thead><tr><th>字段</th><th>类型</th><th>约束</th></tr></thead>
+    <tbody>
+      <tr><td><code>start</code></td><td>number</td><td>秒(float)，精度 ≥ 10ms，≥ 0</td></tr>
+      <tr><td><code>end</code></td><td>number</td><td>秒(float)，> start，允许跨 speaker 重叠</td></tr>
+      <tr><td><code>text</code></td><td>string</td><td>完整句子（含标点），trim 后非空</td></tr>
+      <tr><td><code>speaker</code></td><td>string</td><td>任意非空字符串，同一说话人全局一致</td></tr>
+      <tr><td><code>confidence</code></td><td>number?</td><td>可选，范围 [0, 1]</td></tr>
+    </tbody>
+  </table>
+
+  <h3>TranslatedSegment（翻译输出）</h3>
+  <table class="tech-table">
+    <thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><code>start</code></td><td>number</td><td>保持原始 STT 时间戳不变</td></tr>
+      <tr><td><code>end</code></td><td>number</td><td>保持原始 STT 时间戳不变</td></tr>
+      <tr><td><code>sourceText</code></td><td>string</td><td>原文（== 原始 segment.text）</td></tr>
+      <tr><td><code>targetText</code></td><td>string</td><td>译文</td></tr>
+      <tr><td><code>speaker</code></td><td>string</td><td>透传自 TranscriptSegment</td></tr>
+    </tbody>
+  </table>
+
+  <h3>SpeakerProfile（说话人档案）</h3>
+  <table class="tech-table">
+    <thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><code>id</code></td><td>string</td><td>说话人 ID（同 segment.speaker）</td></tr>
+      <tr><td><code>gender</code></td><td>SpeakerGender</td><td>'adult-male' | 'adult-female' | 'child-male' | 'child-female'</td></tr>
+      <tr><td><code>samplePath</code></td><td>string</td><td>音频样本文件路径（wav）</td></tr>
+      <tr><td><code>sampleDataUrl</code></td><td>string?</td><td>base64 data URL（用于前端播放）</td></tr>
+    </tbody>
+  </table>
+
+  <h3>SynthesisResult（TTS 输出）</h3>
+  <table class="tech-table">
+    <thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><code>audioPath</code></td><td>string</td><td>合成音频文件路径</td></tr>
+      <tr><td><code>segmentTimings</code></td><td>array</td><td>每段实际时间，长度 == segments.length</td></tr>
+      <tr><td><code>segmentTimings[].start</code></td><td>number</td><td>最终音频中的起始时间（秒）</td></tr>
+      <tr><td><code>segmentTimings[].end</code></td><td>number</td><td>最终音频中的结束时间（秒）</td></tr>
+      <tr><td><code>segmentTimings[].actualDuration</code></td><td>number</td><td>TTS 实际生成的音频时长（秒）</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+  <p>VidiTranslate v0.1.0 &nbsp;•&nbsp; Built with Electron + React + TypeScript</p>
+  <p style="margin-top: 8px;">Pipeline 策略架构 — 每个节点可独立替换实现</p>
+</footer>
+
+</body>
+</html>

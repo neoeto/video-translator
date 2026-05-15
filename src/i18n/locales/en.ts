@@ -54,6 +54,14 @@ export const en = {
   'progress.cancelPipeline': 'Cancel Pipeline',
   'progress.noActiveTask': 'No active task',
 
+  'speaker.title': 'Speaker Voice Labeling',
+  'speaker.description': 'Select gender/age for each speaker to match appropriate voice.',
+  'speaker.adultMale': 'Adult Male',
+  'speaker.adultFemale': 'Adult Female',
+  'speaker.childMale': 'Young Male',
+  'speaker.childFemale': 'Young Female',
+  'speaker.continue': 'Continue Translation',
+
   'result.heading': 'Video Library',
   'result.newTranslation': 'New Translation',
   'result.playVideo': 'Play Video',
