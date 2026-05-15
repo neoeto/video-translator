@@ -165,7 +165,7 @@ export async function adjustAudioTempo(
 
 // Natural mode: comfortable speed range — beyond this, speech sounds unnatural
 const NATURAL_MIN_RATE = 0.77
-const NATURAL_MAX_RATE = 1.3
+const NATURAL_MAX_RATE = 2.0
 
 export interface SegmentTiming {
   start: number
@@ -179,9 +179,25 @@ export interface TimelineResult {
 }
 
 /**
+ * Truncate audio to a target duration with a short fade-out to avoid abrupt cuts.
+ */
+async function truncateAudio(inputFile: string, outputFile: string, targetDuration: number): Promise<void> {
+  const fadeOutDuration = Math.min(0.15, targetDuration * 0.1)
+  const fadeStart = Math.max(0, targetDuration - fadeOutDuration)
+  await runFfmpeg((command) => {
+    command
+      .input(inputFile)
+      .audioFilters(`afade=t=out:st=${fadeStart}:d=${fadeOutDuration}`)
+      .outputOptions(['-acodec', 'libmp3lame', '-t', String(targetDuration)])
+      .format('mp3')
+      .output(outputFile)
+  })
+}
+
+/**
  * Adjust a TTS segment's duration to match the target window.
  * - strict mode: force-fit to exact target via atempo + pad
- * - natural mode: adjust within comfortable range, accept remaining difference
+ * - natural mode: adjust within comfortable range, truncate if still overlong
  * Returns the path to the adjusted file and its actual duration.
  */
 async function adjustSegmentDuration(
@@ -193,7 +209,8 @@ async function adjustSegmentDuration(
 ): Promise<{ file: string; duration: number }> {
   const actualDuration = await probeDuration(rawFile)
 
-  if (Math.abs(actualDuration - targetDuration) <= DURATION_TOLERANCE) {
+  // In strict mode, skip the tolerance check — always force-fit to target
+  if (syncMode !== 'strict' && Math.abs(actualDuration - targetDuration) <= DURATION_TOLERANCE) {
     return { file: rawFile, duration: actualDuration }
   }
 
@@ -202,14 +219,28 @@ async function adjustSegmentDuration(
   const finalFile = path.join(workDir, `segment-${index}-final.mp3`)
 
   if (syncMode === 'strict') {
-    // Strict: force to exact target duration
-    await adjustAudioTempo(rawFile, adjustedFile, actualDuration, targetDuration)
+    // Strict: force to exact target duration via atempo + pad/truncate
+    if (Math.abs(actualDuration - targetDuration) > DURATION_TOLERANCE) {
+      await adjustAudioTempo(rawFile, adjustedFile, actualDuration, targetDuration)
+    } else {
+      // Small difference — copy as starting point for pad/truncate
+      await fs.copyFile(rawFile, adjustedFile)
+    }
     const adjustedDuration = await probeDuration(adjustedFile)
-    if (adjustedDuration < targetDuration - DURATION_TOLERANCE) {
+
+    if (adjustedDuration > targetDuration + 0.05) {
+      // Still overlong — truncate to exact target
+      const truncatedFile = path.join(workDir, `segment-${index}-truncated.mp3`)
+      await truncateAudio(adjustedFile, truncatedFile, targetDuration)
+      return { file: truncatedFile, duration: targetDuration }
+    }
+    if (adjustedDuration < targetDuration - 0.05) {
+      // Still short — pad to exact target
       await padAudioToDuration(adjustedFile, finalFile, targetDuration)
       return { file: finalFile, duration: targetDuration }
     }
-    return { file: adjustedFile, duration: adjustedDuration }
+    // Within 50ms — close enough for strict mode
+    return { file: adjustedFile, duration: targetDuration }
   }
 
   // Natural: clamp speed to comfortable range
@@ -222,6 +253,14 @@ async function adjustSegmentDuration(
   const adjustedTarget = actualDuration / clampedRate
   await adjustAudioTempo(rawFile, adjustedFile, actualDuration, adjustedTarget)
   const adjustedDuration = await probeDuration(adjustedFile)
+
+  // If still significantly overlong after tempo adjustment, truncate to prevent drift
+  if (adjustedDuration > targetDuration + DURATION_TOLERANCE) {
+    const truncatedFile = path.join(workDir, `segment-${index}-truncated.mp3`)
+    await truncateAudio(adjustedFile, truncatedFile, targetDuration)
+    return { file: truncatedFile, duration: targetDuration }
+  }
+
   return { file: adjustedFile, duration: adjustedDuration }
 }
 

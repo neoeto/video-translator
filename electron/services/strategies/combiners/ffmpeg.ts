@@ -64,6 +64,7 @@ export default class FfmpegCombiner implements CombinerStrategy {
           '-crf', '23',
           '-pix_fmt', 'yuv420p',
           '-c:a', 'aac',
+          '-t', String(duration),
           '-movflags', '+faststart',
         ])
         .on('progress', (info) => {

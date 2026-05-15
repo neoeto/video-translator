@@ -319,6 +319,13 @@
       border-radius: 4px;
     }
 
+    pre code {
+      background: transparent;
+      padding: 0;
+      border-radius: 0;
+      font-size: inherit;
+    }
+
     /* Architecture diagram */
     .arch-container {
       background: var(--surface-card);
@@ -937,6 +944,75 @@
       <tr><td><code>audio-separator</code></td><td>AI 人声分离（人声分离模式需要）</td><td><code>pip install "audio-separator[cpu]"</code></td></tr>
     </tbody>
   </table>
+
+  <h3>IndexTTS-2 API 服务部署</h3>
+  <p>IndexTTS 模式需要运行一个本地 FastAPI 服务。项目提供了 <code>scripts/indextts2-api.py</code> 脚本，按以下步骤部署：</p>
+
+  <h4>1. 安装 IndexTTS-2</h4>
+  <pre><code>git clone https://github.com/index-tts/index-tts.git && cd index-tts
+git lfs pull
+uv sync --all-extras
+hf download IndexTeam/IndexTTS-2 --local-dir=checkpoints</code></pre>
+
+  <h4>2. 安装 API 依赖</h4>
+  <pre><code>uv add fastapi uvicorn python-multipart</code></pre>
+
+  <h4>3. 复制启动脚本</h4>
+  <pre><code># 将项目中的 api.py 复制到 IndexTTS-2 目录
+cp /path/to/video-translator/scripts/indextts2-api.py api.py</code></pre>
+
+  <h4>4. 启动服务</h4>
+  <pre><code># 基本启动（端口 8080，匹配应用默认设置）
+uv run python api.py
+
+# 使用半精度推理（更快、更省显存，推荐）
+uv run python api.py --fp16
+
+# 自定义端口
+uv run python api.py --port 9000
+
+# 指定默认参考音频
+uv run python api.py --ref examples/voice_01.wav
+
+# 完整参数
+uv run python api.py --fp16 --deepspeed --port 8080 --ref ref.wav</code></pre>
+
+  <h4>运行参数说明</h4>
+  <table class="tech-table">
+    <thead><tr><th>参数</th><th>默认值</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><code>--host</code></td><td>0.0.0.0</td><td>绑定地址</td></tr>
+      <tr><td><code>--port</code></td><td>8080</td><td>端口号（应用设置中 IndexTTS API URL 需对应）</td></tr>
+      <tr><td><code>--fp16</code></td><td>关闭</td><td>半精度推理，降低显存占用，速度更快</td></tr>
+      <tr><td><code>--deepspeed</code></td><td>关闭</td><td>DeepSpeed 加速（部分硬件可能反而变慢）</td></tr>
+      <tr><td><code>--ref</code></td><td>examples/voice_01.wav</td><td>未指定参考音频时使用的默认音色</td></tr>
+    </tbody>
+  </table>
+
+  <h4>环境变量（可选）</h4>
+  <table class="tech-table">
+    <thead><tr><th>变量</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><code>INDEXTTS_CFG</code></td><td>模型配置文件路径（默认 checkpoints/config.yaml）</td></tr>
+      <tr><td><code>INDEXTTS_MODEL_DIR</code></td><td>模型目录路径（默认 checkpoints）</td></tr>
+      <tr><td><code>INDEXTTS_FP16</code></td><td>设为 1 启用半精度</td></tr>
+      <tr><td><code>INDEXTTS_DEEPSPEED</code></td><td>设为 1 启用 DeepSpeed</td></tr>
+      <tr><td><code>INDEXTTS_DEFAULT_REF</code></td><td>默认参考音频路径</td></tr>
+    </tbody>
+  </table>
+
+  <h4>API 接口</h4>
+  <table class="tech-table">
+    <thead><tr><th>方法</th><th>路径</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>GET</td><td><code>/health</code></td><td>健康检查，返回 <code>{"status": "ok", "model": "IndexTTS-2"}</code></td></tr>
+      <tr><td>POST</td><td><code>/tts</code></td><td>JSON 合成：<code>{"text": "...", "reference_audio": "/path/to/ref.wav"}</code>，返回 WAV 音频</td></tr>
+      <tr><td>POST</td><td><code>/tts/upload</code></td><td>表单上传：text + reference_audio 文件，返回 WAV 音频</td></tr>
+    </tbody>
+  </table>
+  <div class="alert">
+    <p><strong>💡 提示：</strong>应用设置中的「IndexTTS API URL」默认为 <code>http://localhost:8080</code>。如果修改了端口号，需要在应用设置中同步更新。说话人标注后，系统会自动将每位说话人的音频样本路径作为 <code>reference_audio</code> 传递给 IndexTTS 进行声音克隆。</p>
+  </div>
 </section>
 
 <!-- Configuration -->
