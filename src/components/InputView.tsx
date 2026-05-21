@@ -1,11 +1,22 @@
 import React, { useState } from 'react'
 import { usePipelineStore } from '../store/usePipelineStore'
 import { useI18n } from '../i18n'
+import { TRANSLATION_LANGUAGES, getLanguageDisplayName, type TranslationLanguage } from '../types'
 
 const isValidYoutubeUrl = (url: string) => {
   const regex = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)[\w-]{11}/
   return regex.test(url)
 }
+
+const SOURCE_LANGUAGE_OPTIONS: TranslationLanguage[] = [
+  'auto', 'en', 'zh', 'ja', 'ko', 'fr', 'de', 'es', 'pt', 'ru',
+  'ar', 'it', 'th', 'vi', 'id', 'tr', 'pl', 'uk', 'nl', 'hi',
+]
+
+const TARGET_LANGUAGE_OPTIONS: Exclude<TranslationLanguage, 'auto'>[] = [
+  'en', 'zh', 'ja', 'ko', 'fr', 'de', 'es', 'pt', 'ru',
+  'ar', 'it', 'th', 'vi', 'id', 'tr', 'pl', 'uk', 'nl', 'hi',
+]
 
 export interface InputViewProps {
   onNavigate: (view: string) => void
@@ -109,6 +120,43 @@ export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
       <p className="text-center text-xs text-outline mb-6">
         {config.pipelineMode === 'subtitleOnly' ? t('pipeline.modeSubtitleOnlyHelp') : t('pipeline.modeFullHelp')}
       </p>
+
+      <div className="flex justify-center items-center gap-3 mb-8">
+        <div className="flex flex-col items-center gap-1.5">
+          <label className="text-xs font-semibold text-outline uppercase tracking-wider">{t('input.sourceLanguage')}</label>
+          <select
+            value={config.sourceLanguage}
+            onChange={(e) => saveConfig({ sourceLanguage: e.target.value as TranslationLanguage })}
+            className="bg-[#181818] border border-[#333333] text-on-surface rounded-lg px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none cursor-pointer min-w-[160px]"
+          >
+            {SOURCE_LANGUAGE_OPTIONS.map((code) => (
+              <option key={code} value={code}>
+                {code === 'auto'
+                  ? t('input.autoDetect')
+                  : `${TRANSLATION_LANGUAGES[code].native} (${getLanguageDisplayName(code, config.locale)})`
+                }
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <span className="material-symbols-outlined text-primary text-[24px] mt-5">arrow_forward</span>
+
+        <div className="flex flex-col items-center gap-1.5">
+          <label className="text-xs font-semibold text-outline uppercase tracking-wider">{t('input.targetLanguage')}</label>
+          <select
+            value={config.targetLanguage}
+            onChange={(e) => saveConfig({ targetLanguage: e.target.value as TranslationLanguage })}
+            className="bg-[#181818] border border-[#333333] text-on-surface rounded-lg px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none cursor-pointer min-w-[160px]"
+          >
+            {TARGET_LANGUAGE_OPTIONS.map((code) => (
+              <option key={code} value={code}>
+                {`${TRANSLATION_LANGUAGES[code].native} (${getLanguageDisplayName(code, config.locale)})`}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       <form onSubmit={handleSubmit} className="relative w-full max-w-2xl mx-auto">
         <div className="relative flex items-center w-full bg-[#181818] border border-[#333333] rounded-xl focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all p-1.5 sharp-shadow">

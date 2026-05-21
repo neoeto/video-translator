@@ -65,7 +65,7 @@ function positionTag(x: number, y: number): string {
 function buildDialogueLine(
   start: number,
   end: number,
-  styleName: 'English' | 'Chinese',
+  styleName: 'Source' | 'Target',
   text: string,
   x: number,
   y: number,
@@ -104,14 +104,14 @@ export function generateAss(
     '',
     '[V4+ Styles]',
     'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
-    `Style: English,${style.fontFamily},${style.enFontSize},${enColorASS},&H000000FF,&H00000000,${bgColorASS},0,0,0,0,100,100,0,0,3,2,1,2,10,10,${bottomMargin},1`,
-    `Style: Chinese,${style.fontFamily},${style.cnFontSize},${cnColorASS},&H000000FF,&H00000000,${bgColorASS},0,0,0,0,100,100,0,0,3,2,1,2,10,10,${bottomMargin},1`,
+    `Style: Source,${style.fontFamily},${style.enFontSize},${enColorASS},&H000000FF,&H00000000,${bgColorASS},0,0,0,0,100,100,0,0,3,2,1,2,10,10,${bottomMargin},1`,
+    `Style: Target,${style.fontFamily},${style.cnFontSize},${cnColorASS},&H000000FF,&H00000000,${bgColorASS},0,0,0,0,100,100,0,0,3,2,1,2,10,10,${bottomMargin},1`,
     '',
     '[Events]',
     'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
     ...translatedSegments.flatMap((segment) => [
-      buildDialogueLine(segment.start, segment.end, 'English', segment.sourceText, centerX, enY, bgAlpha),
-      buildDialogueLine(segment.start, segment.end, 'Chinese', segment.targetText, centerX, cnY, bgAlpha),
+      buildDialogueLine(segment.start, segment.end, 'Source', segment.sourceText, centerX, enY, bgAlpha),
+      buildDialogueLine(segment.start, segment.end, 'Target', segment.targetText, centerX, cnY, bgAlpha),
     ]),
   ]
 

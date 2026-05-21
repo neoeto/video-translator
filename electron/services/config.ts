@@ -74,6 +74,8 @@ function detectAudioSeparatorPath(): string {
 
 const defaultConfig: AppConfig = {
   locale: 'en',
+  sourceLanguage: 'auto',
+  targetLanguage: 'zh',
   openaiApiKey: '',
   outputDir: path.join(os.homedir(), 'Movies', 'video-translator'),
   proxyEnabled: false,
@@ -119,6 +121,14 @@ const store = new Store<AppConfig>({
       type: 'string',
       enum: ['en', 'zh'],
       default: defaultConfig.locale,
+    },
+    sourceLanguage: {
+      type: 'string',
+      default: defaultConfig.sourceLanguage,
+    },
+    targetLanguage: {
+      type: 'string',
+      default: defaultConfig.targetLanguage,
     },
     openaiApiKey: {
       type: 'string',
@@ -247,6 +257,8 @@ export function setConfig(partial: Partial<AppConfig>): void {
 
   const simpleKeys = [
     'locale',
+    'sourceLanguage',
+    'targetLanguage',
     'openaiApiKey',
     'outputDir',
     'proxyEnabled',

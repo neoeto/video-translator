@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { usePipelineStore } from '../store/usePipelineStore'
 import { useI18n } from '../i18n'
+import { getLanguageDisplayName } from '../types'
 import type { HistoryEntry } from '../preload'
 
 const formatTime = (seconds: number) => {
@@ -17,7 +18,7 @@ function formatCompletedAt(timestamp: number | undefined): string {
 }
 
 export const ResultView: React.FC = () => {
-  const { state, reset } = usePipelineStore()
+  const { state, config, reset } = usePipelineStore()
   const t = useI18n((s) => s.t)
   const [showSegments, setShowSegments] = useState(false)
   const [history, setHistory] = useState<HistoryEntry[]>([])
@@ -91,7 +92,7 @@ export const ResultView: React.FC = () => {
               </h3>
               <div className="flex items-center justify-between mt-auto pt-2">
                 <span className="px-2 py-0.5 bg-surface-variant rounded text-xs font-mono text-outline">
-                  {t('result.languagePair')}
+                  {getLanguageDisplayName(config.sourceLanguage, config.locale)} → {getLanguageDisplayName(config.targetLanguage, config.locale)}
                 </span>
               </div>
             </div>

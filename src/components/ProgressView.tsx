@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { usePipelineStore } from '../store/usePipelineStore'
 import type { PipelineStage, SpeakerGender, SpeakerProfile } from '../types'
+import { getLanguageDisplayName } from '../types'
 import { useI18n } from '../i18n'
 
 const ALL_STAGES: { id: PipelineStage; nameKey: string }[] = [
@@ -154,7 +155,9 @@ export const ProgressView: React.FC = () => {
                 <span className="material-symbols-outlined text-[48px] text-outline opacity-50">movie</span>
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e]/80 to-transparent flex items-end p-4">
-                 <span className="text-xs text-on-surface font-mono bg-black/60 px-2 py-1 rounded">{t('progress.target')}</span>
+                 <span className="text-xs text-on-surface font-mono bg-black/60 px-2 py-1 rounded">
+                   {getLanguageDisplayName(config.sourceLanguage, config.locale)} → {getLanguageDisplayName(config.targetLanguage, config.locale)}
+                 </span>
               </div>
             </div>
           </div>

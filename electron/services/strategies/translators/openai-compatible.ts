@@ -32,7 +32,19 @@ function chunkSegments(segments: TranscriptSegment[]): TranscriptSegment[][] {
 }
 
 function buildSystemPrompt(sourceLanguage: string, targetLanguage: string, strictSync = false): string {
-  const base = `You are a professional ${sourceLanguage}-to-${targetLanguage} translator specializing in video content.
+  const isAuto = sourceLanguage === 'auto'
+
+  const base = isAuto
+    ? `You are a professional translator specializing in video content.
+Detect the source language from the text and translate each segment naturally and fluently into ${targetLanguage}.
+Return a JSON object with a "translations" array where each element has:
+- "sourceText": the original text (exact copy)
+- "targetText": the ${targetLanguage} translation
+- "start": the start timestamp (exact copy)
+- "end": the end timestamp (exact copy)
+Maintain the exact same array order. Handle colloquialisms, slang, and technical terms appropriately.
+Do NOT add any extra text, explanations, or notes — only return the JSON.`
+    : `You are a professional ${sourceLanguage}-to-${targetLanguage} translator specializing in video content.
 Translate each segment naturally and fluently into ${targetLanguage}.
 Return a JSON object with a "translations" array where each element has:
 - "sourceText": the original ${sourceLanguage} text (exact copy)
@@ -43,7 +55,10 @@ Maintain the exact same array order. Handle colloquialisms, slang, and technical
 Do NOT add any extra text, explanations, or notes — only return the JSON.`
 
   if (strictSync) {
-    return base + `\n\nIMPORTANT: Each segment has a "duration" field (in seconds). The translated text will be synthesized as speech that must fit within this duration. Adjust translation length so that the ${targetLanguage} speech duration roughly matches the original. As a guideline, approximately 4 Chinese characters per second of speech. Prioritize natural translation, but avoid overly long or short translations relative to the duration.`
+    const charGuide = targetLanguage === 'Chinese'
+      ? 'approximately 4 Chinese characters per second of speech'
+      : 'match the approximate speaking rate of the target language'
+    return base + `\n\nIMPORTANT: Each segment has a "duration" field (in seconds). The translated text will be synthesized as speech that must fit within this duration. Adjust translation length so that the ${targetLanguage} speech duration roughly matches the original. As a guideline, ${charGuide}. Prioritize natural translation, but avoid overly long or short translations relative to the duration.`
   }
 
   return base

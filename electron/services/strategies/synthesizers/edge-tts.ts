@@ -2,18 +2,136 @@ import { accessSync, constants as fsConstants } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import type { AppConfig, SpeakerGender, SpeakerProfile, SynthesizerStrategy, SynthesisResult, TranslatedSegment } from '../../types.js'
+import type { AppConfig, SpeakerGender, SpeakerProfile, SynthesizerStrategy, SynthesisResult, TranslatedSegment, TranslationLanguage } from '../../types.js'
 import {
   buildTimeline, createSilenceFile,
   sleep, toErrorMessage,
   MAX_TTS_RETRIES, INITIAL_TTS_BACKOFF_MS,
 } from './tts-helpers.js'
 
-const VOICE_POOL_BY_GENDER: Record<SpeakerGender, string[]> = {
-  'adult-male': ['zh-CN-YunxiNeural', 'zh-CN-YunjianNeural', 'zh-CN-YunyangNeural'],
-  'adult-female': ['zh-CN-XiaoxiaoNeural', 'zh-CN-XiaoyiNeural', 'zh-CN-XiaozhenNeural'],
-  'child-male': ['zh-CN-YunxiNeural'],
-  'child-female': ['zh-CN-XiaoxiaoNeural'],
+// 为各目标语言提供按性别分组的 Edge TTS 音色池。
+const VOICE_POOLS: Record<string, Record<SpeakerGender, string[]>> = {
+  zh: {
+    'adult-male': ['zh-CN-YunxiNeural', 'zh-CN-YunjianNeural', 'zh-CN-YunyangNeural'],
+    'adult-female': ['zh-CN-XiaoxiaoNeural', 'zh-CN-XiaoyiNeural', 'zh-CN-XiaozhenNeural'],
+    'child-male': ['zh-CN-YunxiNeural'],
+    'child-female': ['zh-CN-XiaoxiaoNeural'],
+  },
+  en: {
+    'adult-male': ['en-US-GuyNeural', 'en-US-ChristopherNeural', 'en-US-EricNeural'],
+    'adult-female': ['en-US-JennyNeural', 'en-US-AriaNeural', 'en-US-SaraNeural'],
+    'child-male': ['en-US-GuyNeural'],
+    'child-female': ['en-US-JennyNeural'],
+  },
+  ja: {
+    'adult-male': ['ja-JP-KeitaNeural'],
+    'adult-female': ['ja-JP-NanamiNeural'],
+    'child-male': ['ja-JP-KeitaNeural'],
+    'child-female': ['ja-JP-NanamiNeural'],
+  },
+  ko: {
+    'adult-male': ['ko-KR-InJoonNeural'],
+    'adult-female': ['ko-KR-SunHiNeural'],
+    'child-male': ['ko-KR-InJoonNeural'],
+    'child-female': ['ko-KR-SunHiNeural'],
+  },
+  fr: {
+    'adult-male': ['fr-FR-HenriNeural'],
+    'adult-female': ['fr-FR-DeniseNeural'],
+    'child-male': ['fr-FR-HenriNeural'],
+    'child-female': ['fr-FR-DeniseNeural'],
+  },
+  de: {
+    'adult-male': ['de-DE-ConradNeural'],
+    'adult-female': ['de-DE-KatjaNeural'],
+    'child-male': ['de-DE-ConradNeural'],
+    'child-female': ['de-DE-KatjaNeural'],
+  },
+  es: {
+    'adult-male': ['es-ES-AlvaroNeural'],
+    'adult-female': ['es-ES-ElviraNeural'],
+    'child-male': ['es-ES-AlvaroNeural'],
+    'child-female': ['es-ES-ElviraNeural'],
+  },
+  pt: {
+    'adult-male': ['pt-BR-AntonioNeural'],
+    'adult-female': ['pt-BR-FranciscaNeural'],
+    'child-male': ['pt-BR-AntonioNeural'],
+    'child-female': ['pt-BR-FranciscaNeural'],
+  },
+  ru: {
+    'adult-male': ['ru-RU-DmitryNeural'],
+    'adult-female': ['ru-RU-SvetlanaNeural'],
+    'child-male': ['ru-RU-DmitryNeural'],
+    'child-female': ['ru-RU-SvetlanaNeural'],
+  },
+  ar: {
+    'adult-male': ['ar-SA-HamedNeural'],
+    'adult-female': ['ar-SA-ZariyahNeural'],
+    'child-male': ['ar-SA-HamedNeural'],
+    'child-female': ['ar-SA-ZariyahNeural'],
+  },
+  it: {
+    'adult-male': ['it-IT-DiegoNeural'],
+    'adult-female': ['it-IT-ElsaNeural'],
+    'child-male': ['it-IT-DiegoNeural'],
+    'child-female': ['it-IT-ElsaNeural'],
+  },
+  th: {
+    'adult-male': ['th-TH-NiwatNeural'],
+    'adult-female': ['th-TH-PremwadeeNeural'],
+    'child-male': ['th-TH-NiwatNeural'],
+    'child-female': ['th-TH-PremwadeeNeural'],
+  },
+  vi: {
+    'adult-male': ['vi-VN-NamMinhNeural'],
+    'adult-female': ['vi-VN-HoaiMyNeural'],
+    'child-male': ['vi-VN-NamMinhNeural'],
+    'child-female': ['vi-VN-HoaiMyNeural'],
+  },
+  id: {
+    'adult-male': ['id-ID-ArdiNeural'],
+    'adult-female': ['id-ID-GadisNeural'],
+    'child-male': ['id-ID-ArdiNeural'],
+    'child-female': ['id-ID-GadisNeural'],
+  },
+  tr: {
+    'adult-male': ['tr-TR-AhmetNeural'],
+    'adult-female': ['tr-TR-EmelNeural'],
+    'child-male': ['tr-TR-AhmetNeural'],
+    'child-female': ['tr-TR-EmelNeural'],
+  },
+  pl: {
+    'adult-male': ['pl-PL-MarekNeural'],
+    'adult-female': ['pl-PL-ZofiaNeural'],
+    'child-male': ['pl-PL-MarekNeural'],
+    'child-female': ['pl-PL-ZofiaNeural'],
+  },
+  uk: {
+    'adult-male': ['uk-UA-OstapNeural'],
+    'adult-female': ['uk-UA-PolinaNeural'],
+    'child-male': ['uk-UA-OstapNeural'],
+    'child-female': ['uk-UA-PolinaNeural'],
+  },
+  nl: {
+    'adult-male': ['nl-NL-MaartenNeural'],
+    'adult-female': ['nl-NL-ColetteNeural'],
+    'child-male': ['nl-NL-MaartenNeural'],
+    'child-female': ['nl-NL-ColetteNeural'],
+  },
+  hi: {
+    'adult-male': ['hi-IN-MadhurNeural'],
+    'adult-female': ['hi-IN-SwaraNeural'],
+    'child-male': ['hi-IN-MadhurNeural'],
+    'child-female': ['hi-IN-SwaraNeural'],
+  },
+}
+
+function getVoicePoolForLanguage(lang: TranslationLanguage): Record<SpeakerGender, string[]> {
+  if (lang !== 'auto' && VOICE_POOLS[lang]) {
+    return VOICE_POOLS[lang]
+  }
+  return VOICE_POOLS.en
 }
 
 function isRetryableEdgeTtsError(error: unknown): boolean {
@@ -119,8 +237,11 @@ export default class EdgeTtsSynthesizer implements SynthesizerStrategy {
   readonly name = 'edge-tts'
   private readonly speakerVoiceMap = new Map<string, string>()
   private readonly genderVoiceIndex = new Map<SpeakerGender, number>()
+  private readonly voicePool: Record<SpeakerGender, string[]>
 
-  constructor(private readonly config: AppConfig) {}
+  constructor(private readonly config: AppConfig) {
+    this.voicePool = getVoicePoolForLanguage(config.targetLanguage)
+  }
 
   private getVoice(speaker: string, speakerProfiles?: SpeakerProfile[]): string {
     const existing = this.speakerVoiceMap.get(speaker)
@@ -128,7 +249,7 @@ export default class EdgeTtsSynthesizer implements SynthesizerStrategy {
 
     const profile = speakerProfiles?.find(p => p.id === speaker)
     const gender: SpeakerGender = profile?.gender ?? 'adult-male'
-    const pool = VOICE_POOL_BY_GENDER[gender]
+    const pool = this.voicePool[gender]
     const idx = this.genderVoiceIndex.get(gender) ?? 0
     const voice = pool[idx % pool.length]
     this.genderVoiceIndex.set(gender, idx + 1)

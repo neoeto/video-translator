@@ -9,6 +9,7 @@ import { generateAss } from './subtitle.js'
 import { extractSpeakerSamples } from './speaker-sample.js'
 import { separateVocals } from './strategies/vocal-separator.js'
 import type { AppConfig, PipelineStage, PipelineState, PipelineStrategies, SpeakerProfile, TranscriptSegment, TranslatedSegment } from './types.js'
+import { getLanguageDisplayName } from './types.js'
 import { getVideoStorageKey } from './video-key.js'
 
 const require = createRequire(import.meta.url)
@@ -201,6 +202,8 @@ function createTranslationFingerprint(segments: TranscriptSegment[], config: App
     translateMode: config.translateMode,
     model: getTranslationModel(config),
     syncMode: config.syncMode,
+    sourceLanguage: config.sourceLanguage,
+    targetLanguage: config.targetLanguage,
   })
 }
 
@@ -381,10 +384,16 @@ export class PipelineOrchestrator {
           return cachedSegments
         }
 
+        // sourceLanguage 为 'auto' 时让 LLM 自动检测源语言，否则使用用户指定值。
+        const resolvedSource = config.sourceLanguage === 'auto'
+          ? undefined
+          : getLanguageDisplayName(config.sourceLanguage)
+        const resolvedTarget = getLanguageDisplayName(config.targetLanguage)
+
         const result = await this.strategies.translator.translate({
           segments: transcription,
-          sourceLanguage: 'English',
-          targetLanguage: 'Chinese',
+          sourceLanguage: resolvedSource ?? 'auto',
+          targetLanguage: resolvedTarget,
           onProgress,
           signal,
           syncMode: config.syncMode,

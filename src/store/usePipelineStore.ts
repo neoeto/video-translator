@@ -28,6 +28,8 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
   state: initialPipelineState,
   config: {
     locale: 'en',
+    sourceLanguage: 'auto' as const,
+    targetLanguage: 'zh' as const,
     openaiApiKey: '',
     outputDir: '',
     proxyEnabled: false,
