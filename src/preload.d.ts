@@ -1,4 +1,4 @@
-import type { PipelineState, AppConfig, SpeakerProfile } from './types'
+import type { PipelineState, AppConfig, SpeakerProfile, VideoSourceType } from './types'
 
 export interface HistoryEntry {
   id: string
@@ -9,7 +9,7 @@ export interface HistoryEntry {
 }
 
 export interface ElectronAPI {
-  pipelineStart: (url: string, outputDir: string) => Promise<void>
+  pipelineStart: (url: string, outputDir: string, sourceType?: VideoSourceType) => Promise<void>
   pipelineCancel: () => Promise<void>
   submitSpeakerLabels: (profiles: SpeakerProfile[]) => Promise<void>
   onProgress: (callback: (state: PipelineState) => void) => () => void
@@ -18,6 +18,7 @@ export interface ElectronAPI {
   getHistory: () => Promise<HistoryEntry[]>
   deleteHistory: (id: string) => Promise<void>
   selectDirectory: () => Promise<string | null>
+  selectVideoFile: () => Promise<string | null>
   openPath: (path: string) => Promise<void>
 }
 

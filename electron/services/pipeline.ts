@@ -8,7 +8,7 @@ import { getConfig } from './config.js'
 import { generateAss } from './subtitle.js'
 import { extractSpeakerSamples } from './speaker-sample.js'
 import { separateVocals } from './strategies/vocal-separator.js'
-import type { AppConfig, PipelineStage, PipelineState, PipelineStrategies, SpeakerProfile, TranscriptSegment, TranslatedSegment } from './types.js'
+import type { AppConfig, PipelineStage, PipelineState, PipelineStrategies, SpeakerProfile, TranscriptSegment, TranslatedSegment, VideoSourceType } from './types.js'
 import { getLanguageDisplayName } from './types.js'
 import { getVideoStorageKey } from './video-key.js'
 
@@ -280,10 +280,10 @@ export class PipelineOrchestrator {
     this.speakerLabelsResolver = null
   }
 
-  async start(url: string, outputDir: string): Promise<void> {
+  async start(url: string, outputDir: string, sourceType: VideoSourceType = 'youtube'): Promise<void> {
     this.cancelled = false
     this.abortController = new AbortController()
-    this.workDir = path.join(outputDir, '.tmp', getVideoStorageKey(url))
+    this.workDir = path.join(outputDir, '.tmp', getVideoStorageKey(url, sourceType))
     const config = getConfig()
     const isSubtitleOnly = config.pipelineMode === 'subtitleOnly'
     const useVocalRemoval = !isSubtitleOnly && config.audioMixMode === 'mix-vocal-removal'

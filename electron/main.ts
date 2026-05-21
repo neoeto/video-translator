@@ -6,7 +6,7 @@ import { getConfig, setConfig } from './services/config.js'
 import { createPipelineStrategies } from './services/factories.js'
 import { addHistoryEntry, deleteHistoryEntry, getHistory, type HistoryEntry } from './services/history.js'
 import { PipelineOrchestrator } from './services/pipeline.js'
-import type { AppConfig, SpeakerProfile } from './services/types.js'
+import type { AppConfig, SpeakerProfile, VideoSourceType } from './services/types.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 let mainWindow: BrowserWindow | null = null
@@ -58,13 +58,13 @@ function createWindow(): void {
 }
 
 function registerIpcHandlers(): void {
-  ipcMain.handle('pipeline:start', async (_event, url: string, outputDir: string): Promise<void> => {
+  ipcMain.handle('pipeline:start', async (_event, url: string, outputDir: string, sourceType: VideoSourceType = 'youtube'): Promise<void> => {
     if (!mainWindow) {
       throw new Error('Main window is not available')
     }
 
     const config = getConfig()
-    const strategies = createPipelineStrategies(config)
+    const strategies = createPipelineStrategies(config, sourceType)
     const pipeline = new PipelineOrchestrator(strategies)
     currentPipeline = pipeline
 
@@ -84,7 +84,7 @@ function registerIpcHandlers(): void {
     })
 
     try {
-      await pipeline.start(url, outputDir)
+      await pipeline.start(url, outputDir, sourceType)
     } finally {
       currentPipeline = null
     }
@@ -116,6 +116,19 @@ function registerIpcHandlers(): void {
       return null
     }
 
+    return result.filePaths[0]
+  })
+
+  ipcMain.handle('dialog:selectVideoFile', async (): Promise<string | null> => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [
+        { name: 'Video Files', extensions: ['mp4', 'mkv', 'webm', 'mov', 'm4v', 'avi', 'flv', 'wmv', 'ts', 'mts'] },
+      ],
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return null
+    }
     return result.filePaths[0]
   })
 

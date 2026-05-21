@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { PipelineState, AppConfig, SpeakerProfile } from '../types'
+import type { PipelineState, AppConfig, SpeakerProfile, VideoSourceType } from '../types'
 
 interface PipelineStore {
   // Pipeline state (updated from main process via IPC)
@@ -11,7 +11,7 @@ interface PipelineStore {
   // Actions
   loadConfig: () => Promise<void>
   saveConfig: (partial: Partial<AppConfig>) => Promise<void>
-  startPipeline: (url: string) => Promise<void>
+  startPipeline: (url: string, sourceType?: VideoSourceType) => Promise<void>
   cancelPipeline: () => Promise<void>
   submitSpeakerLabels: (profiles: SpeakerProfile[]) => Promise<void>
   reset: () => void
@@ -82,13 +82,13 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
     set({ config })
   },
 
-  startPipeline: async (url: string) => {
+  startPipeline: async (url: string, sourceType: VideoSourceType = 'youtube') => {
     const { config } = get()
     // 通过 IPC 订阅主进程流水线进度，把事件流收敛成 zustand 的单一状态源。
     window.electronAPI.onProgress((pipelineState) => {
       set({ state: pipelineState })
     })
-    await window.electronAPI.pipelineStart(url, config.outputDir)
+    await window.electronAPI.pipelineStart(url, config.outputDir, sourceType)
   },
 
   cancelPipeline: async () => {

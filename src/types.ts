@@ -11,6 +11,8 @@ export type PipelineStage =
   | 'completed'
   | 'error'
 
+export type VideoSourceType = 'youtube' | 'bilibili' | 'local-file'
+
 export type SpeakerGender = 'adult-male' | 'adult-female' | 'child-male' | 'child-female'
 
 export interface SpeakerProfile {

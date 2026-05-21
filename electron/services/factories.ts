@@ -7,9 +7,11 @@ import type {
   SynthesizerStrategy,
   CombinerStrategy,
   PipelineStrategies,
+  VideoSourceType,
 } from './types.js'
 
 import YtDlpDownloader from './strategies/downloaders/yt-dlp.js'
+import LocalFileDownloader from './strategies/downloaders/local-file.js'
 import FfmpegExtractor from './strategies/extractors/ffmpeg.js'
 import OpenAIApiTranscriber from './strategies/transcribers/openai-api.js'
 import LocalCliTranscriber from './strategies/transcribers/local-cli.js'
@@ -21,7 +23,11 @@ import IndexTtsSynthesizer from './strategies/synthesizers/indextts.js'
 import FfmpegCombiner from './strategies/combiners/ffmpeg.js'
 import FfmpegSubtitleOnlyCombiner from './strategies/combiners/ffmpeg-subtitle-only.js'
 
-export function createDownloader(config: AppConfig): DownloaderStrategy {
+export function createDownloader(config: AppConfig, sourceType: VideoSourceType = 'youtube'): DownloaderStrategy {
+  if (sourceType === 'local-file') {
+    return new LocalFileDownloader(config)
+  }
+  // YouTube 和 Bilibili 均通过 yt-dlp 下载
   return new YtDlpDownloader(config)
 }
 
@@ -63,9 +69,9 @@ export function createCombiner(config: AppConfig): CombinerStrategy {
   return new FfmpegCombiner(config)
 }
 
-export function createPipelineStrategies(config: AppConfig): PipelineStrategies {
+export function createPipelineStrategies(config: AppConfig, sourceType: VideoSourceType = 'youtube'): PipelineStrategies {
   return {
-    downloader: createDownloader(config),
+    downloader: createDownloader(config, sourceType),
     extractor: createExtractor(config),
     transcriber: createTranscriber(config),
     translator: createTranslator(config),

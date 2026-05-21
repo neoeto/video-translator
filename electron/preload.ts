@@ -1,10 +1,10 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { PipelineState, AppConfig, SpeakerProfile } from './services/types.js'
+import type { PipelineState, AppConfig, SpeakerProfile, VideoSourceType } from './services/types.js'
 import type { HistoryEntry } from './services/history.js'
 
 const electronAPI = {
-  pipelineStart: (url: string, outputDir: string): Promise<void> =>
-    ipcRenderer.invoke('pipeline:start', url, outputDir),
+  pipelineStart: (url: string, outputDir: string, sourceType: VideoSourceType = 'youtube'): Promise<void> =>
+    ipcRenderer.invoke('pipeline:start', url, outputDir, sourceType),
   pipelineCancel: (): Promise<void> =>
     ipcRenderer.invoke('pipeline:cancel'),
   submitSpeakerLabels: (profiles: SpeakerProfile[]): Promise<void> =>
@@ -24,6 +24,8 @@ const electronAPI = {
     ipcRenderer.invoke('history:delete', id),
   selectDirectory: (): Promise<string | null> =>
     ipcRenderer.invoke('dialog:selectDirectory'),
+  selectVideoFile: (): Promise<string | null> =>
+    ipcRenderer.invoke('dialog:selectVideoFile'),
   openPath: (path: string): Promise<void> =>
     ipcRenderer.invoke('shell:openPath', path),
 }
