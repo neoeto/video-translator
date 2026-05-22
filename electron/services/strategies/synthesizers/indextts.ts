@@ -71,7 +71,6 @@ export default class IndexTtsSynthesizer implements SynthesizerStrategy {
       return rawFile
     }
 
-    // Use speaker's sample as reference audio for voice cloning
     const profile = this.speakerProfiles?.find(p => p.id === segment.speaker)
     const referenceAudio = profile?.samplePath || this.config.indexttsReferenceAudio.trim()
     await this.synthesizeToFile(text, rawFile, referenceAudio)

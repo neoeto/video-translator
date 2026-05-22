@@ -30,12 +30,21 @@ export interface SpeakerProfile {
 
 // ─── Node data contracts ────────────────────────────────────────
 
+export interface WordTimestamp {
+  word: string
+  start: number
+  end: number
+  score?: number
+  speaker?: string
+}
+
 export interface TranscriptSegment {
   start: number
   end: number
   text: string
   speaker: string
   confidence?: number
+  words?: WordTimestamp[]
 }
 
 export interface TranscriptionResult {

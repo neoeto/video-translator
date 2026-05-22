@@ -1,13 +1,32 @@
 import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
 import path from 'node:path'
-import type { TranscriptSegment } from '../../types.js'
+import type { TranscriptSegment, WordTimestamp } from '../../types.js'
 
 const require = createRequire(import.meta.url)
 const ffmpegStatic = require('ffmpeg-static') as string | null
 
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function normalizeWords(words: unknown): WordTimestamp[] | undefined {
+  if (!Array.isArray(words) || words.length === 0) return undefined
+
+  const result: WordTimestamp[] = []
+  for (const w of words) {
+    if (typeof w !== 'object' || w === null) continue
+    const item = w as Record<string, unknown>
+    if (typeof item.word !== 'string' || typeof item.start !== 'number' || typeof item.end !== 'number') continue
+    result.push({
+      word: item.word,
+      start: item.start,
+      end: item.end,
+      score: typeof item.score === 'number' ? item.score : undefined,
+      speaker: typeof item.speaker === 'string' ? item.speaker : undefined,
+    })
+  }
+  return result.length > 0 ? result : undefined
 }
 
 export function normalizeSegments(segments: unknown): TranscriptSegment[] {
@@ -30,8 +49,193 @@ export function normalizeSegments(segments: unknown): TranscriptSegment[] {
       end: item.end,
       text: item.text,
       speaker: typeof item.speaker === 'string' ? item.speaker : 'SPEAKER_0',
+      words: normalizeWords(item.words),
     }
   })
+}
+
+// ─── Segment splitting ──────────────────────────────────────────
+
+/**
+ * Calculates display width treating CJK characters as 2 and others as 1,
+ * providing a rough approximation of on-screen subtitle width.
+ */
+function displayWidth(text: string): number {
+  let width = 0
+  for (const char of text) {
+    const code = char.codePointAt(0) ?? 0
+    if (
+      (code >= 0x4E00 && code <= 0x9FFF) ||  // CJK Unified Ideographs
+      (code >= 0x3400 && code <= 0x4DBF) ||  // CJK Extension A
+      (code >= 0x3040 && code <= 0x309F) ||  // Hiragana
+      (code >= 0x30A0 && code <= 0x30FF) ||  // Katakana
+      (code >= 0xAC00 && code <= 0xD7AF) ||  // Hangul Syllables
+      (code >= 0xFF01 && code <= 0xFF60) ||  // Fullwidth Forms
+      (code >= 0xFE30 && code <= 0xFE4F)     // CJK Compatibility Forms
+    ) {
+      width += 2
+    } else {
+      width += 1
+    }
+  }
+  return width
+}
+
+// Punctuation marks that serve as natural sentence/clause boundaries
+const SPLIT_PUNCTUATION = new Set([
+  '。', '！', '？', '，', '、', '；', '：',
+  '.', '!', '?', ',', ';', ':',
+  '…', '—', '–',
+])
+
+const MAX_DISPLAY_WIDTH = 50      // Force split above this (~25 CJK or ~50 Latin chars)
+const PREFERRED_DISPLAY_WIDTH = 35 // Prefer splitting at punctuation above this
+const MIN_DISPLAY_WIDTH = 10       // Don't create segments shorter than this
+
+/**
+ * Splits long transcript segments into shorter ones using word-level timestamps.
+ * Falls back to proportional time interpolation when word timestamps are unavailable.
+ */
+export function splitLongSegments(segments: TranscriptSegment[]): TranscriptSegment[] {
+  const result: TranscriptSegment[] = []
+
+  for (const segment of segments) {
+    if (displayWidth(segment.text) <= MAX_DISPLAY_WIDTH) {
+      // Short enough — strip words and keep as-is
+      result.push({ ...segment, words: undefined })
+      continue
+    }
+
+    const subSegments = segment.words?.length
+      ? splitWithWordTimestamps(segment)
+      : splitByPunctuation(segment)
+
+    result.push(...subSegments)
+  }
+
+  return result
+}
+
+/**
+ * Splits a segment using precise word-level timestamps from WhisperX.
+ */
+function splitWithWordTimestamps(segment: TranscriptSegment): TranscriptSegment[] {
+  const words = segment.words!
+  const results: TranscriptSegment[] = []
+
+  let chunkWords: WordTimestamp[] = []
+  let chunkText = ''
+  let chunkWidth = 0
+
+  const flushChunk = () => {
+    if (chunkWords.length === 0) return
+    results.push({
+      start: chunkWords[0].start,
+      end: chunkWords[chunkWords.length - 1].end,
+      text: chunkText.trim(),
+      speaker: segment.speaker,
+    })
+    chunkWords = []
+    chunkText = ''
+    chunkWidth = 0
+  }
+
+  for (const word of words) {
+    const wordWidth = displayWidth(word.word)
+
+    // Force split if adding this word would exceed hard limit
+    if (chunkWidth > 0 && chunkWidth + wordWidth > MAX_DISPLAY_WIDTH) {
+      flushChunk()
+    }
+
+    chunkWords.push(word)
+    chunkText += word.word
+    chunkWidth += wordWidth
+
+    // Split at punctuation if we've accumulated enough text
+    const lastChar = word.word[word.word.length - 1]
+    if (chunkWidth >= PREFERRED_DISPLAY_WIDTH && SPLIT_PUNCTUATION.has(lastChar)) {
+      flushChunk()
+    }
+  }
+
+  flushChunk()
+
+  // Merge tiny trailing segments into the previous one
+  if (results.length > 1) {
+    const last = results[results.length - 1]
+    if (displayWidth(last.text) < MIN_DISPLAY_WIDTH) {
+      const prev = results[results.length - 2]
+      prev.end = last.end
+      prev.text = prev.text + last.text
+      results.pop()
+    }
+  }
+
+  return results.length > 0 ? results : [{ ...segment, words: undefined }]
+}
+
+/**
+ * Splits a segment by punctuation when word timestamps are unavailable.
+ * Time is interpolated proportionally based on character position.
+ */
+function splitByPunctuation(segment: TranscriptSegment): TranscriptSegment[] {
+  const { text, start, end, speaker } = segment
+  const totalDuration = end - start
+  const totalChars = text.length
+
+  if (totalChars === 0) return [{ ...segment, words: undefined }]
+
+  // Find all punctuation split points
+  const splitPoints: number[] = []
+  let currentWidth = 0
+  for (let i = 0; i < text.length; i++) {
+    currentWidth += displayWidth(text[i])
+    if (currentWidth >= PREFERRED_DISPLAY_WIDTH && SPLIT_PUNCTUATION.has(text[i])) {
+      splitPoints.push(i + 1)
+      currentWidth = 0
+    } else if (currentWidth >= MAX_DISPLAY_WIDTH) {
+      // Force split even without punctuation
+      splitPoints.push(i + 1)
+      currentWidth = 0
+    }
+  }
+
+  if (splitPoints.length === 0) return [{ ...segment, words: undefined }]
+
+  const results: TranscriptSegment[] = []
+  let prevIndex = 0
+
+  for (const splitIndex of splitPoints) {
+    const chunk = text.slice(prevIndex, splitIndex).trim()
+    if (chunk.length === 0) { prevIndex = splitIndex; continue }
+
+    const chunkStart = start + (prevIndex / totalChars) * totalDuration
+    const chunkEnd = start + (splitIndex / totalChars) * totalDuration
+
+    results.push({ start: chunkStart, end: chunkEnd, text: chunk, speaker })
+    prevIndex = splitIndex
+  }
+
+  // Remaining text
+  const remaining = text.slice(prevIndex).trim()
+  if (remaining.length > 0) {
+    const chunkStart = start + (prevIndex / totalChars) * totalDuration
+    results.push({ start: chunkStart, end, text: remaining, speaker })
+  }
+
+  // Merge tiny trailing segments
+  if (results.length > 1) {
+    const last = results[results.length - 1]
+    if (displayWidth(last.text) < MIN_DISPLAY_WIDTH) {
+      const prev = results[results.length - 2]
+      prev.end = last.end
+      prev.text = prev.text + last.text
+      results.pop()
+    }
+  }
+
+  return results.length > 0 ? results : [{ ...segment, words: undefined }]
 }
 
 export function buildWhisperEnv(): NodeJS.ProcessEnv {

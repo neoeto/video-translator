@@ -105,19 +105,16 @@ function parseAndValidateResponse(
 
     const segment = inputSegments[index]
 
-    // 校验原文和时间戳可防止 LLM 重排、合并或改写片段导致字幕与音频错位。
-    if (item.sourceText !== segment.text) {
-      throw new Error(`Invalid translation response: item at index ${index} does not preserve the original text.`)
-    }
-
+    // Timestamp check prevents LLM from reordering or merging segments.
     if (item.start !== segment.start || item.end !== segment.end) {
       throw new Error(`Invalid translation response: item at index ${index} does not preserve timestamps.`)
     }
 
+    // Always use the original text — LLMs sometimes subtly modify sourceText when echoing it back.
     return {
-      start: item.start,
-      end: item.end,
-      sourceText: item.sourceText,
+      start: segment.start,
+      end: segment.end,
+      sourceText: segment.text,
       targetText: item.targetText,
       speaker: segment.speaker,
     }
