@@ -602,13 +602,28 @@ export const SettingsView: React.FC = () => {
                     </span>
                   </div>
                   {config.proxyEnabled && (
-                    <input
-                      type="text"
-                      value={config.proxyUrl || ''}
-                      onChange={(e) => saveConfig({ proxyUrl: e.target.value })}
-                      placeholder="http://127.0.0.1:7890"
-                      className="w-full max-w-2xl bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono text-xs focus:border-primary focus:outline-none transition-colors"
-                    />
+                    <>
+                      <input
+                        type="text"
+                        value={config.proxyUrl || ''}
+                        onChange={(e) => saveConfig({ proxyUrl: e.target.value })}
+                        placeholder="http://127.0.0.1:7890"
+                        className="w-full max-w-2xl bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono text-xs focus:border-primary focus:outline-none transition-colors"
+                      />
+                      <label className="text-xs font-medium text-on-surface-variant mt-3 block">
+                        {t('settings.system.proxyBypass')}
+                      </label>
+                      <input
+                        type="text"
+                        value={config.proxyBypass || ''}
+                        onChange={(e) => saveConfig({ proxyBypass: e.target.value })}
+                        placeholder="localhost, 127.0.0.1, *.local"
+                        className="w-full max-w-2xl bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono text-xs focus:border-primary focus:outline-none transition-colors mt-1"
+                      />
+                      <p className="text-xs text-on-surface-variant mt-1">
+                        {t('settings.system.proxyBypassHelp')}
+                      </p>
+                    </>
                   )}
                 </div>
               </div>

@@ -14,6 +14,7 @@ if (ffprobeStatic.path) ffmpeg.setFfprobePath(ffprobeStatic.path)
 export const DURATION_TOLERANCE = 0.3
 export const MAX_TTS_RETRIES = 3
 export const INITIAL_TTS_BACKOFF_MS = 1000
+export const TTS_SAMPLE_RATE = 24000
 
 type FfmpegCommand = ReturnType<typeof ffmpeg>
 
@@ -78,7 +79,7 @@ export async function createSilenceFile(duration: number, outputFile: string): P
   const safeDuration = Math.max(0.05, duration)
   await runFfmpeg((command) => {
     command
-      .input('anullsrc=r=24000:cl=mono')
+      .input(`anullsrc=r=${TTS_SAMPLE_RATE}:cl=mono`)
       .inputFormat('lavfi')
       .audioCodec('libmp3lame')
       .format('mp3')
@@ -120,7 +121,10 @@ export async function concatAudioFiles(filePaths: string[], outputFile: string, 
     command
       .input(listFile)
       .inputOptions(['-f', 'concat', '-safe', '0'])
-      .outputOptions(['-c', 'copy'])
+      .audioCodec('libmp3lame')
+      .audioFrequency(TTS_SAMPLE_RATE)
+      .audioChannels(1)
+      .format('mp3')
       .output(outputFile)
   })
 }
@@ -331,6 +335,14 @@ export async function buildTimeline(
     })
 
     onProgress(((index + 1) / segments.length) * 100)
+  }
+
+  // Trailing silence: ensure audio covers until the last segment's end time
+  const expectedEnd = segments[segments.length - 1].end
+  if (cumulativePosition < expectedEnd - DURATION_TOLERANCE) {
+    const trailingSilence = path.join(workDir, 'trailing-silence.mp3')
+    await createSilenceFile(expectedEnd - cumulativePosition, trailingSilence)
+    files.push(trailingSilence)
   }
 
   if (files.length === 1) {

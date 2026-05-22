@@ -159,6 +159,8 @@ export const zh: Record<TranslationKey, string> = {
   'settings.system.browse': '浏览',
   'settings.system.workingDirectoryHelp': '临时处理文件和默认导出文件的存放位置。',
   'settings.system.networkProxy': '网络代理',
+  'settings.system.proxyBypass': '代理白名单',
+  'settings.system.proxyBypassHelp': '逗号分隔的域名列表，匹配的请求将直连不走代理。支持通配符，如 *.example.com',
   'settings.system.enabled': '已启用',
   'settings.system.disabled': '已禁用',
   'settings.actions.show': '显示',

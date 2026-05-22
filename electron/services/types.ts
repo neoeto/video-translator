@@ -130,6 +130,8 @@ export interface TranslatorStrategy {
 
 export interface SynthesizerStrategy {
   readonly name: string
+  /** When true, the synthesizer uses speaker voice samples directly (voice cloning) and doesn't need gender labeling. */
+  readonly supportsVoiceCloning?: boolean
   synthesize(input: {
     segments: TranslatedSegment[]
     workDir: string
@@ -254,6 +256,7 @@ export interface AppConfig {
   subtitleStyle: SubtitleStyle
   proxyEnabled: boolean
   proxyUrl: string
+  proxyBypass: string
   transcribeMode: TranscribeMode
   localWhisperApiUrl: string
   localWhisperCliPath: string

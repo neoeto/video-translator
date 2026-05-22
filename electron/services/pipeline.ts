@@ -345,31 +345,35 @@ export class PipelineOrchestrator {
 
       this.assertNotCancelled()
 
-      // Speaker labeling pause (skip for subtitle-only mode)
+      // Speaker labeling pause: skip for subtitle-only mode or voice-cloning synthesizers
       let speakerProfiles: SpeakerProfile[] | undefined
+      const needsSpeakerLabeling = !isSubtitleOnly && !this.strategies.synthesizer.supportsVoiceCloning
       if (!isSubtitleOnly) {
-        // Try to load cached speaker profiles
+        // Always extract samples (needed for voice cloning too)
         const profilesCachePath = path.join(this.workDir, 'speaker-profiles.json')
         const cachedProfiles = await this.loadSpeakerProfiles(profilesCachePath, transcription)
 
         if (cachedProfiles) {
           speakerProfiles = cachedProfiles
         } else {
-          // Extract voice samples and pause for user labeling
           const profiles = await extractSpeakerSamples(audioPath, transcription, this.workDir)
-          this.updateState({
-            stage: 'awaiting-speaker-labels',
-            progress: 0,
-            speakerProfiles: profiles,
-          })
 
-          // Wait for user to submit speaker labels
-          speakerProfiles = await new Promise<SpeakerProfile[]>((resolve) => {
-            this.speakerLabelsResolver = resolve
-          })
-          this.speakerLabelsResolver = null
+          if (needsSpeakerLabeling) {
+            // Pause for user to assign gender labels (Edge TTS, OpenAI TTS)
+            this.updateState({
+              stage: 'awaiting-speaker-labels',
+              progress: 0,
+              speakerProfiles: profiles,
+            })
+            speakerProfiles = await new Promise<SpeakerProfile[]>((resolve) => {
+              this.speakerLabelsResolver = resolve
+            })
+            this.speakerLabelsResolver = null
+          } else {
+            // Voice cloning: use samples directly without user labeling
+            speakerProfiles = profiles
+          }
 
-          // Cache the labeled profiles
           await this.saveSpeakerProfiles(profilesCachePath, transcription, speakerProfiles)
         }
         this.assertNotCancelled()
@@ -503,13 +507,12 @@ export class PipelineOrchestrator {
       })
 
       this.assertNotCancelled()
-      this.setState({
+      this.updateState({
         stage: 'completed',
         progress: 100,
         overallProgress: 100,
         videoTitle: download.title,
         outputPath,
-        thumbnailDataUrl: this.state.thumbnailDataUrl,
         completedAt: Date.now(),
         translatedSegments: translationResult,
       })

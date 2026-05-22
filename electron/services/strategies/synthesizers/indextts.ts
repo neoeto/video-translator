@@ -1,24 +1,23 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import { fetch as undiciFetch, ProxyAgent } from 'undici'
+import { fetch as undiciFetch } from 'undici'
 import type { AppConfig, SpeakerProfile, SynthesizerStrategy, SynthesisResult, TranslatedSegment } from '../../types.js'
+import { getDispatcher } from '../../proxy.js'
 import {
   buildTimeline, createSilenceFile, runFfmpeg,
   sleep, toErrorMessage, isRetryableTtsError,
-  MAX_TTS_RETRIES, INITIAL_TTS_BACKOFF_MS,
+  MAX_TTS_RETRIES, INITIAL_TTS_BACKOFF_MS, TTS_SAMPLE_RATE,
 } from './tts-helpers.js'
 
 const INDEXTTS_DEFAULT_API_URL = 'http://localhost:8080'
-
-function isMp3Response(contentType: string, outputFile: string): boolean {
-  return /audio\/mpeg|audio\/mp3/i.test(contentType) || outputFile.toLowerCase().endsWith('.mp3')
-}
 
 async function convertAudioToMp3(inputFile: string, outputFile: string): Promise<void> {
   await runFfmpeg((command) => {
     command
       .input(inputFile)
       .audioCodec('libmp3lame')
+      .audioFrequency(TTS_SAMPLE_RATE)
+      .audioChannels(1)
       .format('mp3')
       .output(outputFile)
   })
@@ -26,6 +25,7 @@ async function convertAudioToMp3(inputFile: string, outputFile: string): Promise
 
 export default class IndexTtsSynthesizer implements SynthesizerStrategy {
   readonly name = 'indextts'
+  readonly supportsVoiceCloning = true
   private speakerProfiles?: SpeakerProfile[]
 
   constructor(private readonly config: AppConfig) {}
@@ -82,9 +82,7 @@ export default class IndexTtsSynthesizer implements SynthesizerStrategy {
     const apiUrl = new URL('/tts', baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`).toString()
     const ref = referenceAudio || ''
     const body = ref ? { text, reference_audio: ref } : { text }
-    const fetchOptions = this.config.proxyEnabled && this.config.proxyUrl
-      ? { dispatcher: new ProxyAgent(this.config.proxyUrl) }
-      : {}
+    const fetchOptions = { dispatcher: getDispatcher(this.config, apiUrl) }
 
     let lastError: unknown
 
@@ -107,16 +105,13 @@ export default class IndexTtsSynthesizer implements SynthesizerStrategy {
         const contentType = response.headers.get('content-type') ?? ''
         const buffer = Buffer.from(await response.arrayBuffer())
 
-        if (isMp3Response(contentType, outputFile)) {
-          await fs.writeFile(outputFile, buffer)
-        } else {
-          const rawFile = `${outputFile}.indextts-response`
-          try {
-            await fs.writeFile(rawFile, buffer)
-            await convertAudioToMp3(rawFile, outputFile)
-          } finally {
-            await fs.rm(rawFile, { force: true }).catch(() => {})
-          }
+        // Always convert through ffmpeg to normalize sample rate and channels
+        const rawFile = `${outputFile}.indextts-response`
+        try {
+          await fs.writeFile(rawFile, buffer)
+          await convertAudioToMp3(rawFile, outputFile)
+        } finally {
+          await fs.rm(rawFile, { force: true }).catch(() => {})
         }
         return
       } catch (error) {

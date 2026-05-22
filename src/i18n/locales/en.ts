@@ -157,6 +157,8 @@ export const en = {
   'settings.system.browse': 'Browse',
   'settings.system.workingDirectoryHelp': 'Location for temporary processing files and default exports.',
   'settings.system.networkProxy': 'Network Proxy',
+  'settings.system.proxyBypass': 'Proxy Bypass',
+  'settings.system.proxyBypassHelp': 'Comma-separated list of domains that bypass the proxy. Wildcards supported, e.g. *.example.com',
   'settings.system.enabled': 'Enabled',
   'settings.system.disabled': 'Disabled',
   'settings.actions.show': 'Show',

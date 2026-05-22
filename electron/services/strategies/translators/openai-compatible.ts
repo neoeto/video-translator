@@ -1,6 +1,6 @@
 import OpenAI from 'openai'
-import { ProxyAgent } from 'undici'
 import type { AppConfig, TranslatorStrategy, TranslationResult, TranscriptSegment, TranslatedSegment } from '../../types.js'
+import { getDispatcher } from '../../proxy.js'
 
 // 分批限制 prompt 和响应体大小，降低长视频一次性翻译超出模型上下文或 JSON 截断的概率。
 const BATCH_SIZE = 50
@@ -151,12 +151,11 @@ export default class OpenAICompatibleTranslator implements TranslatorStrategy {
     const { segments, sourceLanguage, targetLanguage, onProgress, signal, syncMode } = input
     const strictSync = syncMode === 'strict'
     const provider = getProviderSettings(this.config)
+    const targetUrl = provider.baseURL || 'https://api.openai.com'
     const client = new OpenAI({
       apiKey: provider.apiKey,
       ...(provider.baseURL ? { baseURL: provider.baseURL } : {}),
-      ...(this.config.proxyEnabled && this.config.proxyUrl
-        ? { fetchOptions: { dispatcher: new ProxyAgent(this.config.proxyUrl) } }
-        : {}),
+      fetchOptions: { dispatcher: getDispatcher(this.config, targetUrl) },
     })
 
     const batches = chunkSegments(segments)
@@ -219,12 +218,11 @@ export default class OpenAICompatibleTranslator implements TranslatorStrategy {
 
   async translateText(text: string, targetLanguage: string): Promise<string> {
     const provider = getProviderSettings(this.config)
+    const targetUrl = provider.baseURL || 'https://api.openai.com'
     const client = new OpenAI({
       apiKey: provider.apiKey,
       ...(provider.baseURL ? { baseURL: provider.baseURL } : {}),
-      ...(this.config.proxyEnabled && this.config.proxyUrl
-        ? { fetchOptions: { dispatcher: new ProxyAgent(this.config.proxyUrl) } }
-        : {}),
+      fetchOptions: { dispatcher: getDispatcher(this.config, targetUrl) },
     })
 
     try {

@@ -80,6 +80,7 @@ const defaultConfig: AppConfig = {
   outputDir: path.join(os.homedir(), 'Movies', 'video-translator'),
   proxyEnabled: false,
   proxyUrl: '',
+  proxyBypass: 'localhost, 127.0.0.1',
   transcribeMode: 'openai',
   localWhisperApiUrl: 'http://localhost:9000',
   localWhisperCliPath: detectWhisperPath(),
@@ -145,6 +146,10 @@ const store = new Store<AppConfig>({
     proxyUrl: {
       type: 'string',
       default: defaultConfig.proxyUrl,
+    },
+    proxyBypass: {
+      type: 'string',
+      default: defaultConfig.proxyBypass,
     },
     transcribeMode: {
       type: 'string',
@@ -263,6 +268,7 @@ export function setConfig(partial: Partial<AppConfig>): void {
     'outputDir',
     'proxyEnabled',
     'proxyUrl',
+    'proxyBypass',
     'transcribeMode',
     'localWhisperApiUrl',
     'localWhisperCliPath',

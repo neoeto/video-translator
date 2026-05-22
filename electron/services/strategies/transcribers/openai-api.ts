@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import OpenAI from 'openai'
-import { ProxyAgent } from 'undici'
 import type { AppConfig, TranscriberStrategy, TranscriptionResult, TranscriptSegment } from '../../types.js'
+import { getDispatcher } from '../../proxy.js'
 import { normalizeSegments, sleep, isRetryableError, describeOpenAIError } from './transcriber-helpers.js'
 
 // OpenAI Whisper API 单文件上限为 25MB，本地 API 兼容模式也沿用该边界以提前失败。
@@ -55,12 +55,11 @@ export default class OpenAIApiTranscriber implements TranscriberStrategy {
 
     const isLocalApi = this.config.transcribeMode === 'local-api'
     // local-api 复用 OpenAI SDK 协议，但鉴权通常由本地服务忽略，因此使用占位 key。
+    const baseURL = isLocalApi ? this.config.localWhisperApiUrl : 'https://api.openai.com'
     const client = new OpenAI({
       apiKey: isLocalApi ? 'not-needed' : this.config.openaiApiKey,
-      ...(isLocalApi ? { baseURL: this.config.localWhisperApiUrl } : {}),
-      ...(this.config.proxyEnabled && this.config.proxyUrl
-        ? { fetchOptions: { dispatcher: new ProxyAgent(this.config.proxyUrl) } }
-        : {}),
+      ...(isLocalApi ? { baseURL } : {}),
+      fetchOptions: { dispatcher: getDispatcher(this.config, baseURL) },
     })
 
     const whisperLang = this.config.sourceLanguage === 'auto' ? undefined : this.config.sourceLanguage

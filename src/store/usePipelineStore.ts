@@ -24,6 +24,8 @@ const initialPipelineState: PipelineState = {
   overallProgress: 0,
 }
 
+let progressCleanup: (() => void) | null = null
+
 export const usePipelineStore = create<PipelineStore>((set, get) => ({
   state: initialPipelineState,
   config: {
@@ -34,6 +36,7 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
     outputDir: '',
     proxyEnabled: false,
     proxyUrl: '',
+    proxyBypass: 'localhost, 127.0.0.1',
     transcribeMode: 'openai' as const,
     localWhisperApiUrl: 'http://localhost:9000',
     localWhisperCliPath: 'whisper',
@@ -84,8 +87,9 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
 
   startPipeline: async (url: string, sourceType: VideoSourceType = 'youtube') => {
     const { config } = get()
-    // 通过 IPC 订阅主进程流水线进度，把事件流收敛成 zustand 的单一状态源。
-    window.electronAPI.onProgress((pipelineState) => {
+    // Remove any previously registered progress listener to avoid duplicates
+    if (progressCleanup) { progressCleanup(); progressCleanup = null }
+    progressCleanup = window.electronAPI.onProgress((pipelineState) => {
       set({ state: pipelineState })
     })
     await window.electronAPI.pipelineStart(url, config.outputDir, sourceType)

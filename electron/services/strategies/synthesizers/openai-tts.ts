@@ -1,8 +1,8 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import OpenAI from 'openai'
-import { ProxyAgent } from 'undici'
 import type { AppConfig, SpeakerGender, SpeakerProfile, SynthesizerStrategy, SynthesisResult, TranslatedSegment } from '../../types.js'
+import { getDispatcher } from '../../proxy.js'
 import {
   buildTimeline, createSilenceFile,
   sleep, toErrorMessage, isRetryableTtsError,
@@ -25,9 +25,7 @@ export default class OpenAITtsSynthesizer implements SynthesizerStrategy {
   constructor(private readonly config: AppConfig) {
     this.client = new OpenAI({
       apiKey: config.openaiApiKey,
-      ...(config.proxyEnabled && config.proxyUrl
-        ? { fetchOptions: { dispatcher: new ProxyAgent(config.proxyUrl) } }
-        : {}),
+      fetchOptions: { dispatcher: getDispatcher(config, 'https://api.openai.com') },
     })
   }
 

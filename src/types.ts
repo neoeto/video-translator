@@ -114,6 +114,7 @@ export interface AppConfig {
   subtitleStyle: SubtitleStyle
   proxyEnabled: boolean
   proxyUrl: string
+  proxyBypass: string
   transcribeMode: TranscribeMode
   localWhisperApiUrl: string
   localWhisperCliPath: string
