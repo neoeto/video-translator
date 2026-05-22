@@ -3,9 +3,12 @@ import Store from 'electron-store'
 export interface HistoryEntry {
   id: string
   videoTitle: string
+  translatedTitle?: string
   outputPath: string
   thumbnailDataUrl?: string
   completedAt: number
+  sourceLanguage?: string
+  targetLanguage?: string
 }
 
 interface HistorySchema {

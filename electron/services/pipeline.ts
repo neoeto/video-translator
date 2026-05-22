@@ -404,6 +404,17 @@ export class PipelineOrchestrator {
       })
       this.updateState({ translatedSegments: translationResult })
 
+      // Translate video title (non-blocking, best effort)
+      if (download.title && this.strategies.translator.translateText) {
+        const resolvedTarget = getLanguageDisplayName(config.targetLanguage)
+        try {
+          const translatedTitle = await this.strategies.translator.translateText(download.title, resolvedTarget)
+          this.updateState({ translatedTitle })
+        } catch {
+          // Non-critical: keep original title
+        }
+      }
+
       let subtitleSegments = translationResult
       let synthesizedAudioPath: string | undefined
 

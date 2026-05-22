@@ -30,7 +30,7 @@ export default class OpenAIApiTranscriber implements TranscriberStrategy {
         onProgress?.(10)
         const segments = await this.transcribeOnce(audioPath)
         onProgress?.(100)
-        return { language: 'en', segments }
+        return { language: this.config.sourceLanguage || 'auto', segments }
       } catch (error) {
         lastError = error
         if (!isRetryableError(error) || attempt === MAX_RETRIES) {
@@ -63,12 +63,14 @@ export default class OpenAIApiTranscriber implements TranscriberStrategy {
         : {}),
     })
 
+    const whisperLang = this.config.sourceLanguage === 'auto' ? undefined : this.config.sourceLanguage
+
     const response = (await client.audio.transcriptions.create({
       model: 'whisper-1',
       file: fs.createReadStream(audioPath),
       response_format: 'verbose_json',
       timestamp_granularities: ['segment'],
-      language: 'en',
+      ...(whisperLang ? { language: whisperLang } : {}),
     })) as WhisperVerboseJsonResponse
 
     return normalizeSegments(response.segments)

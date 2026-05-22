@@ -73,12 +73,16 @@ function registerIpcHandlers(): void {
 
       // Persist completed translations to history
       if (state.stage === 'completed' && state.outputPath) {
+        const currentConfig = getConfig()
         addHistoryEntry({
           id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           videoTitle: state.videoTitle || 'Untitled',
+          translatedTitle: state.translatedTitle,
           outputPath: state.outputPath,
           thumbnailDataUrl: state.thumbnailDataUrl,
           completedAt: state.completedAt || Date.now(),
+          sourceLanguage: currentConfig.sourceLanguage,
+          targetLanguage: currentConfig.targetLanguage,
         })
       }
     })

@@ -37,7 +37,9 @@ function App() {
     // 流水线阶段驱动页面自动跳转，让用户无需手动切到进度页或结果页。
     if (stage === 'completed') {
       setActiveView('library')
-    } else if (stage !== 'idle' && stage !== 'error') {
+    } else if (stage === 'idle') {
+      setActiveView('home')
+    } else if (stage !== 'error') {
       setActiveView('processing')
     }
   }, [stage])

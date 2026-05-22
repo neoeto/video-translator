@@ -116,6 +116,7 @@ export interface TranslatorStrategy {
     signal?: AbortSignal
     syncMode?: SyncMode
   }): Promise<TranslationResult>
+  translateText?(text: string, targetLanguage: string): Promise<string>
 }
 
 export interface SynthesizerStrategy {
@@ -161,6 +162,7 @@ export interface PipelineState {
   progress: number
   overallProgress: number
   videoTitle?: string
+  translatedTitle?: string
   error?: string
   outputPath?: string
   thumbnailDataUrl?: string

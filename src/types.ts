@@ -42,6 +42,7 @@ export interface PipelineState {
   progress: number
   overallProgress: number
   videoTitle?: string
+  translatedTitle?: string
   error?: string
   outputPath?: string
   thumbnailDataUrl?: string

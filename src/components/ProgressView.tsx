@@ -138,6 +138,11 @@ export const ProgressView: React.FC = () => {
             <h2 className="text-xl font-bold text-on-surface line-clamp-1" title={state.videoTitle || t('progress.processingVideoTitle')}>
               {state.videoTitle || t('progress.processingVideo')}
             </h2>
+            {state.translatedTitle && (
+              <p className="text-sm text-on-surface-variant line-clamp-1 mt-0.5" title={state.translatedTitle}>
+                {state.translatedTitle}
+              </p>
+            )}
           </div>
           
           <div className="text-right flex flex-col items-end">
@@ -195,14 +200,28 @@ export const ProgressView: React.FC = () => {
               </div>
             )}
 
-            <div className="relative flex justify-between items-center w-full mt-4">
-              {STAGES.map((stage, index) => {
-                const status = getStageStatus(stage.id)
-                const isLast = index === STAGES.length - 1
-                
+            <div className="relative w-full mt-4">
+              {/* Background connector line spanning all nodes */}
+              <div className="absolute left-0 right-0 flex items-center" style={{ top: 15 }}>
+                <div className="w-full h-[2px] bg-surface-variant rounded-full mx-4" />
+              </div>
+              {/* Completed portion overlay */}
+              {(() => {
+                const currentIndex = STAGES.findIndex(s => s.id === state.stage)
+                const completedCount = state.stage === 'completed' ? STAGES.length : currentIndex
+                if (completedCount <= 0) return null
+                const pct = (completedCount / (STAGES.length - 1)) * 100
                 return (
-                  <React.Fragment key={stage.id}>
-                    <div className="relative flex flex-col items-center group z-10">
+                  <div className="absolute left-0 flex items-center" style={{ top: 15, width: `${pct}%` }}>
+                    <div className="w-full h-[2px] bg-secondary-container rounded-full mx-4" />
+                  </div>
+                )
+              })()}
+              <div className="relative flex justify-between">
+                {STAGES.map((stage) => {
+                  const status = getStageStatus(stage.id)
+                  return (
+                    <div key={stage.id} className="flex flex-col items-center z-10">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-colors duration-300 ${
                         status === 'completed' ? 'bg-secondary-container border-secondary-container' :
                         status === 'active' ? 'bg-primary-container/20 border-primary shadow-[0_0_12px_rgba(173,198,255,0.4)]' :
@@ -211,7 +230,7 @@ export const ProgressView: React.FC = () => {
                       }`}>
                         {renderIcon(status === 'error' && state.stage === stage.id ? 'error' : status)}
                       </div>
-                      <div className="absolute top-10 w-24 text-center">
+                      <div className="mt-2 w-20 text-center">
                         <span className={`text-[11px] font-bold uppercase tracking-wider ${
                           status === 'completed' ? 'text-secondary' :
                           status === 'active' ? 'text-primary' :
@@ -222,17 +241,9 @@ export const ProgressView: React.FC = () => {
                         </span>
                       </div>
                     </div>
-                    
-                    {!isLast && (
-                      <div className="flex-1 mx-2 h-[2px] rounded-full relative -top-3">
-                        <div className={`absolute inset-0 transition-all duration-500 ${
-                          status === 'completed' ? 'bg-secondary-container' : 'bg-surface-variant'
-                        }`}></div>
-                      </div>
-                    )}
-                  </React.Fragment>
-                )
-              })}
+                  )
+                })}
+              </div>
             </div>
           </div>
         </div>

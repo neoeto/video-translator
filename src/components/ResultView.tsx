@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { usePipelineStore } from '../store/usePipelineStore'
 import { useI18n } from '../i18n'
-import { getLanguageDisplayName } from '../types'
+import { getLanguageDisplayName, type TranslationLanguage } from '../types'
 import type { HistoryEntry } from '../preload'
 
 const formatTime = (seconds: number) => {
@@ -90,9 +90,14 @@ export const ResultView: React.FC = () => {
               <h3 className="font-bold text-on-surface line-clamp-2 leading-tight" title={entry.videoTitle}>
                 {entry.videoTitle}
               </h3>
+              {entry.translatedTitle && (
+                <p className="text-sm text-on-surface-variant line-clamp-1" title={entry.translatedTitle}>
+                  {entry.translatedTitle}
+                </p>
+              )}
               <div className="flex items-center justify-between mt-auto pt-2">
                 <span className="px-2 py-0.5 bg-surface-variant rounded text-xs font-mono text-outline">
-                  {getLanguageDisplayName(config.sourceLanguage, config.locale)} → {getLanguageDisplayName(config.targetLanguage, config.locale)}
+                  {getLanguageDisplayName((entry.sourceLanguage || config.sourceLanguage) as TranslationLanguage, config.locale)} → {getLanguageDisplayName((entry.targetLanguage || config.targetLanguage) as TranslationLanguage, config.locale)}
                 </span>
               </div>
             </div>

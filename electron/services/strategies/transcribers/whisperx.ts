@@ -18,18 +18,20 @@ export default class WhisperXTranscriber implements TranscriberStrategy {
     const outputDir = path.dirname(audioPath)
 
     try {
+      // Map config sourceLanguage to whisperx --language flag
+      const whisperLang = this.config.sourceLanguage === 'auto' ? undefined : this.config.sourceLanguage
       const args = [
         audioPath,
         '--model', 'large-v3',
         '--diarize',
-        '--language', 'en',
+        ...(whisperLang ? ['--language', whisperLang] : []),
         '--output_format', 'json',
         '--output_dir', outputDir,
         '--print_progress', 'True',
       ]
 
       if (this.config.whisperxHfToken.trim()) {
-        args.splice(4, 0, '--hf_token', this.config.whisperxHfToken.trim())
+        args.push('--hf_token', this.config.whisperxHfToken.trim())
       }
 
       onProgress?.(10)
@@ -54,7 +56,7 @@ export default class WhisperXTranscriber implements TranscriberStrategy {
       const segments = normalizeSegments(parsed.segments)
 
       onProgress?.(100)
-      return { language: 'en', segments }
+      return { language: whisperLang || 'auto', segments }
     } catch (error) {
       if (typeof error === 'object' && error !== null) {
         const candidate = error as { code?: string; message?: string }

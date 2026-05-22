@@ -219,4 +219,28 @@ export default class OpenAICompatibleTranslator implements TranslatorStrategy {
       `Failed to translate batch after ${MAX_RETRIES} attempts: ${lastError instanceof Error ? lastError.message : String(lastError)}`
     )
   }
+
+  async translateText(text: string, targetLanguage: string): Promise<string> {
+    const provider = getProviderSettings(this.config)
+    const client = new OpenAI({
+      apiKey: provider.apiKey,
+      ...(provider.baseURL ? { baseURL: provider.baseURL } : {}),
+      ...(this.config.proxyEnabled && this.config.proxyUrl
+        ? { fetchOptions: { dispatcher: new ProxyAgent(this.config.proxyUrl) } }
+        : {}),
+    })
+
+    try {
+      const response = await client.chat.completions.create({
+        model: provider.model,
+        messages: [
+          { role: 'system', content: `Translate the following text into ${targetLanguage}. Return ONLY the translated text, nothing else.` },
+          { role: 'user', content: text },
+        ],
+      })
+      return response.choices[0]?.message?.content?.trim() || text
+    } catch {
+      return text
+    }
+  }
 }
