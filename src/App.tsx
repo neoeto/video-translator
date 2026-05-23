@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { usePipelineStore } from './store/usePipelineStore'
 import { InputView } from './components/InputView'
 import { ProgressView } from './components/ProgressView'
@@ -18,6 +18,7 @@ function App() {
   const initLocale = useI18n((s) => s.initLocale)
   const t = useI18n((s) => s.t)
   const [activeView, setActiveView] = useState<'home' | 'processing' | 'library' | 'settings'>('home')
+  const prevStageRef = useRef(stage)
 
   useEffect(() => {
     loadConfig()
@@ -35,13 +36,16 @@ function App() {
   }, [t])
 
   useEffect(() => {
-    // Only navigate to library when completed AND no more tasks in queue
+    const prevStage = prevStageRef.current
+    prevStageRef.current = stage
+
+    // Auto-navigate to processing only on first task start (idle/completed → downloading)
+    if ((prevStage === 'idle' || prevStage === 'completed') && stage === 'downloading') {
+      setActiveView('processing')
+    }
+    // Auto-navigate to library when all tasks complete
     if (stage === 'completed' && !queueState.active && queueState.pending.length === 0) {
       setActiveView('library')
-    } else if (stage === 'idle' && !queueState.active) {
-      setActiveView('home')
-    } else if (stage !== 'error' && stage !== 'idle' && stage !== 'completed') {
-      setActiveView('processing')
     }
   }, [stage, queueState])
 
