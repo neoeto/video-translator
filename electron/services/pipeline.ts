@@ -242,6 +242,22 @@ function getVideoDimensions(videoPath: string): Promise<VideoDimensions> {
   })
 }
 
+function getVideoDuration(videoPath: string): Promise<number> {
+  if (!ffprobePath) {
+    return Promise.resolve(0)
+  }
+
+  return new Promise((resolve) => {
+    ffmpeg.ffprobe(videoPath, (error, data) => {
+      if (error || !data?.format?.duration) {
+        resolve(0)
+        return
+      }
+      resolve(data.format.duration)
+    })
+  })
+}
+
 function generateThumbnail(videoPath: string, outputPath: string): Promise<void> {
   return new Promise((resolve) => {
     ffmpeg(videoPath)
@@ -298,7 +314,12 @@ export class PipelineOrchestrator {
       const download = await this.runStep('downloading', 0, (onProgress, signal) =>
         this.strategies.downloader.download({ url, outputDir, onProgress, signal })
       )
-      this.updateState({ videoTitle: download.title })
+      this.updateState({ videoTitle: download.title, sourceType })
+
+      const duration = await getVideoDuration(download.videoPath)
+      if (duration > 0) {
+        this.updateState({ duration })
+      }
 
       // Generate thumbnail from source video for progress display
       const thumbnailPath = path.join(this.workDir, 'thumbnail.jpg')
@@ -515,6 +536,7 @@ export class PipelineOrchestrator {
         outputPath,
         completedAt: Date.now(),
         translatedSegments: translationResult,
+        sourceType,
       })
     } catch (error) {
       if (this.cancelled) {

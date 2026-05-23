@@ -9,6 +9,11 @@ export interface HistoryEntry {
   completedAt: number
   sourceLanguage?: string
   targetLanguage?: string
+  duration?: number
+  sourceType?: string
+  fileSize?: number
+  pipelineMode?: string
+  translatedSegments?: { start: number; end: number; sourceText: string; targetText: string; speaker: string }[]
 }
 
 interface HistorySchema {

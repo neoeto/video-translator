@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, screen, shell } from 'electron'
+import { statSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { is } from '@electron-toolkit/utils'
@@ -74,6 +75,10 @@ function registerIpcHandlers(): void {
       // Persist completed translations to history
       if (state.stage === 'completed' && state.outputPath) {
         const currentConfig = getConfig()
+        let fileSize: number | undefined
+        try {
+          fileSize = statSync(state.outputPath).size
+        } catch { /* non-critical */ }
         addHistoryEntry({
           id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           videoTitle: state.videoTitle || 'Untitled',
@@ -83,6 +88,11 @@ function registerIpcHandlers(): void {
           completedAt: state.completedAt || Date.now(),
           sourceLanguage: currentConfig.sourceLanguage,
           targetLanguage: currentConfig.targetLanguage,
+          duration: state.duration,
+          sourceType,
+          fileSize,
+          pipelineMode: currentConfig.pipelineMode,
+          translatedSegments: state.translatedSegments,
         })
       }
     })

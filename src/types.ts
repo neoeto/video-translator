@@ -49,6 +49,8 @@ export interface PipelineState {
   completedAt?: number
   translatedSegments?: TranslatedSegment[]
   speakerProfiles?: SpeakerProfile[]
+  duration?: number
+  sourceType?: VideoSourceType
 }
 
 export interface SubtitleStyle {
