@@ -179,6 +179,12 @@ export const en = {
   'settings.system.disabled': 'Disabled',
   'settings.actions.show': 'Show',
   'settings.actions.hide': 'Hide',
+  'settings.tabs.subtitles': 'Subtitles',
+  'settings.subtitles.heading': 'Subtitle Style',
+  'settings.subtitles.description': 'Configure the appearance of embedded subtitles in output videos.',
+  'settings.subtitles.enFontSize': 'Source Language Font Size',
+  'settings.subtitles.cnFontSize': 'Target Language Font Size',
+  'settings.subtitles.fontSizeHelp': 'Font size in pixels for the ASS subtitle overlay.',
 } as const
 
 export type TranslationKey = keyof typeof en

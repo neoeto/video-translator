@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { usePipelineStore } from '../store/usePipelineStore'
 import { useI18n } from '../i18n'
 
-type SettingsTab = 'ai-services' | 'translation' | 'tts' | 'system'
+type SettingsTab = 'ai-services' | 'translation' | 'tts' | 'subtitles' | 'system'
 
 export const SettingsView: React.FC = () => {
   const { config, saveConfig } = usePipelineStore()
@@ -23,6 +23,7 @@ export const SettingsView: React.FC = () => {
     { id: 'ai-services', icon: 'smart_toy', label: t('settings.tabs.aiServices') },
     { id: 'translation', icon: 'translate', label: t('settings.tabs.translation') },
     { id: 'tts', icon: 'record_voice_over', label: t('settings.tabs.tts') },
+    { id: 'subtitles', icon: 'subtitles', label: t('settings.tabs.subtitles') },
     { id: 'system', icon: 'dns', label: t('settings.tabs.system') },
   ]
 
@@ -535,6 +536,53 @@ export const SettingsView: React.FC = () => {
                       </p>
                     </div>
                   )}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {activeTab === 'subtitles' && (
+            <section className="bg-surface-container rounded-xl border border-outline-variant/40 p-unit-lg shadow-sm">
+              <div className="border-b border-outline-variant/30 pb-4 mb-6">
+                <h3 className="text-lg font-semibold text-on-surface flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">subtitles</span>
+                  {t('settings.subtitles.heading')}
+                </h3>
+                <p className="text-[13px] text-on-surface-variant mt-1">
+                  {t('settings.subtitles.description')}
+                </p>
+              </div>
+
+              <div className="space-y-6 max-w-2xl">
+                <div>
+                  <label className="block text-[11px] font-semibold text-on-surface-variant mb-2 uppercase tracking-wider">
+                    {t('settings.subtitles.enFontSize')}
+                  </label>
+                  <input
+                    type="number"
+                    min={8}
+                    max={120}
+                    value={config.subtitleStyle.enFontSize}
+                    onChange={(e) => saveConfig({ subtitleStyle: { enFontSize: Number(e.target.value) } })}
+                    className="w-32 bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono text-xs focus:border-primary focus:outline-none transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-on-surface-variant mb-2 uppercase tracking-wider">
+                    {t('settings.subtitles.cnFontSize')}
+                  </label>
+                  <input
+                    type="number"
+                    min={8}
+                    max={120}
+                    value={config.subtitleStyle.cnFontSize}
+                    onChange={(e) => saveConfig({ subtitleStyle: { cnFontSize: Number(e.target.value) } })}
+                    className="w-32 bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono text-xs focus:border-primary focus:outline-none transition-colors"
+                  />
+                  <p className="text-[12px] text-on-surface-variant mt-1">
+                    {t('settings.subtitles.fontSizeHelp')}
+                  </p>
                 </div>
               </div>
             </section>

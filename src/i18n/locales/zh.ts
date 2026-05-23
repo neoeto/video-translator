@@ -181,4 +181,10 @@ export const zh: Record<TranslationKey, string> = {
   'settings.system.disabled': '已禁用',
   'settings.actions.show': '显示',
   'settings.actions.hide': '隐藏',
+  'settings.tabs.subtitles': '字幕',
+  'settings.subtitles.heading': '字幕样式',
+  'settings.subtitles.description': '配置输出视频中嵌入字幕的外观。',
+  'settings.subtitles.enFontSize': '源语言字号',
+  'settings.subtitles.cnFontSize': '目标语言字号',
+  'settings.subtitles.fontSizeHelp': '字幕覆盖层（ASS 格式）的字体大小（像素）。',
 }
