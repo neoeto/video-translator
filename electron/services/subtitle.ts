@@ -222,7 +222,8 @@ function buildDialogueLine(
   y: number,
   bgAlpha: string
 ): string {
-  const overrideTags = `{${positionTag(x, y)}\\1a&H${bgAlpha}&\\4a&H${bgAlpha}&}`
+  // \1a = primary text alpha (always visible), \4a = background alpha
+  const overrideTags = `{${positionTag(x, y)}\\4a&H${bgAlpha}&}`
   return `Dialogue: 0,${formatTimestamp(start)},${formatTimestamp(end)},${styleName},,0,0,0,,${overrideTags}${escapeAssText(text)}`
 }
 
@@ -245,6 +246,13 @@ export function generateAss(
   const targetY = sourceY - Math.max(style.enFontSize, style.cnFontSize) - lineGap
   const centerX = width / 2
 
+  // BorderStyle 3 = opaque box (uses BackColour as solid background).
+  // BorderStyle 1 = outline + drop shadow (no background box).
+  // When bgOpacity is 0 (no background wanted), use style 1 with thin outline for readability.
+  const borderStyle = style.bgOpacity > 0 ? 3 : 1
+  const outlineSize = style.bgOpacity > 0 ? 2 : 2
+  const shadowSize = style.bgOpacity > 0 ? 1 : 0
+
   const lines = [
     '[Script Info]',
     'Title: Video Translation Subtitles',
@@ -254,8 +262,8 @@ export function generateAss(
     '',
     '[V4+ Styles]',
     'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
-    `Style: Source,${style.fontFamily},${style.enFontSize},${enColorASS},&H000000FF,&H00000000,${bgColorASS},0,0,0,0,100,100,0,0,3,2,1,2,10,10,${bottomMargin},1`,
-    `Style: Target,${style.fontFamily},${style.cnFontSize},${cnColorASS},&H000000FF,&H00000000,${bgColorASS},0,0,0,0,100,100,0,0,3,2,1,2,10,10,${bottomMargin},1`,
+    `Style: Source,${style.fontFamily},${style.enFontSize},${enColorASS},&H000000FF,&H00000000,${bgColorASS},0,0,0,0,100,100,0,0,${borderStyle},${outlineSize},${shadowSize},2,10,10,${bottomMargin},1`,
+    `Style: Target,${style.fontFamily},${style.cnFontSize},${cnColorASS},&H000000FF,&H00000000,${bgColorASS},0,0,0,0,100,100,0,0,${borderStyle},${outlineSize},${shadowSize},2,10,10,${bottomMargin},1`,
     '',
     '[Events]',
     'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
