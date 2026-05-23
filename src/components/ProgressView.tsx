@@ -82,7 +82,7 @@ const SpeakerLabelingPanel: React.FC<{
 }
 
 export const ProgressView: React.FC = () => {
-  const { state, config, cancelPipeline, submitSpeakerLabels, reset } = usePipelineStore()
+  const { state, config, queueState, cancelPipeline, skipError, removeQueued, submitSpeakerLabels, reset } = usePipelineStore()
   const t = useI18n((s) => s.t)
 
   const STAGES = useMemo(() =>
@@ -248,25 +248,80 @@ export const ProgressView: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-4 border-t border-surface-variant bg-surface-container flex justify-end">
-          {state.stage === 'error' ? (
-            <button
-              onClick={reset}
-              className="px-6 py-2 bg-primary text-on-primary hover:bg-primary-container rounded-lg font-semibold transition-colors"
-            >
-              {t('progress.backToHome')}
-            </button>
-          ) : (
-            <button
-              onClick={cancelPipeline}
-              className="px-5 py-2 text-error border border-error/50 hover:bg-error-container/10 rounded-lg font-semibold transition-colors"
-            >
-              {t('progress.cancelPipeline')}
-            </button>
+        <div className="p-4 border-t border-surface-variant bg-surface-container flex justify-between items-center">
+          {/* Queue info */}
+          {queueState.pending.length > 0 && (
+            <span className="text-xs text-on-surface-variant flex items-center gap-1">
+              <span className="material-symbols-outlined text-[14px]">queue</span>
+              {t('progress.queuePending', { count: String(queueState.pending.length) })}
+            </span>
           )}
+          {queueState.pending.length === 0 && <span />}
+
+          <div className="flex gap-2">
+            {state.stage === 'error' ? (
+              <>
+                {queueState.pending.length > 0 && (
+                  <button
+                    onClick={skipError}
+                    className="px-5 py-2 bg-primary text-on-primary hover:bg-primary-container rounded-lg font-semibold transition-colors"
+                  >
+                    {t('progress.skipAndContinue')}
+                  </button>
+                )}
+                <button
+                  onClick={reset}
+                  className="px-6 py-2 bg-surface-variant text-on-surface hover:bg-outline-variant rounded-lg font-semibold transition-colors"
+                >
+                  {t('progress.backToHome')}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={cancelPipeline}
+                className="px-5 py-2 text-error border border-error/50 hover:bg-error-container/10 rounded-lg font-semibold transition-colors"
+              >
+                {t('progress.cancelPipeline')}
+              </button>
+            )}
+          </div>
         </div>
 
       </div>
+      )}
+
+      {/* Pending queue items */}
+      {queueState.pending.length > 0 && (
+        <div className="mt-4 bg-surface-container rounded-xl border border-surface-variant overflow-hidden sharp-shadow">
+          <div className="p-4 border-b border-surface-variant">
+            <h3 className="text-sm font-bold text-on-surface flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px]">queue</span>
+              {t('progress.queueTitle')} ({queueState.pending.length})
+            </h3>
+          </div>
+          <div className="divide-y divide-surface-variant">
+            {queueState.pending.map((task, idx) => (
+              <div key={task.id} className="px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-xs text-outline font-mono w-5 shrink-0">#{idx + 1}</span>
+                  <span className="text-sm text-on-surface truncate">
+                    {task.title || task.url}
+                  </span>
+                  <span className="text-xs text-outline-variant shrink-0">
+                    {task.sourceType}
+                  </span>
+                </div>
+                <button
+                  onClick={() => removeQueued(task.id)}
+                  className="shrink-0 p-1 rounded hover:bg-error-container/20 text-outline hover:text-error transition-colors"
+                  title={t('progress.removeFromQueue')}
+                >
+                  <span className="material-symbols-outlined text-[16px]">close</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   )

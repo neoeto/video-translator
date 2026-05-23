@@ -25,6 +25,7 @@ export const en = {
   'input.descriptionLocalFile': 'Select a local video file to extract, translate, and synthesize a localized version.',
   'input.urlPlaceholder': 'dQw4w9WgXcQ',
   'input.translate': 'Translate',
+  'input.addToQueue': 'Add to Queue',
   'input.sourceLanguage': 'Source Language',
   'input.targetLanguage': 'Target Language',
   'input.autoDetect': 'Auto Detect',
@@ -69,6 +70,10 @@ export const en = {
   'progress.backToHome': 'Back to Home',
   'progress.cancelPipeline': 'Cancel Pipeline',
   'progress.noActiveTask': 'No active task',
+  'progress.queuePending': '{count} task(s) in queue',
+  'progress.skipAndContinue': 'Skip & Continue Queue',
+  'progress.queueTitle': 'Pending Queue',
+  'progress.removeFromQueue': 'Remove from queue',
 
   'speaker.title': 'Speaker Voice Labeling',
   'speaker.description': 'Select gender/age for each speaker to match appropriate voice.',

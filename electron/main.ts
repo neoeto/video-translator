@@ -7,11 +7,95 @@ import { getConfig, setConfig } from './services/config.js'
 import { createPipelineStrategies } from './services/factories.js'
 import { addHistoryEntry, deleteHistoryEntry, getHistory, type HistoryEntry } from './services/history.js'
 import { PipelineOrchestrator } from './services/pipeline.js'
-import type { AppConfig, SpeakerProfile, VideoSourceType } from './services/types.js'
+import type { AppConfig, PipelineState, SpeakerProfile, VideoSourceType } from './services/types.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 let mainWindow: BrowserWindow | null = null
+
+// ─── Task Queue ─────────────────────────────────────────────────
+
+interface QueueTask {
+  id: string
+  url: string
+  outputDir: string
+  sourceType: VideoSourceType
+  title?: string
+}
+
+interface QueueState {
+  active: QueueTask | null
+  pending: QueueTask[]
+}
+
 let currentPipeline: PipelineOrchestrator | null = null
+const taskQueue: QueueTask[] = []
+let activeTask: QueueTask | null = null
+
+function broadcastQueueState(): void {
+  const state: QueueState = { active: activeTask, pending: [...taskQueue] }
+  mainWindow?.webContents.send('pipeline:queue-state', state)
+}
+
+function processNextTask(): void {
+  if (activeTask || taskQueue.length === 0) return
+
+  const task = taskQueue.shift()!
+  activeTask = task
+  broadcastQueueState()
+
+  const config = getConfig()
+  const strategies = createPipelineStrategies(config, task.sourceType)
+  const pipeline = new PipelineOrchestrator(strategies)
+  currentPipeline = pipeline
+
+  pipeline.onProgress((state: PipelineState) => {
+    // Update task title once known
+    if (state.videoTitle && activeTask) {
+      activeTask.title = state.videoTitle
+      broadcastQueueState()
+    }
+
+    mainWindow?.webContents.send('pipeline:progress', state)
+
+    if (state.stage === 'completed' && state.outputPath) {
+      const currentConfig = getConfig()
+      let fileSize: number | undefined
+      try {
+        fileSize = statSync(state.outputPath).size
+      } catch { /* non-critical */ }
+      addHistoryEntry({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        videoTitle: state.videoTitle || 'Untitled',
+        translatedTitle: state.translatedTitle,
+        outputPath: state.outputPath,
+        thumbnailDataUrl: state.thumbnailDataUrl,
+        completedAt: state.completedAt || Date.now(),
+        sourceLanguage: currentConfig.sourceLanguage,
+        targetLanguage: currentConfig.targetLanguage,
+        duration: state.duration,
+        sourceType: task.sourceType,
+        fileSize,
+        pipelineMode: currentConfig.pipelineMode,
+        summary: state.summary,
+        translatedSegments: state.translatedSegments,
+      })
+    }
+  })
+
+  pipeline.start(task.url, task.outputDir, task.sourceType)
+    .then(() => {
+      activeTask = null
+      currentPipeline = null
+      broadcastQueueState()
+      processNextTask()
+    })
+    .catch(() => {
+      activeTask = null
+      currentPipeline = null
+      broadcastQueueState()
+      // On error, don't auto-start next — let user decide
+    })
+}
 
 function resolveIconPath(): string {
   if (is.dev) {
@@ -64,49 +148,46 @@ function registerIpcHandlers(): void {
       throw new Error('Main window is not available')
     }
 
-    const config = getConfig()
-    const strategies = createPipelineStrategies(config, sourceType)
-    const pipeline = new PipelineOrchestrator(strategies)
-    currentPipeline = pipeline
+    const task: QueueTask = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      url,
+      outputDir,
+      sourceType,
+    }
 
-    pipeline.onProgress((state) => {
-      mainWindow?.webContents.send('pipeline:progress', state)
-
-      // Persist completed translations to history
-      if (state.stage === 'completed' && state.outputPath) {
-        const currentConfig = getConfig()
-        let fileSize: number | undefined
-        try {
-          fileSize = statSync(state.outputPath).size
-        } catch { /* non-critical */ }
-        addHistoryEntry({
-          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          videoTitle: state.videoTitle || 'Untitled',
-          translatedTitle: state.translatedTitle,
-          outputPath: state.outputPath,
-          thumbnailDataUrl: state.thumbnailDataUrl,
-          completedAt: state.completedAt || Date.now(),
-          sourceLanguage: currentConfig.sourceLanguage,
-          targetLanguage: currentConfig.targetLanguage,
-          duration: state.duration,
-          sourceType,
-          fileSize,
-          pipelineMode: currentConfig.pipelineMode,
-          summary: state.summary,
-          translatedSegments: state.translatedSegments,
-        })
-      }
-    })
-
-    try {
-      await pipeline.start(url, outputDir, sourceType)
-    } finally {
-      currentPipeline = null
+    if (activeTask) {
+      // Queue the task if one is already running
+      taskQueue.push(task)
+      broadcastQueueState()
+    } else {
+      // Start immediately
+      taskQueue.push(task)
+      processNextTask()
     }
   })
 
   ipcMain.handle('pipeline:cancel', async (): Promise<void> => {
     currentPipeline?.cancel()
+  })
+
+  ipcMain.handle('pipeline:skip-error', (): void => {
+    // After error, reset and start next queued task
+    activeTask = null
+    currentPipeline = null
+    broadcastQueueState()
+    processNextTask()
+  })
+
+  ipcMain.handle('pipeline:remove-queued', (_event, taskId: string): void => {
+    const idx = taskQueue.findIndex(t => t.id === taskId)
+    if (idx !== -1) {
+      taskQueue.splice(idx, 1)
+      broadcastQueueState()
+    }
+  })
+
+  ipcMain.handle('pipeline:get-queue', (): QueueState => {
+    return { active: activeTask, pending: [...taskQueue] }
   })
 
   ipcMain.handle('pipeline:submit-speaker-labels', (_event, profiles: SpeakerProfile[]): void => {

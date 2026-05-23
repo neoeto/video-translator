@@ -1,9 +1,12 @@
 import { create } from 'zustand'
 import type { PipelineState, AppConfig, SpeakerProfile, VideoSourceType } from '../types'
+import type { QueueState } from '../preload'
 
 interface PipelineStore {
   // Pipeline state (updated from main process via IPC)
   state: PipelineState
+  // Queue state
+  queueState: QueueState
   // App config
   config: AppConfig
   // Loading states
@@ -13,6 +16,8 @@ interface PipelineStore {
   saveConfig: (partial: Partial<AppConfig>) => Promise<void>
   startPipeline: (url: string, sourceType?: VideoSourceType) => Promise<void>
   cancelPipeline: () => Promise<void>
+  skipError: () => Promise<void>
+  removeQueued: (taskId: string) => Promise<void>
   submitSpeakerLabels: (profiles: SpeakerProfile[]) => Promise<void>
   reset: () => void
   updateState: (state: Partial<PipelineState>) => void
@@ -24,10 +29,17 @@ const initialPipelineState: PipelineState = {
   overallProgress: 0,
 }
 
+const initialQueueState: QueueState = {
+  active: null,
+  pending: [],
+}
+
 let progressCleanup: (() => void) | null = null
+let queueCleanup: (() => void) | null = null
 
 export const usePipelineStore = create<PipelineStore>((set, get) => ({
   state: initialPipelineState,
+  queueState: initialQueueState,
   config: {
     locale: 'en',
     sourceLanguage: 'auto' as const,
@@ -76,27 +88,42 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
     } catch {
       set({ isLoadingConfig: false })
     }
+
+    // Set up queue state listener
+    if (!queueCleanup) {
+      queueCleanup = window.electronAPI.onQueueState((qs) => {
+        set({ queueState: qs })
+      })
+    }
   },
 
   saveConfig: async (partial) => {
     await window.electronAPI.setConfig(partial)
-    // 写入后立即从主进程重读，避免前端局部合并与 electron-store 默认值/归一化结果不一致。
     const config = await window.electronAPI.getConfig()
     set({ config })
   },
 
   startPipeline: async (url: string, sourceType: VideoSourceType = 'youtube') => {
     const { config } = get()
-    // Remove any previously registered progress listener to avoid duplicates
-    if (progressCleanup) { progressCleanup(); progressCleanup = null }
-    progressCleanup = window.electronAPI.onProgress((pipelineState) => {
-      set({ state: pipelineState })
-    })
+    // Set up progress listener if not already active
+    if (!progressCleanup) {
+      progressCleanup = window.electronAPI.onProgress((pipelineState) => {
+        set({ state: pipelineState })
+      })
+    }
     await window.electronAPI.pipelineStart(url, config.outputDir, sourceType)
   },
 
   cancelPipeline: async () => {
     await window.electronAPI.pipelineCancel()
+  },
+
+  skipError: async () => {
+    await window.electronAPI.pipelineSkipError()
+  },
+
+  removeQueued: async (taskId: string) => {
+    await window.electronAPI.pipelineRemoveQueued(taskId)
   },
 
   submitSpeakerLabels: async (profiles: SpeakerProfile[]) => {

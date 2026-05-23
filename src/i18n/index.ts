@@ -18,16 +18,21 @@ function isLocale(locale: string | undefined): locale is Locale {
 }
 
 function makeTranslate(locale: Locale) {
-  // 每次语言变化都生成新函数引用，确保 zustand selector 能感知 t 的变化并触发重渲染。
-  return (key: string): string => {
+  return (key: string, params?: Record<string, string>): string => {
     if (!isTranslationKey(key)) return key
-    return dictionaries[locale][key] ?? dictionaries.en[key]
+    let result = dictionaries[locale][key] ?? dictionaries.en[key]
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        result = result.replace(`{${k}}`, v)
+      }
+    }
+    return result
   }
 }
 
 interface I18nStore {
   locale: Locale
-  t: (key: string) => string
+  t: (key: string, params?: Record<string, string>) => string
   setLocale: (locale: Locale) => Promise<void>
   initLocale: (locale?: Locale) => void
 }

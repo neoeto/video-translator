@@ -11,6 +11,7 @@ import './index.css'
 
 function App() {
   const stage = usePipelineStore((s) => s.state.stage)
+  const queueState = usePipelineStore((s) => s.queueState)
   const loadConfig = usePipelineStore((s) => s.loadConfig)
   const configLocale = usePipelineStore((s) => s.config.locale)
   const isLoadingConfig = usePipelineStore((s) => s.isLoadingConfig)
@@ -34,15 +35,15 @@ function App() {
   }, [t])
 
   useEffect(() => {
-    // 流水线阶段驱动页面自动跳转，让用户无需手动切到进度页或结果页。
-    if (stage === 'completed') {
+    // Only navigate to library when completed AND no more tasks in queue
+    if (stage === 'completed' && !queueState.active && queueState.pending.length === 0) {
       setActiveView('library')
-    } else if (stage === 'idle') {
+    } else if (stage === 'idle' && !queueState.active) {
       setActiveView('home')
-    } else if (stage !== 'error') {
+    } else if (stage !== 'error' && stage !== 'idle' && stage !== 'completed') {
       setActiveView('processing')
     }
-  }, [stage])
+  }, [stage, queueState])
 
   const getViewTitle = () => {
     switch (activeView) {

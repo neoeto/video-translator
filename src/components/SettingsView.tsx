@@ -563,7 +563,7 @@ export const SettingsView: React.FC = () => {
                     min={8}
                     max={120}
                     value={config.subtitleStyle.enFontSize}
-                    onChange={(e) => saveConfig({ subtitleStyle: { enFontSize: Number(e.target.value) } })}
+                    onChange={(e) => saveConfig({ subtitleStyle: { ...config.subtitleStyle, enFontSize: Number(e.target.value) } })}
                     className="w-32 bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono text-xs focus:border-primary focus:outline-none transition-colors"
                   />
                 </div>
@@ -577,7 +577,7 @@ export const SettingsView: React.FC = () => {
                     min={8}
                     max={120}
                     value={config.subtitleStyle.cnFontSize}
-                    onChange={(e) => saveConfig({ subtitleStyle: { cnFontSize: Number(e.target.value) } })}
+                    onChange={(e) => saveConfig({ subtitleStyle: { ...config.subtitleStyle, cnFontSize: Number(e.target.value) } })}
                     className="w-32 bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono text-xs focus:border-primary focus:outline-none transition-colors"
                   />
                   <p className="text-[12px] text-on-surface-variant mt-1">

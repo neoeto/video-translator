@@ -27,6 +27,7 @@ export const zh: Record<TranslationKey, string> = {
   'input.descriptionLocalFile': '选择本地视频文件，即可提取、翻译并合成本地化版本。',
   'input.urlPlaceholder': 'dQw4w9WgXcQ',
   'input.translate': '开始翻译',
+  'input.addToQueue': '加入队列',
   'input.sourceLanguage': '源语言',
   'input.targetLanguage': '目标语言',
   'input.autoDetect': '自动检测',
@@ -71,6 +72,10 @@ export const zh: Record<TranslationKey, string> = {
   'progress.backToHome': '返回首页',
   'progress.cancelPipeline': '取消任务',
   'progress.noActiveTask': '暂无进行中的任务',
+  'progress.queuePending': '队列中有 {count} 个任务',
+  'progress.skipAndContinue': '跳过并继续队列',
+  'progress.queueTitle': '等待队列',
+  'progress.removeFromQueue': '从队列中移除',
 
   'speaker.title': '说话人音色标注',
   'speaker.description': '请为每位说话人选择性别/年龄，以匹配合适的语音音色。',

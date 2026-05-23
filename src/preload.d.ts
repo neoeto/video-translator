@@ -1,5 +1,18 @@
 import type { PipelineState, AppConfig, SpeakerProfile, VideoSourceType } from './types'
 
+export interface QueueTask {
+  id: string
+  url: string
+  outputDir: string
+  sourceType: string
+  title?: string
+}
+
+export interface QueueState {
+  active: QueueTask | null
+  pending: QueueTask[]
+}
+
 export interface HistoryEntry {
   id: string
   videoTitle: string
@@ -20,8 +33,12 @@ export interface HistoryEntry {
 export interface ElectronAPI {
   pipelineStart: (url: string, outputDir: string, sourceType?: VideoSourceType) => Promise<void>
   pipelineCancel: () => Promise<void>
+  pipelineSkipError: () => Promise<void>
+  pipelineRemoveQueued: (taskId: string) => Promise<void>
+  pipelineGetQueue: () => Promise<QueueState>
   submitSpeakerLabels: (profiles: SpeakerProfile[]) => Promise<void>
   onProgress: (callback: (state: PipelineState) => void) => () => void
+  onQueueState: (callback: (state: QueueState) => void) => () => void
   getConfig: () => Promise<AppConfig>
   setConfig: (config: Partial<AppConfig>) => Promise<void>
   getHistory: () => Promise<HistoryEntry[]>

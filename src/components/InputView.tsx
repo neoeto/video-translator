@@ -60,13 +60,14 @@ export interface InputViewProps {
 }
 
 export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
-  const { config, saveConfig, startPipeline, isLoadingConfig } = usePipelineStore()
+  const { config, saveConfig, startPipeline, queueState, isLoadingConfig } = usePipelineStore()
   const t = useI18n((s) => s.t)
   const [videoId, setVideoId] = useState('')
   const [localFilePath, setLocalFilePath] = useState('')
   const [sourceType, setSourceType] = useState<VideoSourceType>('youtube')
 
   const hasInput = sourceType === 'local-file' ? !!localFilePath : !!videoId
+  const isQueueActive = !!queueState.active
 
   /** Handle paste — auto-extract video ID from full URL */
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLInputElement>) => {
@@ -307,8 +308,8 @@ export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
                 : 'bg-surface-variant text-outline cursor-not-allowed'
             }`}
           >
-            <span className="material-symbols-outlined text-[18px]">translate</span>
-            {t('input.translate')}
+            <span className="material-symbols-outlined text-[18px]">{isQueueActive ? 'queue' : 'translate'}</span>
+            {isQueueActive ? t('input.addToQueue') : t('input.translate')}
           </button>
         </div>
 
