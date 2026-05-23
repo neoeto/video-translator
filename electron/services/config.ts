@@ -100,14 +100,14 @@ const defaultConfig: AppConfig = {
   indexttsReferenceAudio: '',
   audioSeparatorPath: detectAudioSeparatorPath(),
   subtitleStyle: {
-    enFontSize: 16,
-    cnFontSize: 22,
+    enFontSize: 24,
+    cnFontSize: 33,
     enColor: '#FFFFFF',
     cnColor: '#FFFF00',
     enPosition: 'bottom',
     cnPosition: 'bottom',
     bgColor: '#000000',
-    bgOpacity: 0.6,
+    bgOpacity: 0,
     fontFamily: 'Arial',
   },
 }
