@@ -51,6 +51,7 @@ export interface PipelineState {
   speakerProfiles?: SpeakerProfile[]
   duration?: number
   sourceType?: VideoSourceType
+  summary?: string
 }
 
 export interface SubtitleStyle {

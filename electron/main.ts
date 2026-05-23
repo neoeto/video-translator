@@ -92,6 +92,7 @@ function registerIpcHandlers(): void {
           sourceType,
           fileSize,
           pipelineMode: currentConfig.pipelineMode,
+          summary: state.summary,
           translatedSegments: state.translatedSegments,
         })
       }

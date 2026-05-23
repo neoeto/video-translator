@@ -13,6 +13,7 @@ export interface HistoryEntry {
   sourceType?: string
   fileSize?: number
   pipelineMode?: string
+  summary?: string
   translatedSegments?: { start: number; end: number; sourceText: string; targetText: string; speaker: string }[]
 }
 

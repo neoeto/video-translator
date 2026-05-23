@@ -245,11 +245,11 @@ export const ResultView: React.FC = () => {
               </div>
             </div>
 
-            {selectedEntry.translatedSegments && selectedEntry.translatedSegments.length > 0 && (
+            {(selectedEntry.summary || (selectedEntry.translatedSegments && selectedEntry.translatedSegments.length > 0)) && (
               <div className="p-6 border-b border-surface-variant">
                 <h4 className="text-sm text-outline mb-2">{t('result.detail.summary')}</h4>
                 <p className="text-sm text-on-surface-variant leading-relaxed">
-                  {generateSummary(selectedEntry.translatedSegments)}
+                  {selectedEntry.summary || generateSummary(selectedEntry.translatedSegments)}
                 </p>
               </div>
             )}

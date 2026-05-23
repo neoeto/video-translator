@@ -238,4 +238,27 @@ export default class OpenAICompatibleTranslator implements TranslatorStrategy {
       return text
     }
   }
+
+  async summarizeText(text: string, targetLanguage: string): Promise<string> {
+    const provider = getProviderSettings(this.config)
+    const targetUrl = provider.baseURL || 'https://api.openai.com'
+    const client = new OpenAI({
+      apiKey: provider.apiKey,
+      ...(provider.baseURL ? { baseURL: provider.baseURL } : {}),
+      fetchOptions: { dispatcher: getDispatcher(this.config, targetUrl) },
+    })
+
+    try {
+      const response = await client.chat.completions.create({
+        model: provider.model,
+        messages: [
+          { role: 'system', content: `Summarize the following video transcript in ${targetLanguage}. Write a concise summary in 2-3 sentences. Return ONLY the summary, nothing else.` },
+          { role: 'user', content: text },
+        ],
+      })
+      return response.choices[0]?.message?.content?.trim() || ''
+    } catch {
+      return ''
+    }
+  }
 }

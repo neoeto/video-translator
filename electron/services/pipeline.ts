@@ -440,6 +440,21 @@ export class PipelineOrchestrator {
         }
       }
 
+      // Generate video summary from transcript (non-blocking, best effort)
+      if (this.strategies.translator.summarizeText && translationResult.length > 0) {
+        const resolvedTarget = getLanguageDisplayName(config.targetLanguage)
+        try {
+          const transcriptText = translationResult.map(s => s.sourceText).join(' ')
+          const truncated = transcriptText.length > 2000 ? transcriptText.slice(0, 2000) : transcriptText
+          const summary = await this.strategies.translator.summarizeText(truncated, resolvedTarget)
+          if (summary) {
+            this.updateState({ summary })
+          }
+        } catch {
+          // Non-critical: skip summary
+        }
+      }
+
       let subtitleSegments = translationResult
       let synthesizedAudioPath: string | undefined
 

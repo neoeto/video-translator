@@ -126,6 +126,7 @@ export interface TranslatorStrategy {
     syncMode?: SyncMode
   }): Promise<TranslationResult>
   translateText?(text: string, targetLanguage: string): Promise<string>
+  summarizeText?(text: string, targetLanguage: string): Promise<string>
 }
 
 export interface SynthesizerStrategy {
@@ -182,6 +183,7 @@ export interface PipelineState {
   speakerProfiles?: SpeakerProfile[]
   duration?: number
   sourceType?: VideoSourceType
+  summary?: string
 }
 
 // ─── Subtitle style ─────────────────────────────────────────────
