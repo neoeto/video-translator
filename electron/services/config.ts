@@ -247,6 +247,30 @@ const store = new Store<AppConfig>({
   },
 })
 
+// 配置迁移：将旧默认字号升级为新值，去除字幕背景
+;(() => {
+  const style = store.get('subtitleStyle')
+  let updated = false
+  const patch: Partial<typeof style> = {}
+
+  if (style.enFontSize <= 24) {
+    patch.enFontSize = defaultConfig.subtitleStyle.enFontSize
+    updated = true
+  }
+  if (style.cnFontSize <= 33) {
+    patch.cnFontSize = defaultConfig.subtitleStyle.cnFontSize
+    updated = true
+  }
+  if (style.bgOpacity > 0) {
+    patch.bgOpacity = 0
+    updated = true
+  }
+
+  if (updated) {
+    store.set('subtitleStyle', { ...style, ...patch })
+  }
+})()
+
 export function getConfig(): AppConfig {
   return store.store
 }
