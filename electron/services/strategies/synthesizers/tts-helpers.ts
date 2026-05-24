@@ -199,6 +199,21 @@ async function truncateAudio(inputFile: string, outputFile: string, targetDurati
 }
 
 /**
+ * Force audio to exactly targetDuration by padding with silence if short.
+ * Unlike padAudioToDuration, this always pads regardless of how small the difference is.
+ */
+async function forceExactDuration(inputFile: string, outputFile: string, targetDuration: number): Promise<void> {
+  await runFfmpeg((command) => {
+    command
+      .input(inputFile)
+      .audioFilters('apad')
+      .outputOptions(['-acodec', 'libmp3lame', '-t', String(targetDuration)])
+      .format('mp3')
+      .output(outputFile)
+  })
+}
+
+/**
  * Adjust a TTS segment's duration to match the target window.
  * - strict mode: force-fit to exact target via atempo + pad
  * - natural mode: adjust within comfortable range, truncate if still overlong
@@ -215,6 +230,13 @@ async function adjustSegmentDuration(
 
   // In strict mode, skip the tolerance check — always force-fit to target
   if (syncMode !== 'strict' && Math.abs(actualDuration - targetDuration) <= DURATION_TOLERANCE) {
+    // Within tolerance — no tempo adjustment needed.
+    // But if shorter than target, pad to prevent cumulative drift.
+    if (actualDuration < targetDuration - 0.01) {
+      const paddedFile = path.join(workDir, `segment-${index}-padded.mp3`)
+      await forceExactDuration(rawFile, paddedFile, targetDuration)
+      return { file: paddedFile, duration: targetDuration }
+    }
     return { file: rawFile, duration: actualDuration }
   }
 
@@ -233,24 +255,27 @@ async function adjustSegmentDuration(
     const adjustedDuration = await probeDuration(adjustedFile)
 
     if (adjustedDuration > targetDuration + 0.05) {
-      // Still overlong — truncate to exact target
       const truncatedFile = path.join(workDir, `segment-${index}-truncated.mp3`)
       await truncateAudio(adjustedFile, truncatedFile, targetDuration)
       return { file: truncatedFile, duration: targetDuration }
     }
     if (adjustedDuration < targetDuration - 0.05) {
-      // Still short — pad to exact target
       await padAudioToDuration(adjustedFile, finalFile, targetDuration)
       return { file: finalFile, duration: targetDuration }
     }
-    // Within 50ms — close enough for strict mode
     return { file: adjustedFile, duration: targetDuration }
   }
 
   // Natural: clamp speed to comfortable range
   const clampedRate = Math.max(NATURAL_MIN_RATE, Math.min(NATURAL_MAX_RATE, ratio))
   if (Math.abs(clampedRate - 1.0) < 0.02) {
-    // Rate is essentially 1x, no adjustment needed
+    // Rate is essentially 1x, no tempo adjustment needed
+    // Pad if shorter to prevent drift accumulation
+    if (actualDuration < targetDuration - 0.01) {
+      const paddedFile = path.join(workDir, `segment-${index}-padded.mp3`)
+      await forceExactDuration(rawFile, paddedFile, targetDuration)
+      return { file: paddedFile, duration: targetDuration }
+    }
     return { file: rawFile, duration: actualDuration }
   }
 
@@ -258,11 +283,18 @@ async function adjustSegmentDuration(
   await adjustAudioTempo(rawFile, adjustedFile, actualDuration, adjustedTarget)
   const adjustedDuration = await probeDuration(adjustedFile)
 
-  // If still significantly overlong after tempo adjustment, truncate to prevent drift
+  // If still overlong after tempo adjustment, truncate to prevent drift
   if (adjustedDuration > targetDuration + DURATION_TOLERANCE) {
     const truncatedFile = path.join(workDir, `segment-${index}-truncated.mp3`)
     await truncateAudio(adjustedFile, truncatedFile, targetDuration)
     return { file: truncatedFile, duration: targetDuration }
+  }
+
+  // If shorter after tempo adjustment, pad to prevent drift accumulation
+  if (adjustedDuration < targetDuration - 0.01) {
+    const paddedFile = path.join(workDir, `segment-${index}-padded.mp3`)
+    await forceExactDuration(adjustedFile, paddedFile, targetDuration)
+    return { file: paddedFile, duration: targetDuration }
   }
 
   return { file: adjustedFile, duration: adjustedDuration }
@@ -311,10 +343,10 @@ export async function buildTimeline(
       cumulativePosition = segment.start
     }
 
-    // Compensating gap: place segment at its original start time, adjusting for drift
+    // Compensating gap: always align to segment's intended start time
     if (index > 0) {
       const expectedGap = segment.start - cumulativePosition
-      if (expectedGap > DURATION_TOLERANCE) {
+      if (expectedGap > 0.01) {
         const gapFile = path.join(workDir, `gap-${index}.mp3`)
         await createSilenceFile(expectedGap, gapFile)
         files.push(gapFile)
