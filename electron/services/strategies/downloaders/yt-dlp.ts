@@ -6,8 +6,10 @@ import path from 'node:path'
 import { getVideoStorageKey } from '../../video-key.js'
 import type { AppConfig, DownloaderStrategy, DownloadResult } from '../../types.js'
 
+import { resolvePackagedPath } from '../../resolve-packaged-path.js'
+
 const require = createRequire(import.meta.url)
-const ffmpegStaticPath = require('ffmpeg-static') as string | null
+const ffmpegStaticPath = resolvePackagedPath(require('ffmpeg-static') as string | null)
 
 // 优先选择 MP4 视频流和 M4A 音频流，降低后续 ffmpeg 合成与播放器兼容风险。
 const DOWNLOAD_FORMAT = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'

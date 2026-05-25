@@ -4,12 +4,17 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import type { SyncMode, TranslatedSegment } from '../../types.js'
 
+import { resolvePackagedPath } from '../../resolve-packaged-path.js'
+
 const require = createRequire(import.meta.url)
 const ffprobeStatic = require('ffprobe-static') as { path?: string }
 const ffmpegStatic = require('ffmpeg-static') as string | null
 
-if (ffmpegStatic) ffmpeg.setFfmpegPath(ffmpegStatic)
-if (ffprobeStatic.path) ffmpeg.setFfprobePath(ffprobeStatic.path)
+const resolvedFfmpegPath = resolvePackagedPath(ffmpegStatic)
+const resolvedFfprobePath = resolvePackagedPath(ffprobeStatic.path)
+
+if (resolvedFfmpegPath) ffmpeg.setFfmpegPath(resolvedFfmpegPath)
+if (resolvedFfprobePath) ffmpeg.setFfprobePath(resolvedFfprobePath)
 
 export const DURATION_TOLERANCE = 0.3
 export const MAX_TTS_RETRIES = 3

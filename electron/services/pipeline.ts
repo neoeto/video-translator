@@ -12,9 +12,11 @@ import type { AppConfig, PipelineStage, PipelineState, PipelineStrategies, Speak
 import { getLanguageDisplayName } from './types.js'
 import { getVideoStorageKey } from './video-key.js'
 
+import { resolvePackagedPath } from './resolve-packaged-path.js'
+
 const require = createRequire(import.meta.url)
 const ffprobeStatic = require('ffprobe-static') as { path?: string } | string
-const ffprobePath = typeof ffprobeStatic === 'string' ? ffprobeStatic : ffprobeStatic.path
+const ffprobePath = resolvePackagedPath(typeof ffprobeStatic === 'string' ? ffprobeStatic : ffprobeStatic.path)
 
 if (typeof ffprobePath === 'string') {
   ffmpeg.setFfprobePath(ffprobePath)

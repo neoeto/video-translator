@@ -3,8 +3,10 @@ import { createRequire } from 'node:module'
 import path from 'node:path'
 import type { TranscriptSegment, WordTimestamp } from '../../types.js'
 
+import { resolvePackagedPath } from '../../resolve-packaged-path.js'
+
 const require = createRequire(import.meta.url)
-const ffmpegStatic = require('ffmpeg-static') as string | null
+const ffmpegStatic = resolvePackagedPath(require('ffmpeg-static') as string | null)
 
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))

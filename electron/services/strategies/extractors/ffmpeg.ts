@@ -4,12 +4,14 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import type { AppConfig, AudioExtractorStrategy, AudioResult } from '../../types.js'
 
+import { resolvePackagedPath } from '../../resolve-packaged-path.js'
+
 const require = createRequire(import.meta.url)
 const ffmpegStatic = require('ffmpeg-static') as string | null
 const ffprobeStatic = require('ffprobe-static') as { path?: string } | string
 
-const ffmpegPath = ffmpegStatic
-const ffprobePath = typeof ffprobeStatic === 'string' ? ffprobeStatic : ffprobeStatic.path
+const ffmpegPath = resolvePackagedPath(ffmpegStatic)
+const ffprobePath = resolvePackagedPath(typeof ffprobeStatic === 'string' ? ffprobeStatic : ffprobeStatic.path)
 
 if (!ffmpegPath) throw new Error('ffmpeg binary not found')
 if (!ffprobePath) throw new Error('ffprobe binary not found')

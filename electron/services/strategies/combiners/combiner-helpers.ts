@@ -3,12 +3,14 @@ import ffmpeg from 'fluent-ffmpeg'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 
+import { resolvePackagedPath } from '../../resolve-packaged-path.js'
+
 const require = createRequire(import.meta.url)
 const ffmpegStatic = require('ffmpeg-static') as string | null
 const ffprobeStatic = require('ffprobe-static') as { path?: string } | string
 
-export const ffmpegPath = ffmpegStatic
-export const ffprobePath = typeof ffprobeStatic === 'string' ? ffprobeStatic : ffprobeStatic.path
+export const ffmpegPath = resolvePackagedPath(ffmpegStatic)
+export const ffprobePath = resolvePackagedPath(typeof ffprobeStatic === 'string' ? ffprobeStatic : ffprobeStatic.path)
 
 if (typeof ffmpegPath === 'string') ffmpeg.setFfmpegPath(ffmpegPath)
 if (typeof ffprobePath === 'string') ffmpeg.setFfprobePath(ffprobePath)
