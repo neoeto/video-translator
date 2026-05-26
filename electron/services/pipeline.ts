@@ -13,6 +13,7 @@ import { getLanguageDisplayName } from './types.js'
 import { getVideoStorageKey } from './video-key.js'
 
 import { resolvePackagedPath } from './resolve-packaged-path.js'
+import { buildUniqueOutputPath } from './output-path.js'
 
 const require = createRequire(import.meta.url)
 const ffprobeStatic = require('ffprobe-static') as { path?: string } | string
@@ -46,15 +47,6 @@ function toErrorMessage(error: unknown): string {
   return String(error)
 }
 
-function sanitizeFileName(fileName: string): string {
-  const sanitized = fileName
-    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '_')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .replace(/[. ]+$/g, '')
-
-  return sanitized || 'translated_video'
-}
 
 function createFingerprint(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex')
@@ -522,13 +514,12 @@ export class PipelineOrchestrator {
         const { width, height } = await getVideoDimensions(download.videoPath)
         this.assertNotCancelled()
 
-        const assContent = generateAss(subtitleSegments, config.subtitleStyle, width, height)
+        const assContent = generateAss(subtitleSegments, config.subtitleStyle, width, height, config.subtitleMinSplitWidth)
         const subtitlePath = path.join(this.workDir, 'subtitles.ass')
         await fs.writeFile(subtitlePath, assContent, 'utf8')
         this.assertNotCancelled()
 
-        const suffix = isSubtitleOnly ? '_subtitled' : '_translated'
-        const finalOutputPath = path.join(outputDir, `${sanitizeFileName(download.title)}${suffix}.mp4`)
+        const finalOutputPath = await buildUniqueOutputPath({ outputDir, title: download.title, isSubtitleOnly })
         const result = await this.strategies.combiner.combine({
           videoPath: download.videoPath,
           audioPath: synthesizedAudioPath,
