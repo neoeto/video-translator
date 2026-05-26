@@ -72,6 +72,16 @@ function detectAudioSeparatorPath(): string {
   return 'audio-separator'
 }
 
+const DEFAULT_SUBTITLE_MIN_SPLIT_WIDTH = 20
+
+function normalizeSubtitleMinSplitWidth(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return DEFAULT_SUBTITLE_MIN_SPLIT_WIDTH
+  }
+
+  return Math.max(0, Math.trunc(value))
+}
+
 const defaultConfig: AppConfig = {
   locale: 'en',
   sourceLanguage: 'auto',
@@ -110,6 +120,7 @@ const defaultConfig: AppConfig = {
     bgOpacity: 0,
     fontFamily: 'Arial',
   },
+  subtitleMinSplitWidth: DEFAULT_SUBTITLE_MIN_SPLIT_WIDTH,
 }
 
 const store = new Store<AppConfig>({
@@ -244,10 +255,27 @@ const store = new Store<AppConfig>({
         fontFamily: { type: 'string', default: defaultConfig.subtitleStyle.fontFamily },
       },
     },
+    subtitleMinSplitWidth: {
+      type: 'integer',
+      minimum: 0,
+      default: defaultConfig.subtitleMinSplitWidth,
+    },
   },
 })
 
+function normalizeStoredConfig(): void {
+  const storedSubtitleMinSplitWidth = store.get('subtitleMinSplitWidth') as unknown
+  const normalizedSubtitleMinSplitWidth = normalizeSubtitleMinSplitWidth(storedSubtitleMinSplitWidth)
+
+  if (storedSubtitleMinSplitWidth !== normalizedSubtitleMinSplitWidth) {
+    store.set('subtitleMinSplitWidth', normalizedSubtitleMinSplitWidth)
+  }
+}
+
+normalizeStoredConfig()
+
 export function getConfig(): AppConfig {
+  normalizeStoredConfig()
   return store.store
 }
 
@@ -258,6 +286,10 @@ export function setConfig(partial: Partial<AppConfig>): void {
       ...store.get('subtitleStyle'),
       ...partial.subtitleStyle,
     })
+  }
+
+  if (partial.subtitleMinSplitWidth !== undefined) {
+    store.set('subtitleMinSplitWidth', normalizeSubtitleMinSplitWidth(partial.subtitleMinSplitWidth))
   }
 
   const simpleKeys = [

@@ -258,6 +258,7 @@ export interface AppConfig {
   openaiApiKey: string
   outputDir: string
   subtitleStyle: SubtitleStyle
+  subtitleMinSplitWidth: number
   proxyEnabled: boolean
   proxyUrl: string
   proxyBypass: string

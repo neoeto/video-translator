@@ -190,6 +190,8 @@ export const en = {
   'settings.subtitles.enFontSize': 'Source Language Font Size',
   'settings.subtitles.cnFontSize': 'Target Language Font Size',
   'settings.subtitles.fontSizeHelp': 'Font size in pixels for the ASS subtitle overlay.',
+  'settings.subtitles.minSplitWidth': 'Minimum Split Display Width',
+  'settings.subtitles.minSplitWidthHelp': '0 makes punctuation splits easier; larger values merge short fragments more aggressively.',
 } as const
 
 export type TranslationKey = keyof typeof en

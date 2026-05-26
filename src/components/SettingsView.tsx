@@ -1,6 +1,10 @@
 import React, { useState } from 'react'
 import { usePipelineStore } from '../store/usePipelineStore'
 import { useI18n } from '../i18n'
+import {
+  commitSubtitleMinSplitWidthInput,
+  getSubtitleMinSplitWidthInputValue,
+} from './subtitle-min-split-width'
 
 type SettingsTab = 'ai-services' | 'translation' | 'tts' | 'subtitles' | 'system'
 
@@ -11,6 +15,18 @@ export const SettingsView: React.FC = () => {
   const [showOpenAiKey, setShowOpenAiKey] = useState(false)
   const [showDeepseekKey, setShowDeepseekKey] = useState(false)
   const [showGlmKey, setShowGlmKey] = useState(false)
+  const [subtitleMinSplitWidthDraft, setSubtitleMinSplitWidthDraft] = useState<string | null>(null)
+
+  const commitSubtitleMinSplitWidthDraftValue = async () => {
+    if (subtitleMinSplitWidthDraft === null) return
+
+    const nextValue = commitSubtitleMinSplitWidthInput(subtitleMinSplitWidthDraft, config.subtitleMinSplitWidth)
+    setSubtitleMinSplitWidthDraft(null)
+
+    if (nextValue !== config.subtitleMinSplitWidth) {
+      await saveConfig({ subtitleMinSplitWidth: nextValue })
+    }
+  }
 
   const handleSelectDirectory = async () => {
     const dir = await window.electronAPI.selectDirectory()
@@ -582,6 +598,35 @@ export const SettingsView: React.FC = () => {
                   />
                   <p className="text-[12px] text-on-surface-variant mt-1">
                     {t('settings.subtitles.fontSizeHelp')}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-on-surface-variant mb-2 uppercase tracking-wider">
+                    {t('settings.subtitles.minSplitWidth')}
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={getSubtitleMinSplitWidthInputValue(config.subtitleMinSplitWidth, subtitleMinSplitWidthDraft)}
+                    onChange={(e) => setSubtitleMinSplitWidthDraft(e.target.value)}
+                    onBlur={() => {
+                      void commitSubtitleMinSplitWidthDraftValue()
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.currentTarget.blur()
+                      }
+                      if (e.key === 'Escape') {
+                        setSubtitleMinSplitWidthDraft(null)
+                        e.currentTarget.blur()
+                      }
+                    }}
+                    className="w-32 bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono text-xs focus:border-primary focus:outline-none transition-colors"
+                  />
+                  <p className="text-[12px] text-on-surface-variant mt-1">
+                    {t('settings.subtitles.minSplitWidthHelp')}
                   </p>
                 </div>
               </div>

@@ -192,4 +192,6 @@ export const zh: Record<TranslationKey, string> = {
   'settings.subtitles.enFontSize': '源语言字号',
   'settings.subtitles.cnFontSize': '目标语言字号',
   'settings.subtitles.fontSizeHelp': '字幕覆盖层（ASS 格式）的字体大小（像素）。',
+  'settings.subtitles.minSplitWidth': '最小拆分显示宽度',
+  'settings.subtitles.minSplitWidthHelp': '0 表示尽量按标点拆分；值越大，越倾向于合并短片段。',
 }

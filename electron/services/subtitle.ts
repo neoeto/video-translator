@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 
 import type { SubtitleStyle, TranslatedSegment } from './types.js'
+import { splitSegmentIntoSubtitleTracks } from './subtitle-tracks.js'
 
 const DEFAULT_VIDEO_WIDTH = 1920
 const DEFAULT_VIDEO_HEIGHT = 1080
@@ -57,156 +58,6 @@ function escapeAssText(text: string): string {
     .replace(/\r?\n/g, '\\N')
 }
 
-// ─── Subtitle sentence splitting ──────────────────────────────
-
-const SPLIT_PUNCTUATION = new Set([
-  '。', '！', '？', '，', '、', '；', '：',
-  '.', '!', '?', ',', ';', ':',
-  '…', '—', '–',
-])
-
-// Minimum display width before a punctuation split is accepted.
-// Shorter fragments are merged with the next clause.
-const MIN_SPLIT_WIDTH = 20
-
-/**
- * Approximate display width: CJK characters count as 2, others as 1.
- */
-function displayWidth(text: string): number {
-  let width = 0
-  for (const char of text) {
-    const code = char.codePointAt(0) ?? 0
-    if (
-      (code >= 0x4E00 && code <= 0x9FFF) ||
-      (code >= 0x3400 && code <= 0x4DBF) ||
-      (code >= 0x3040 && code <= 0x309F) ||
-      (code >= 0x30A0 && code <= 0x30FF) ||
-      (code >= 0xAC00 && code <= 0xD7AF) ||
-      (code >= 0xFF01 && code <= 0xFF60) ||
-      (code >= 0xFE30 && code <= 0xFE4F)
-    ) {
-      width += 2
-    } else {
-      width += 1
-    }
-  }
-  return width
-}
-
-interface SubtitleChunk {
-  sourceText: string
-  targetText: string
-  start: number
-  end: number
-}
-
-/**
- * Splits text into clauses at punctuation marks.
- * Short fragments (below MIN_SPLIT_WIDTH) are merged with the next clause.
- * Handles abbreviations like "U.S." by not splitting at a period followed by a non-space.
- */
-function splitAtPunctuation(text: string): string[] {
-  const parts: string[] = []
-  let current = ''
-
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i]
-    current += char
-    if (SPLIT_PUNCTUATION.has(char)) {
-      // Don't split at '.' followed by a non-whitespace character (abbreviations)
-      if (char === '.' && i + 1 < text.length && !/\s/.test(text[i + 1])) {
-        continue
-      }
-      // Only split if accumulated text is long enough
-      if (current.trim() && displayWidth(current.trim()) >= MIN_SPLIT_WIDTH) {
-        parts.push(current)
-        current = ''
-      }
-    }
-  }
-
-  if (current.trim()) parts.push(current)
-  return parts.length > 0 ? parts : [text]
-}
-
-/**
- * Merges the shortest adjacent pair of parts until the target count is reached.
- */
-function mergePartsToCount(parts: string[], targetCount: number): string[] {
-  const result = [...parts]
-  while (result.length > targetCount && result.length > 1) {
-    let minIdx = 0
-    let minLen = Infinity
-    for (let i = 0; i < result.length - 1; i++) {
-      const combinedLen = result[i].length + result[i + 1].length
-      if (combinedLen < minLen) {
-        minLen = combinedLen
-        minIdx = i
-      }
-    }
-    result.splice(minIdx, 2, result[minIdx] + result[minIdx + 1])
-  }
-  return result
-}
-
-/**
- * Splits a translated segment into subtitle chunks at punctuation boundaries.
- * Source and target texts are split independently, then paired by merging
- * the shorter list to match the longer one.
- */
-function splitSubtitleSegment(segment: TranslatedSegment): SubtitleChunk[] {
-  let srcParts = splitAtPunctuation(segment.sourceText)
-  let tgtParts = splitAtPunctuation(segment.targetText)
-
-  if (srcParts.length <= 1 && tgtParts.length <= 1) {
-    return [{
-      sourceText: segment.sourceText.trim(),
-      targetText: segment.targetText.trim(),
-      start: segment.start,
-      end: segment.end,
-    }]
-  }
-
-  const numChunks = Math.min(srcParts.length, tgtParts.length)
-  srcParts = mergePartsToCount(srcParts, numChunks)
-  tgtParts = mergePartsToCount(tgtParts, numChunks)
-
-  const totalDuration = segment.end - segment.start
-  const totalSrcLen = segment.sourceText.length
-  const chunks: SubtitleChunk[] = []
-  let charPos = 0
-
-  for (let i = 0; i < numChunks; i++) {
-    const src = srcParts[i].trim()
-    const tgt = tgtParts[i].trim()
-    if (!src && !tgt) continue
-
-    const timeStart = totalSrcLen > 0
-      ? segment.start + (charPos / totalSrcLen) * totalDuration
-      : segment.start
-    charPos += srcParts[i].length
-    const timeEnd = i === numChunks - 1
-      ? segment.end
-      : totalSrcLen > 0
-        ? segment.start + (charPos / totalSrcLen) * totalDuration
-        : segment.end
-
-    chunks.push({
-      sourceText: src || tgt,
-      targetText: tgt || src,
-      start: timeStart,
-      end: timeEnd,
-    })
-  }
-
-  return chunks.length > 0 ? chunks : [{
-    sourceText: segment.sourceText.trim(),
-    targetText: segment.targetText.trim(),
-    start: segment.start,
-    end: segment.end,
-  }]
-}
-
 // ─── ASS generation ───────────────────────────────────────────
 
 function positionTag(x: number, y: number): string {
@@ -231,7 +82,8 @@ export function generateAss(
   translatedSegments: TranslatedSegment[],
   style: SubtitleStyle,
   videoWidth: number,
-  videoHeight: number
+  videoHeight: number,
+  minSplitWidth = 20
 ): string {
   const width = videoWidth || DEFAULT_VIDEO_WIDTH
   const height = videoHeight || DEFAULT_VIDEO_HEIGHT
@@ -267,12 +119,17 @@ export function generateAss(
     '',
     '[Events]',
     'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
-    ...translatedSegments.flatMap((segment) =>
-      splitSubtitleSegment(segment).flatMap((chunk) => [
-        buildDialogueLine(chunk.start, chunk.end, 'Source', chunk.sourceText, centerX, sourceY, bgAlpha),
-        buildDialogueLine(chunk.start, chunk.end, 'Target', chunk.targetText, centerX, targetY, bgAlpha),
-      ])
-    ),
+    ...translatedSegments.flatMap((segment) => {
+      const tracks = splitSegmentIntoSubtitleTracks(segment, minSplitWidth)
+      return [
+        ...tracks.source.map((chunk) =>
+          buildDialogueLine(chunk.start, chunk.end, 'Source', chunk.text, centerX, sourceY, bgAlpha)
+        ),
+        ...tracks.target.map((chunk) =>
+          buildDialogueLine(chunk.start, chunk.end, 'Target', chunk.text, centerX, targetY, bgAlpha)
+        ),
+      ]
+    }),
   ]
 
   return lines.join('\n')
@@ -283,13 +140,15 @@ export function writeAssFile(
   style: SubtitleStyle,
   outputPath: string,
   videoWidth?: number,
-  videoHeight?: number
+  videoHeight?: number,
+  minSplitWidth = 20
 ): void {
   const ass = generateAss(
     translatedSegments,
     style,
     videoWidth ?? DEFAULT_VIDEO_WIDTH,
-    videoHeight ?? DEFAULT_VIDEO_HEIGHT
+    videoHeight ?? DEFAULT_VIDEO_HEIGHT,
+    minSplitWidth
   )
   fs.writeFileSync(outputPath, ass, 'utf8')
 }

@@ -78,6 +78,7 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
       bgOpacity: 0,
       fontFamily: 'Arial',
     },
+    subtitleMinSplitWidth: 20,
   },
   isLoadingConfig: true,
 
