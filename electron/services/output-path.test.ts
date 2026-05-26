@@ -4,6 +4,23 @@ import test from 'node:test';
 // @ts-expect-error TS5097: Node's --experimental-strip-types test runner requires the .ts specifier here.
 import { buildUniqueOutputPath } from './output-path.ts';
 
+function createStubbedLocalDate(): Date {
+  return {
+    getFullYear: () => 2026,
+    getMonth: () => 4,
+    getDate: () => 26,
+    getHours: () => 9,
+    getMinutes: () => 15,
+    getSeconds: () => 30,
+    getUTCFullYear: () => 2026,
+    getUTCMonth: () => 4,
+    getUTCDate: () => 25,
+    getUTCHours: () => 23,
+    getUTCMinutes: () => 15,
+    getUTCSeconds: () => 30,
+  } as Date;
+}
+
 test('returns the base translated output path when no collision exists', async () => {
   const outputPath = await buildUniqueOutputPath({
     outputDir: '/tmp/out',
@@ -24,7 +41,7 @@ test('appends YYMMDD-HHmmss when the base translated output path already exists'
     title: 'Same Title',
     isSubtitleOnly: false,
     pathExists: async (candidate) => taken.has(candidate),
-    now: () => new Date('2026-05-26T09:15:30Z'),
+    now: () => createStubbedLocalDate(),
   });
 
   assert.equal(outputPath, '/tmp/out/Same Title_translated_260526-091530.mp4');
@@ -41,7 +58,7 @@ test('adds an incrementing suffix when the timestamped subtitle-only output path
     title: 'Same Title',
     isSubtitleOnly: true,
     pathExists: async (candidate) => taken.has(candidate),
-    now: () => new Date('2026-05-26T09:15:30Z'),
+    now: () => createStubbedLocalDate(),
   });
 
   assert.equal(outputPath, '/tmp/out/Same Title_subtitled_260526-091530_2.mp4');
