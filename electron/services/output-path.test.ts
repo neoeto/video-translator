@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+// @ts-expect-error TS5097: Node's --experimental-strip-types test runner requires the .ts specifier here.
 import { buildUniqueOutputPath } from './output-path.ts';
 
 test('returns the base translated output path when no collision exists', async () => {
