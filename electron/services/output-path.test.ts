@@ -1,55 +1,47 @@
-import assert from 'node:assert';
-import fs from 'node:fs';
-import { describe, it, beforeEach, afterEach } from 'node:test';
+import assert from 'node:assert/strict';
+import test from 'node:test';
 
-// Tests expect buildUniqueOutputPath to be implemented in ./output-path.ts
-// and that the timestamp helper uses process.env.FIXED_TIMESTAMP when set.
+import { buildUniqueOutputPath } from './output-path.ts';
 
-const FIXED_TS = '260526-091530';
-
-describe('buildUniqueOutputPath collisions', () => {
-  let origExists: typeof fs.existsSync;
-
-  beforeEach(() => {
-    origExists = fs.existsSync;
-    process.env.FIXED_TIMESTAMP = FIXED_TS;
+test('returns the base translated output path when no collision exists', async () => {
+  const outputPath = await buildUniqueOutputPath({
+    outputDir: '/tmp/out',
+    title: 'Same Title',
+    isSubtitleOnly: false,
+    pathExists: async () => false,
+    now: () => new Date('2026-05-26T09:15:30Z'),
   });
 
-  afterEach(() => {
-    fs.existsSync = origExists;
-    delete process.env.FIXED_TIMESTAMP;
+  assert.equal(outputPath, '/tmp/out/Same Title_translated.mp4');
+});
+
+test('appends YYMMDD-HHmmss when the base translated output path already exists', async () => {
+  const taken = new Set(['/tmp/out/Same Title_translated.mp4']);
+
+  const outputPath = await buildUniqueOutputPath({
+    outputDir: '/tmp/out',
+    title: 'Same Title',
+    isSubtitleOnly: false,
+    pathExists: async (candidate) => taken.has(candidate),
+    now: () => new Date('2026-05-26T09:15:30Z'),
   });
 
-  it('no collision => /tmp/out/Same Title_translated.mp4', async () => {
-    const { buildUniqueOutputPath } = await import('./output-path.ts');
-    // simulate no files existing
-    fs.existsSync = () => false;
-    const out = buildUniqueOutputPath({ destDir: '/tmp/out', title: 'Same Title', baseSuffix: 'translated' });
-    assert.strictEqual(out, '/tmp/out/Same Title_translated.mp4');
+  assert.equal(outputPath, '/tmp/out/Same Title_translated_260526-091530.mp4');
+});
+
+test('adds an incrementing suffix when the timestamped subtitle-only output path also exists', async () => {
+  const taken = new Set([
+    '/tmp/out/Same Title_subtitled.mp4',
+    '/tmp/out/Same Title_subtitled_260526-091530.mp4',
+  ]);
+
+  const outputPath = await buildUniqueOutputPath({
+    outputDir: '/tmp/out',
+    title: 'Same Title',
+    isSubtitleOnly: true,
+    pathExists: async (candidate) => taken.has(candidate),
+    now: () => new Date('2026-05-26T09:15:30Z'),
   });
 
-  it('base collision => /tmp/out/Same Title_translated_260526-091530.mp4', async () => {
-    const { buildUniqueOutputPath } = await import('./output-path.ts');
-    // first candidate (base) exists, timestamped does not
-    const calls: string[] = [];
-    fs.existsSync = (p: string) => {
-      calls.push(p);
-      if (p.endsWith('Same Title_translated.mp4')) return true;
-      return false;
-    };
-    const out = buildUniqueOutputPath({ destDir: '/tmp/out', title: 'Same Title', baseSuffix: 'translated' });
-    assert.strictEqual(out, '/tmp/out/Same Title_translated_260526-091530.mp4');
-  });
-
-  it('base + timestamp collision in subtitleOnly mode => /tmp/out/Same Title_subtitled_260526-091530_2.mp4', async () => {
-    const { buildUniqueOutputPath } = await import('./output-path.ts');
-    // base and timestamp exist, _2 does not
-    fs.existsSync = (p: string) => {
-      if (p.endsWith('Same Title_subtitled.mp4')) return true;
-      if (p.endsWith('Same Title_subtitled_260526-091530.mp4')) return true;
-      return false;
-    };
-    const out = buildUniqueOutputPath({ destDir: '/tmp/out', title: 'Same Title', baseSuffix: 'subtitled' });
-    assert.strictEqual(out, '/tmp/out/Same Title_subtitled_260526-091530_2.mp4');
-  });
+  assert.equal(outputPath, '/tmp/out/Same Title_subtitled_260526-091530_2.mp4');
 });
