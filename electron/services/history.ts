@@ -5,6 +5,7 @@ export interface HistoryEntry {
   videoTitle: string
   translatedTitle?: string
   outputPath: string
+  sourceUrl?: string
   thumbnailDataUrl?: string
   completedAt: number
   sourceLanguage?: string

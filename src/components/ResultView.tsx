@@ -45,6 +45,16 @@ function getSourceLabel(sourceType: string | undefined, t: (key: string) => stri
   }
 }
 
+function isRemoteSource(sourceType: string | undefined): boolean {
+  return sourceType === 'youtube' || sourceType === 'bilibili'
+}
+
+function getOriginalLink(sourceType: string | undefined, sourceUrl: string | undefined): string | null {
+  if (!isRemoteSource(sourceType)) return null
+  const url = sourceUrl?.trim()
+  return url ? url : null
+}
+
 function generateSummary(segments: { sourceText: string }[] | undefined): string {
   if (!segments || segments.length === 0) return ''
   const text = segments.map(s => s.sourceText).join(' ')
@@ -70,6 +80,16 @@ export const ResultView: React.FC = () => {
   const handleOpenVideo = (filePath: string) => {
     window.electronAPI.openPath(filePath)
   }
+
+  const handleOpenOriginalLink = (url: string) => {
+    window.electronAPI.openExternal(url).catch((error) => {
+      console.error('Failed to open original link', { url, error })
+    })
+  }
+
+  const selectedEntryOriginalLink = selectedEntry
+    ? getOriginalLink(selectedEntry.sourceType, selectedEntry.sourceUrl)
+    : null
 
   return (
     <div className="w-full max-w-5xl mx-auto pt-10 px-6 pb-12">
@@ -218,6 +238,20 @@ export const ResultView: React.FC = () => {
               <div>
                 <span className="text-outline block mb-1">{t('result.detail.source')}</span>
                 <span className="text-on-surface">{getSourceLabel(selectedEntry.sourceType, t)}</span>
+              </div>
+              <div>
+                <span className="text-outline block mb-1">{t('result.detail.originalLink')}</span>
+                {selectedEntryOriginalLink ? (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenOriginalLink(selectedEntryOriginalLink)}
+                    className="text-primary hover:underline text-left break-all"
+                  >
+                    {selectedEntryOriginalLink}
+                  </button>
+                ) : (
+                  <span className="text-on-surface">--</span>
+                )}
               </div>
               <div>
                 <span className="text-outline block mb-1">{t('result.detail.duration')}</span>

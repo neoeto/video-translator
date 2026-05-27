@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { is } from '@electron-toolkit/utils'
 import { getConfig, setConfig } from './services/config.js'
 import { createPipelineStrategies } from './services/factories.js'
+import { buildHistorySourceUrl } from './services/history-source-link.js'
 import { addHistoryEntry, deleteHistoryEntry, getHistory, type HistoryEntry } from './services/history.js'
 import { PipelineOrchestrator } from './services/pipeline.js'
 import type { AppConfig, PipelineState, SpeakerProfile, VideoSourceType } from './services/types.js'
@@ -59,6 +60,10 @@ function processNextTask(): void {
 
     if (state.stage === 'completed' && state.outputPath) {
       const currentConfig = getConfig()
+      const sourceUrl = buildHistorySourceUrl({
+        sourceType: task.sourceType,
+        taskUrl: task.url,
+      })
       let fileSize: number | undefined
       try {
         fileSize = statSync(state.outputPath).size
@@ -74,6 +79,7 @@ function processNextTask(): void {
         targetLanguage: currentConfig.targetLanguage,
         duration: state.duration,
         sourceType: task.sourceType,
+        ...(sourceUrl ? { sourceUrl } : {}),
         fileSize,
         pipelineMode: currentConfig.pipelineMode,
         summary: state.summary,
@@ -233,6 +239,21 @@ function registerIpcHandlers(): void {
     if (errorMessage) {
       throw new Error(errorMessage)
     }
+  })
+
+  ipcMain.handle('shell:openExternal', async (_event, url: string): Promise<void> => {
+    let parsedUrl: URL
+    try {
+      parsedUrl = new URL(url)
+    } catch {
+      throw new Error('Invalid URL')
+    }
+
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      throw new Error('Unsupported URL protocol')
+    }
+
+    await shell.openExternal(parsedUrl.toString())
   })
 }
 

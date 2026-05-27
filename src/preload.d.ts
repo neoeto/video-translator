@@ -18,6 +18,7 @@ export interface HistoryEntry {
   videoTitle: string
   translatedTitle?: string
   outputPath: string
+  sourceUrl?: string
   thumbnailDataUrl?: string
   completedAt: number
   sourceLanguage?: string
@@ -46,6 +47,7 @@ export interface ElectronAPI {
   selectDirectory: () => Promise<string | null>
   selectVideoFile: () => Promise<string | null>
   openPath: (path: string) => Promise<void>
+  openExternal: (url: string) => Promise<void>
 }
 
 declare global {

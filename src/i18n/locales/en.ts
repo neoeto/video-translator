@@ -101,6 +101,7 @@ export const en = {
   'result.detail.sourceYoutube': 'YouTube',
   'result.detail.sourceBilibili': 'Bilibili',
   'result.detail.sourceLocalFile': 'Local File',
+  'result.detail.originalLink': 'Original Link',
   'result.detail.duration': 'Duration',
   'result.detail.fileSize': 'File Size',
   'result.detail.language': 'Language',

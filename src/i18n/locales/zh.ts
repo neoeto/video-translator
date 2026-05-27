@@ -103,6 +103,7 @@ export const zh: Record<TranslationKey, string> = {
   'result.detail.sourceYoutube': 'YouTube',
   'result.detail.sourceBilibili': 'Bilibili',
   'result.detail.sourceLocalFile': '本地文件',
+  'result.detail.originalLink': '原始链接',
   'result.detail.duration': '视频时长',
   'result.detail.fileSize': '文件大小',
   'result.detail.language': '语言转换',

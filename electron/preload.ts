@@ -39,6 +39,8 @@ const electronAPI = {
     ipcRenderer.invoke('dialog:selectVideoFile'),
   openPath: (path: string): Promise<void> =>
     ipcRenderer.invoke('shell:openPath', path),
+  openExternal: (url: string): Promise<void> =>
+    ipcRenderer.invoke('shell:openExternal', url),
 }
 
 // 使用 contextBridge 暴露白名单 API，隔离渲染进程与 ipcRenderer，避免直接挂载 Node/Electron 能力。
