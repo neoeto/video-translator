@@ -40,6 +40,7 @@ interface CachedSegmentsFile<T> {
 interface CachedOutputFile {
   fingerprint: string
   outputPath: string
+  segmentTimings?: { start: number; end: number; actualDuration: number }[]
 }
 
 function toErrorMessage(error: unknown): string {
@@ -105,7 +106,18 @@ function isCachedOutputFile(value: unknown): value is CachedOutputFile {
   }
 
   const candidate = value as Record<string, unknown>
-  return typeof candidate.fingerprint === 'string' && typeof candidate.outputPath === 'string'
+  if (typeof candidate.fingerprint !== 'string' || typeof candidate.outputPath !== 'string') {
+    return false
+  }
+  if (candidate.segmentTimings !== undefined) {
+    if (!Array.isArray(candidate.segmentTimings)) return false
+    if (!candidate.segmentTimings.every((t) => {
+      if (typeof t !== 'object' || t === null) return false
+      const c = t as Record<string, unknown>
+      return typeof c.start === 'number' && typeof c.end === 'number' && typeof c.actualDuration === 'number'
+    })) return false
+  }
+  return true
 }
 
 async function fileExists(filePath: string): Promise<boolean> {
@@ -150,18 +162,25 @@ async function writeCachedSegments<T>(filePath: string, fingerprint: string, seg
   await fs.writeFile(filePath, JSON.stringify({ fingerprint, segments }, null, 2), 'utf8')
 }
 
-async function readCachedOutput(filePath: string, fingerprint: string): Promise<string | null> {
+async function readCachedOutput(filePath: string, fingerprint: string): Promise<CachedOutputFile | null> {
   const cached = await readCachedJson(filePath, isCachedOutputFile)
 
   if (!cached || cached.fingerprint !== fingerprint) {
     return null
   }
 
-  return (await fileExists(cached.outputPath)) ? cached.outputPath : null
+  return (await fileExists(cached.outputPath)) ? cached : null
 }
 
-async function writeCachedOutput(filePath: string, fingerprint: string, outputPath: string): Promise<void> {
-  await fs.writeFile(filePath, JSON.stringify({ fingerprint, outputPath }, null, 2), 'utf8')
+async function writeCachedOutput(
+  filePath: string,
+  fingerprint: string,
+  outputPath: string,
+  segmentTimings?: { start: number; end: number; actualDuration: number }[],
+): Promise<void> {
+  const payload: CachedOutputFile = { fingerprint, outputPath }
+  if (segmentTimings) payload.segmentTimings = segmentTimings
+  await fs.writeFile(filePath, JSON.stringify(payload, null, 2), 'utf8')
 }
 
 async function createTranscriptionFingerprint(videoPath: string, config: AppConfig): Promise<string> {
@@ -210,6 +229,9 @@ function createTtsFingerprint(translatedSegments: TranslatedSegment[], config: A
     indexttsReferenceMode: config.indexttsReferenceMode ?? 'speaker-sample',
     indexttsReferenceAudio: config.indexttsReferenceAudio,
     referenceResolverVersion: 1,
+    // Bump when changing the TTS timeline assembly (e.g. switching intermediate
+    // format from mp3 to wav) so existing tts.json caches get invalidated.
+    ttsPipelineVersion: 2,
   })
 }
 
@@ -483,7 +505,11 @@ export class PipelineOrchestrator {
           const cachedOutput = await readCachedOutput(ttsCachePath, ttsFingerprint)
           if (cachedOutput) {
             onProgress(100)
-            return { audioPath: cachedOutput, segmentTimings: translationResult.map(s => ({ start: s.start, end: s.end, actualDuration: s.end - s.start })) }
+            // Prefer cached actual segment timings (so natural-mode subtitle alignment stays accurate
+            // across reruns). Fall back to planned timings only for legacy caches without it.
+            const segmentTimings = cachedOutput.segmentTimings
+              ?? translationResult.map(s => ({ start: s.start, end: s.end, actualDuration: s.end - s.start }))
+            return { audioPath: cachedOutput.outputPath, segmentTimings }
           }
 
           const speakers = [...new Set(translationResult.map((s) => s.speaker))]
@@ -499,7 +525,7 @@ export class PipelineOrchestrator {
             sourceAudioPath,
             originalSegments: transcription,
           })
-          await writeCachedOutput(ttsCachePath, ttsFingerprint, result.audioPath)
+          await writeCachedOutput(ttsCachePath, ttsFingerprint, result.audioPath, result.segmentTimings)
           return result
         })
 

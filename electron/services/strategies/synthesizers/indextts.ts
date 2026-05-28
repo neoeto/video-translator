@@ -12,14 +12,14 @@ import { ReferenceAudioResolver } from './reference-audio-resolver.js'
 
 const INDEXTTS_DEFAULT_API_URL = 'http://localhost:8080'
 
-async function convertAudioToMp3(inputFile: string, outputFile: string): Promise<void> {
+async function convertAudioToWav(inputFile: string, outputFile: string): Promise<void> {
   await runFfmpeg((command) => {
     command
       .input(inputFile)
-      .audioCodec('libmp3lame')
+      .audioCodec('pcm_s16le')
       .audioFrequency(TTS_SAMPLE_RATE)
       .audioChannels(1)
-      .format('mp3')
+      .format('wav')
       .output(outputFile)
   })
 }
@@ -82,7 +82,7 @@ export default class IndexTtsSynthesizer implements SynthesizerStrategy {
   private async synthesizeSegment(segment: TranslatedSegment, index: number, workDir: string): Promise<string> {
     const targetDuration = Math.max(0.05, segment.end - segment.start)
     const text = segment.targetText.trim() || segment.sourceText.trim()
-    const rawFile = path.join(workDir, `segment-${index}-raw.mp3`)
+    const rawFile = path.join(workDir, `segment-${index}-synth.wav`)
 
     if (!text) {
       await createSilenceFile(targetDuration, rawFile)
@@ -132,7 +132,7 @@ export default class IndexTtsSynthesizer implements SynthesizerStrategy {
         const rawFile = `${outputFile}.indextts-response`
         try {
           await fs.writeFile(rawFile, buffer)
-          await convertAudioToMp3(rawFile, outputFile)
+          await convertAudioToWav(rawFile, outputFile)
         } finally {
           await fs.rm(rawFile, { force: true }).catch(() => {})
         }

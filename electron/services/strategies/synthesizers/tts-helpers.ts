@@ -86,9 +86,28 @@ export async function createSilenceFile(duration: number, outputFile: string): P
     command
       .input(`anullsrc=r=${TTS_SAMPLE_RATE}:cl=mono`)
       .inputFormat('lavfi')
-      .audioCodec('libmp3lame')
-      .format('mp3')
+      .audioCodec('pcm_s16le')
+      .audioChannels(1)
+      .audioFrequency(TTS_SAMPLE_RATE)
+      .format('wav')
       .duration(safeDuration)
+      .output(outputFile)
+  })
+}
+
+/**
+ * Normalize an arbitrary input audio (mp3/wav/flac/etc) to a canonical wav
+ * (pcm_s16le, mono, TTS_SAMPLE_RATE). All subsequent timeline operations work
+ * on wav so MP3 encoder pre-delay does not accumulate across steps.
+ */
+export async function normalizeToWav(inputFile: string, outputFile: string): Promise<void> {
+  await runFfmpeg((command) => {
+    command
+      .input(inputFile)
+      .audioCodec('pcm_s16le')
+      .audioChannels(1)
+      .audioFrequency(TTS_SAMPLE_RATE)
+      .format('wav')
       .output(outputFile)
   })
 }
@@ -107,8 +126,8 @@ export async function padAudioToDuration(inputFile: string, outputFile: string, 
     command
       .input(inputFile)
       .audioFilters(`apad=pad_dur=${missingDuration}`)
-      .outputOptions(['-acodec', 'libmp3lame', '-t', String(targetDuration)])
-      .format('mp3')
+      .outputOptions(['-acodec', 'pcm_s16le', '-ac', '1', '-ar', String(TTS_SAMPLE_RATE), '-t', String(targetDuration)])
+      .format('wav')
       .output(outputFile)
   })
 }
@@ -122,14 +141,19 @@ export async function concatAudioFiles(filePaths: string[], outputFile: string, 
   const listContent = filePaths.map((fp) => `file '${escapeConcatPath(fp)}'`).join('\n') + '\n'
   await fs.writeFile(listFile, listContent)
 
+  // All inputs are canonical wav (pcm_s16le / mono / TTS_SAMPLE_RATE) — encode
+  // once to MP3 at the very end. Re-encoding between intermediate steps would
+  // accumulate LAME encoder pre-delay (~24ms per cycle), causing a drift of
+  // several seconds across hundreds of segments.
+  const outputIsMp3 = outputFile.toLowerCase().endsWith('.mp3')
   await runFfmpeg((command) => {
     command
       .input(listFile)
       .inputOptions(['-f', 'concat', '-safe', '0'])
-      .audioCodec('libmp3lame')
       .audioFrequency(TTS_SAMPLE_RATE)
       .audioChannels(1)
-      .format('mp3')
+      .audioCodec(outputIsMp3 ? 'libmp3lame' : 'pcm_s16le')
+      .format(outputIsMp3 ? 'mp3' : 'wav')
       .output(outputFile)
   })
 }
@@ -166,8 +190,10 @@ export async function adjustAudioTempo(
     command
       .input(inputFile)
       .audioFilters(buildAtempoFilter(playbackRate))
-      .audioCodec('libmp3lame')
-      .format('mp3')
+      .audioCodec('pcm_s16le')
+      .audioChannels(1)
+      .audioFrequency(TTS_SAMPLE_RATE)
+      .format('wav')
       .output(outputFile)
   })
 }
@@ -197,8 +223,8 @@ async function truncateAudio(inputFile: string, outputFile: string, targetDurati
     command
       .input(inputFile)
       .audioFilters(`afade=t=out:st=${fadeStart}:d=${fadeOutDuration}`)
-      .outputOptions(['-acodec', 'libmp3lame', '-t', String(targetDuration)])
-      .format('mp3')
+      .outputOptions(['-acodec', 'pcm_s16le', '-ac', '1', '-ar', String(TTS_SAMPLE_RATE), '-t', String(targetDuration)])
+      .format('wav')
       .output(outputFile)
   })
 }
@@ -212,8 +238,8 @@ async function forceExactDuration(inputFile: string, outputFile: string, targetD
     command
       .input(inputFile)
       .audioFilters('apad')
-      .outputOptions(['-acodec', 'libmp3lame', '-t', String(targetDuration)])
-      .format('mp3')
+      .outputOptions(['-acodec', 'pcm_s16le', '-ac', '1', '-ar', String(TTS_SAMPLE_RATE), '-t', String(targetDuration)])
+      .format('wav')
       .output(outputFile)
   })
 }
@@ -238,7 +264,7 @@ async function adjustSegmentDuration(
     // Within tolerance — no tempo adjustment needed.
     // But if shorter than target, pad to prevent cumulative drift.
     if (actualDuration < targetDuration - 0.01) {
-      const paddedFile = path.join(workDir, `segment-${index}-padded.mp3`)
+      const paddedFile = path.join(workDir, `segment-${index}-padded.wav`)
       await forceExactDuration(rawFile, paddedFile, targetDuration)
       return { file: paddedFile, duration: targetDuration }
     }
@@ -246,8 +272,8 @@ async function adjustSegmentDuration(
   }
 
   const ratio = actualDuration / targetDuration
-  const adjustedFile = path.join(workDir, `segment-${index}-adjusted.mp3`)
-  const finalFile = path.join(workDir, `segment-${index}-final.mp3`)
+  const adjustedFile = path.join(workDir, `segment-${index}-adjusted.wav`)
+  const finalFile = path.join(workDir, `segment-${index}-final.wav`)
 
   if (syncMode === 'strict') {
     // Strict: force to exact target duration via atempo + pad/truncate
@@ -260,7 +286,7 @@ async function adjustSegmentDuration(
     const adjustedDuration = await probeDuration(adjustedFile)
 
     if (adjustedDuration > targetDuration + 0.05) {
-      const truncatedFile = path.join(workDir, `segment-${index}-truncated.mp3`)
+      const truncatedFile = path.join(workDir, `segment-${index}-truncated.wav`)
       await truncateAudio(adjustedFile, truncatedFile, targetDuration)
       return { file: truncatedFile, duration: targetDuration }
     }
@@ -277,7 +303,7 @@ async function adjustSegmentDuration(
     // Rate is essentially 1x, no tempo adjustment needed
     // Pad if shorter to prevent drift accumulation
     if (actualDuration < targetDuration - 0.01) {
-      const paddedFile = path.join(workDir, `segment-${index}-padded.mp3`)
+      const paddedFile = path.join(workDir, `segment-${index}-padded.wav`)
       await forceExactDuration(rawFile, paddedFile, targetDuration)
       return { file: paddedFile, duration: targetDuration }
     }
@@ -290,14 +316,14 @@ async function adjustSegmentDuration(
 
   // If still overlong after tempo adjustment, truncate to prevent drift
   if (adjustedDuration > targetDuration + DURATION_TOLERANCE) {
-    const truncatedFile = path.join(workDir, `segment-${index}-truncated.mp3`)
+    const truncatedFile = path.join(workDir, `segment-${index}-truncated.wav`)
     await truncateAudio(adjustedFile, truncatedFile, targetDuration)
     return { file: truncatedFile, duration: targetDuration }
   }
 
   // If shorter after tempo adjustment, pad to prevent drift accumulation
   if (adjustedDuration < targetDuration - 0.01) {
-    const paddedFile = path.join(workDir, `segment-${index}-padded.mp3`)
+    const paddedFile = path.join(workDir, `segment-${index}-padded.wav`)
     await forceExactDuration(adjustedFile, paddedFile, targetDuration)
     return { file: paddedFile, duration: targetDuration }
   }
@@ -321,7 +347,18 @@ export async function buildTimeline(
   const outputPath = path.join(workDir, '..', 'cn_audio.mp3')
 
   if (segments.length === 0) {
-    await createSilenceFile(0.1, outputPath)
+    // Edge case: no segments — emit a tiny silent mp3 directly to outputPath.
+    await runFfmpeg((command) => {
+      command
+        .input(`anullsrc=r=${TTS_SAMPLE_RATE}:cl=mono`)
+        .inputFormat('lavfi')
+        .audioCodec('libmp3lame')
+        .audioChannels(1)
+        .audioFrequency(TTS_SAMPLE_RATE)
+        .format('mp3')
+        .duration(0.1)
+        .output(outputPath)
+    })
     onProgress(100)
     return { audioPath: outputPath, segmentTimings: [] }
   }
@@ -333,16 +370,25 @@ export async function buildTimeline(
   for (let index = 0; index < segments.length; index += 1) {
     if (signal?.aborted) throw new Error('Pipeline cancelled')
     const segment = segments[index]
-    const rawFile = await synthesizeSegment(segment, index, workDir)
+    const rawSynthFile = await synthesizeSegment(segment, index, workDir)
+
+    // Normalize to canonical wav so every downstream step is lossless and free
+    // of MP3 encoder pre-delay accumulation.
+    const rawWavFile = path.join(workDir, `segment-${index}-raw.wav`)
+    if (path.resolve(rawSynthFile) === path.resolve(rawWavFile)) {
+      // Synthesizer already wrote canonical wav directly — no normalization needed.
+    } else {
+      await normalizeToWav(rawSynthFile, rawWavFile)
+    }
 
     const targetDuration = Math.max(0.05, segment.end - segment.start)
     const { file: adjustedFile, duration: actualDuration } = await adjustSegmentDuration(
-      rawFile, index, workDir, targetDuration, syncMode
+      rawWavFile, index, workDir, targetDuration, syncMode
     )
 
     // Leading silence before first segment
     if (index === 0 && segment.start > 0) {
-      const leadingSilence = path.join(workDir, 'leading-silence.mp3')
+      const leadingSilence = path.join(workDir, 'leading-silence.wav')
       await createSilenceFile(segment.start, leadingSilence)
       files.push(leadingSilence)
       cumulativePosition = segment.start
@@ -352,7 +398,7 @@ export async function buildTimeline(
     if (index > 0) {
       const expectedGap = segment.start - cumulativePosition
       if (expectedGap > 0.01) {
-        const gapFile = path.join(workDir, `gap-${index}.mp3`)
+        const gapFile = path.join(workDir, `gap-${index}.wav`)
         await createSilenceFile(expectedGap, gapFile)
         files.push(gapFile)
         cumulativePosition += expectedGap
@@ -377,13 +423,22 @@ export async function buildTimeline(
   // Trailing silence: ensure audio covers until the last segment's end time
   const expectedEnd = segments[segments.length - 1].end
   if (cumulativePosition < expectedEnd - DURATION_TOLERANCE) {
-    const trailingSilence = path.join(workDir, 'trailing-silence.mp3')
+    const trailingSilence = path.join(workDir, 'trailing-silence.wav')
     await createSilenceFile(expectedEnd - cumulativePosition, trailingSilence)
     files.push(trailingSilence)
   }
 
   if (files.length === 1) {
-    await fs.copyFile(files[0], outputPath)
+    // Single file: still need to encode to the final mp3 output container.
+    await runFfmpeg((command) => {
+      command
+        .input(files[0])
+        .audioCodec('libmp3lame')
+        .audioFrequency(TTS_SAMPLE_RATE)
+        .audioChannels(1)
+        .format('mp3')
+        .output(outputPath)
+    })
   } else {
     await concatAudioFiles(files, outputPath, workDir)
   }
