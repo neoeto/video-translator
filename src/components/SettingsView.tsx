@@ -11,6 +11,8 @@ type SettingsTab = 'ai-services' | 'translation' | 'tts' | 'subtitles' | 'system
 export const SettingsView: React.FC = () => {
   const { config, saveConfig } = usePipelineStore()
   const t = useI18n((s) => s.t)
+  const locale = useI18n((s) => s.locale)
+  const setLocale = useI18n((s) => s.setLocale)
   const [activeTab, setActiveTab] = useState<SettingsTab>('ai-services')
   const [showOpenAiKey, setShowOpenAiKey] = useState(false)
   const [showDeepseekKey, setShowDeepseekKey] = useState(false)
@@ -650,6 +652,69 @@ export const SettingsView: React.FC = () => {
           )}
 
           {activeTab === 'system' && (
+            <>
+            <section className="bg-surface-container rounded-xl border border-outline-variant/40 p-unit-lg shadow-sm mb-unit-lg">
+              <div className="border-b border-outline-variant/30 pb-4 mb-6">
+                <h3 className="text-lg font-semibold text-on-surface flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">palette</span>
+                  {t('settings.system.appearance')}
+                </h3>
+                <p className="text-[13px] text-on-surface-variant mt-1">
+                  {t('settings.system.appearanceDescription')}
+                </p>
+              </div>
+              <div className="flex gap-3 max-w-md">
+                {([
+                  { value: 'dark', icon: 'dark_mode', label: t('settings.system.themeDark') },
+                  { value: 'light', icon: 'light_mode', label: t('settings.system.themeLight') },
+                  { value: 'system', icon: 'brightness_auto', label: t('settings.system.themeSystem') },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => saveConfig({ themeMode: opt.value })}
+                    className={`flex-1 flex flex-col items-center gap-2 px-4 py-3 rounded-lg border transition-colors ${
+                      config.themeMode === opt.value
+                        ? 'bg-primary/15 border-primary text-primary'
+                        : 'bg-surface-container-low border-outline-variant/40 text-on-surface-variant hover:bg-surface-container-high'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[24px]">{opt.icon}</span>
+                    <span className="text-[13px] font-medium">{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+            <section className="bg-surface-container rounded-xl border border-outline-variant/40 p-unit-lg shadow-sm mb-unit-lg">
+              <div className="border-b border-outline-variant/30 pb-4 mb-6">
+                <h3 className="text-lg font-semibold text-on-surface flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">language</span>
+                  {t('settings.system.language')}
+                </h3>
+                <p className="text-[13px] text-on-surface-variant mt-1">
+                  {t('settings.system.languageDescription')}
+                </p>
+              </div>
+              <div className="flex gap-3 max-w-md">
+                {([
+                  { value: 'en', label: 'English' },
+                  { value: 'zh', label: '中文' },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setLocale(opt.value)}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border transition-colors ${
+                      locale === opt.value
+                        ? 'bg-primary/15 border-primary text-primary'
+                        : 'bg-surface-container-low border-outline-variant/40 text-on-surface-variant hover:bg-surface-container-high'
+                    }`}
+                  >
+                    <span className="text-[13px] font-medium">{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
             <section className="bg-surface-container rounded-xl border border-outline-variant/40 p-unit-lg shadow-sm">
               <div className="border-b border-outline-variant/30 pb-4 mb-6">
                 <h3 className="text-lg font-semibold text-on-surface flex items-center gap-2">
@@ -737,6 +802,7 @@ export const SettingsView: React.FC = () => {
                 </div>
               </div>
             </section>
+            </>
           )}
         </div>
       </div>

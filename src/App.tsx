@@ -14,6 +14,7 @@ function App() {
   const queueState = usePipelineStore((s) => s.queueState)
   const loadConfig = usePipelineStore((s) => s.loadConfig)
   const configLocale = usePipelineStore((s) => s.config.locale)
+  const configThemeMode = usePipelineStore((s) => s.config.themeMode)
   const isLoadingConfig = usePipelineStore((s) => s.isLoadingConfig)
   const initLocale = useI18n((s) => s.initLocale)
   const t = useI18n((s) => s.t)
@@ -34,6 +35,32 @@ function App() {
   useEffect(() => {
     document.title = t('app.title')
   }, [t])
+
+  useEffect(() => {
+    const html = document.documentElement
+
+    const applyTheme = (isDark: boolean) => {
+      if (isDark) {
+        html.classList.add('dark')
+        html.style.colorScheme = 'dark'
+      } else {
+        html.classList.remove('dark')
+        html.style.colorScheme = 'light'
+      }
+    }
+
+    if (configThemeMode === 'dark') {
+      applyTheme(true)
+    } else if (configThemeMode === 'light') {
+      applyTheme(false)
+    } else {
+      const mq = window.matchMedia('(prefers-color-scheme: dark)')
+      applyTheme(mq.matches)
+      const handler = (e: MediaQueryListEvent) => applyTheme(e.matches)
+      mq.addEventListener('change', handler)
+      return () => mq.removeEventListener('change', handler)
+    }
+  }, [configThemeMode])
 
   useEffect(() => {
     const prevStage = prevStageRef.current

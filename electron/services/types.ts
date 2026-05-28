@@ -214,6 +214,7 @@ export type TtsMode = 'edge' | 'openai' | 'indextts'
 export type SyncMode = 'natural' | 'strict'
 export type PipelineMode = 'full' | 'subtitleOnly'
 export type AudioMixMode = 'replace' | 'mix-gate' | 'mix-vocal-removal'
+export type ThemeMode = 'dark' | 'light' | 'system'
 export type Locale = 'en' | 'zh'
 
 // 'auto' 仅用于源语言，表示由 Whisper 自动检测。
@@ -259,6 +260,7 @@ export interface ProxyConfig {
 
 export interface AppConfig {
   locale: Locale
+  themeMode: ThemeMode
   sourceLanguage: TranslationLanguage
   targetLanguage: TranslationLanguage
   openaiApiKey: string

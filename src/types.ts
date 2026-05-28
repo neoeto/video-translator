@@ -73,6 +73,7 @@ export type IndexTtsReferenceMode = 'speaker-sample' | 'segment-original'
 export type SyncMode = 'natural' | 'strict'
 export type PipelineMode = 'full' | 'subtitleOnly'
 export type AudioMixMode = 'replace' | 'mix-gate' | 'mix-vocal-removal'
+export type ThemeMode = 'dark' | 'light' | 'system'
 export type Locale = 'en' | 'zh'
 
 export type TranslationLanguage =
@@ -111,6 +112,7 @@ export function getLanguageDisplayName(code: TranslationLanguage, uiLocale: Loca
 
 export interface AppConfig {
   locale: Locale
+  themeMode: ThemeMode
   sourceLanguage: TranslationLanguage
   targetLanguage: TranslationLanguage
   openaiApiKey: string

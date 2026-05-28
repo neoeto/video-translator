@@ -42,6 +42,7 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
   queueState: initialQueueState,
   config: {
     locale: 'en',
+    themeMode: 'dark' as const,
     sourceLanguage: 'auto' as const,
     targetLanguage: 'zh' as const,
     openaiApiKey: '',

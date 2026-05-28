@@ -172,7 +172,7 @@ export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
 
       {/* 管道模式 + 语言选择 — 同一行 */}
       <div className="flex justify-center items-center gap-4 mb-6 flex-wrap">
-        <div className="inline-flex bg-[#181818] border border-[#333333] rounded-lg p-0.5">
+        <div className="inline-flex bg-surface-container-low border border-outline-variant rounded-lg p-0.5">
           <button
             type="button"
             onClick={() => saveConfig({ pipelineMode: 'full' })}
@@ -199,13 +199,13 @@ export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
           </button>
         </div>
 
-        <span className="text-[#333333] text-lg select-none">|</span>
+        <span className="text-outline-variant text-lg select-none">|</span>
 
         <div className="flex items-center gap-2">
           <select
             value={config.sourceLanguage}
             onChange={(e) => saveConfig({ sourceLanguage: e.target.value as TranslationLanguage })}
-            className="bg-[#181818] border border-[#333333] text-on-surface rounded-lg px-2.5 py-1.5 text-xs focus:border-primary focus:ring-1 focus:ring-primary outline-none cursor-pointer"
+            className="bg-surface-container-low border border-outline-variant text-on-surface rounded-lg px-2.5 py-1.5 text-xs focus:border-primary focus:ring-1 focus:ring-primary outline-none cursor-pointer"
           >
             {SOURCE_LANGUAGE_OPTIONS.map((code) => (
               <option key={code} value={code}>
@@ -222,7 +222,7 @@ export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
           <select
             value={config.targetLanguage}
             onChange={(e) => saveConfig({ targetLanguage: e.target.value as TranslationLanguage })}
-            className="bg-[#181818] border border-[#333333] text-on-surface rounded-lg px-2.5 py-1.5 text-xs focus:border-primary focus:ring-1 focus:ring-primary outline-none cursor-pointer"
+            className="bg-surface-container-low border border-outline-variant text-on-surface rounded-lg px-2.5 py-1.5 text-xs focus:border-primary focus:ring-1 focus:ring-primary outline-none cursor-pointer"
           >
             {TARGET_LANGUAGE_OPTIONS.map((code) => (
               <option key={code} value={code}>
@@ -235,7 +235,7 @@ export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
 
       {/* 输入框 — 来源类型前缀下拉 + URL 前缀 */}
       <form onSubmit={handleSubmit} className="relative w-full max-w-2xl mx-auto">
-        <div className="relative flex items-center w-full bg-[#181818] border border-[#333333] rounded-xl focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all p-1.5 sharp-shadow">
+        <div className="relative flex items-center w-full bg-surface-container-low border border-outline-variant rounded-xl focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all p-1.5 sharp-shadow">
           {/* 来源类型前缀下拉 */}
           <div className="relative shrink-0">
             <select
@@ -256,7 +256,7 @@ export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
             </span>
           </div>
 
-          <div className="w-px h-6 bg-[#333333] mx-1.5 shrink-0" />
+          <div className="w-px h-6 bg-outline-variant mx-1.5 shrink-0" />
 
           {sourceType === 'local-file' ? (
             /* 本地文件选择 */

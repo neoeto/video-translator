@@ -159,7 +159,7 @@ export const ProgressView: React.FC = () => {
               ) : (
                 <span className="material-symbols-outlined text-[48px] text-outline opacity-50">movie</span>
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e]/80 to-transparent flex items-end p-4">
+              <div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/80 to-transparent flex items-end p-4">
                  <span className="text-xs text-on-surface font-mono bg-black/60 px-2 py-1 rounded">
                    {getLanguageDisplayName(config.sourceLanguage, config.locale)} → {getLanguageDisplayName(config.targetLanguage, config.locale)}
                  </span>

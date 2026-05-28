@@ -84,6 +84,7 @@ function normalizeSubtitleMinSplitWidth(value: unknown): number {
 
 const defaultConfig: AppConfig = {
   locale: 'en',
+  themeMode: 'dark',
   sourceLanguage: 'auto',
   targetLanguage: 'zh',
   openaiApiKey: '',
@@ -134,6 +135,11 @@ const store = new Store<AppConfig>({
       type: 'string',
       enum: ['en', 'zh'],
       default: defaultConfig.locale,
+    },
+    themeMode: {
+      type: 'string',
+      enum: ['dark', 'light', 'system'],
+      default: 'dark',
     },
     sourceLanguage: {
       type: 'string',
@@ -300,6 +306,7 @@ export function setConfig(partial: Partial<AppConfig>): void {
 
   const simpleKeys = [
     'locale',
+    'themeMode',
     'sourceLanguage',
     'targetLanguage',
     'openaiApiKey',

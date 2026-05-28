@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, nativeImage, screen, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, nativeTheme, screen, shell } from 'electron'
 import { statSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -137,6 +137,9 @@ function createWindow(): void {
 
   mainWindow = window
 
+  const initialTheme = getConfig().themeMode ?? 'dark'
+  nativeTheme.themeSource = initialTheme
+
   window.on('ready-to-show', () => {
     window.show()
   })
@@ -204,6 +207,9 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('config:set', (_event, config: Partial<AppConfig>): void => {
     setConfig(config)
+    if (config.themeMode) {
+      nativeTheme.themeSource = config.themeMode
+    }
   })
 
   ipcMain.handle('history:get', (): HistoryEntry[] => getHistory())
