@@ -66,6 +66,7 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
     audioMixMode: 'replace' as const,
     indexttsApiUrl: 'http://localhost:8080',
     indexttsReferenceAudio: '',
+    indexttsReferenceMode: 'speaker-sample' as const,
     audioSeparatorPath: '',
     subtitleStyle: {
       enFontSize: 36,

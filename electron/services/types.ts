@@ -129,6 +129,8 @@ export interface TranslatorStrategy {
   summarizeText?(text: string, targetLanguage: string): Promise<string>
 }
 
+export type IndexTtsReferenceMode = 'speaker-sample' | 'segment-original'
+
 export interface SynthesizerStrategy {
   readonly name: string
   /** When true, the synthesizer uses speaker voice samples directly (voice cloning) and doesn't need gender labeling. */
@@ -141,6 +143,10 @@ export interface SynthesizerStrategy {
     onProgress: (pct: number) => void
     signal?: AbortSignal
     syncMode?: SyncMode
+    /** Path to the source audio used for segment-original reference extraction (vocals preferred, else raw audio). */
+    sourceAudioPath?: string
+    /** Original transcript segments aligned with `segments` by index; used to infer speaker runs. */
+    originalSegments?: TranscriptSegment[]
   }): Promise<SynthesisResult>
 }
 
@@ -279,5 +285,6 @@ export interface AppConfig {
   audioMixMode: AudioMixMode
   indexttsApiUrl: string
   indexttsReferenceAudio: string
+  indexttsReferenceMode: IndexTtsReferenceMode
   audioSeparatorPath: string
 }

@@ -69,6 +69,7 @@ export interface SubtitleStyle {
 export type TranscribeMode = 'openai' | 'local-api' | 'local-cli' | 'whisperx'
 export type TranslateMode = 'openai' | 'deepseek' | 'glm'
 export type TtsMode = 'edge' | 'openai' | 'indextts'
+export type IndexTtsReferenceMode = 'speaker-sample' | 'segment-original'
 export type SyncMode = 'natural' | 'strict'
 export type PipelineMode = 'full' | 'subtitleOnly'
 export type AudioMixMode = 'replace' | 'mix-gate' | 'mix-vocal-removal'
@@ -136,5 +137,6 @@ export interface AppConfig {
   audioMixMode: AudioMixMode
   indexttsApiUrl: string
   indexttsReferenceAudio: string
+  indexttsReferenceMode: IndexTtsReferenceMode
   audioSeparatorPath: string
 }

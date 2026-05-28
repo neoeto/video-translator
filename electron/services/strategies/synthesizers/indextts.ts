@@ -1,13 +1,14 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { fetch as undiciFetch } from 'undici'
-import type { AppConfig, SpeakerProfile, SynthesizerStrategy, SynthesisResult, TranslatedSegment } from '../../types.js'
+import type { AppConfig, SpeakerProfile, SynthesizerStrategy, SynthesisResult, TranscriptSegment, TranslatedSegment } from '../../types.js'
 import { getDispatcher } from '../../proxy.js'
 import {
   buildTimeline, createSilenceFile, runFfmpeg,
   sleep, toErrorMessage, isRetryableTtsError,
   MAX_TTS_RETRIES, INITIAL_TTS_BACKOFF_MS, TTS_SAMPLE_RATE,
 } from './tts-helpers.js'
+import { ReferenceAudioResolver } from './reference-audio-resolver.js'
 
 const INDEXTTS_DEFAULT_API_URL = 'http://localhost:8080'
 
@@ -27,6 +28,7 @@ export default class IndexTtsSynthesizer implements SynthesizerStrategy {
   readonly name = 'indextts'
   readonly supportsVoiceCloning = true
   private speakerProfiles?: SpeakerProfile[]
+  private resolver?: ReferenceAudioResolver
 
   constructor(private readonly config: AppConfig) {}
 
@@ -38,11 +40,27 @@ export default class IndexTtsSynthesizer implements SynthesizerStrategy {
     onProgress: (pct: number) => void
     signal?: AbortSignal
     syncMode?: import('../../types.js').SyncMode
+    sourceAudioPath?: string
+    originalSegments?: TranscriptSegment[]
   }): Promise<SynthesisResult> {
-    const { segments, workDir, onProgress, signal, syncMode, speakerProfiles } = input
+    const { segments, workDir, onProgress, signal, syncMode, speakerProfiles, sourceAudioPath, originalSegments } = input
     this.speakerProfiles = speakerProfiles
     const ttsWorkDir = path.join(workDir, '.tts-temp')
     await fs.mkdir(ttsWorkDir, { recursive: true })
+
+    this.resolver = new ReferenceAudioResolver({
+      mode: this.config.indexttsReferenceMode ?? 'speaker-sample',
+      speakerProfiles,
+      globalReference: this.config.indexttsReferenceAudio,
+      sourceAudioPath,
+      originalSegments,
+      cacheDir: path.join(ttsWorkDir, 'reference-clips'),
+      logger: (event) => {
+        if (event.level === 'warn') {
+          console.warn(`[indextts.reference] seg#${event.segmentIndex}: ${event.message}`)
+        }
+      },
+    })
 
     try {
       const result = await buildTimeline(
@@ -71,8 +89,13 @@ export default class IndexTtsSynthesizer implements SynthesizerStrategy {
       return rawFile
     }
 
-    const profile = this.speakerProfiles?.find(p => p.id === segment.speaker)
-    const referenceAudio = profile?.samplePath || this.config.indexttsReferenceAudio.trim()
+    const decision = this.resolver
+      ? await this.resolver.resolve(segment, index)
+      : undefined
+    const referenceAudio = decision?.referenceAudio
+      ?? this.speakerProfiles?.find(p => p.id === segment.speaker)?.samplePath
+      ?? this.config.indexttsReferenceAudio.trim()
+      ?? ''
     await this.synthesizeToFile(text, rawFile, referenceAudio)
     return rawFile
   }

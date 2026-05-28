@@ -108,6 +108,7 @@ const defaultConfig: AppConfig = {
   audioMixMode: 'replace',
   indexttsApiUrl: 'http://localhost:8080',
   indexttsReferenceAudio: '',
+  indexttsReferenceMode: 'speaker-sample',
   audioSeparatorPath: detectAudioSeparatorPath(),
   subtitleStyle: {
     enFontSize: 36,
@@ -236,6 +237,11 @@ const store = new Store<AppConfig>({
       type: 'string',
       default: defaultConfig.indexttsReferenceAudio,
     },
+    indexttsReferenceMode: {
+      type: 'string',
+      enum: ['speaker-sample', 'segment-original'],
+      default: defaultConfig.indexttsReferenceMode,
+    },
     audioSeparatorPath: {
       type: 'string',
       default: defaultConfig.audioSeparatorPath,
@@ -318,6 +324,7 @@ export function setConfig(partial: Partial<AppConfig>): void {
     'audioMixMode',
     'indexttsApiUrl',
     'indexttsReferenceAudio',
+    'indexttsReferenceMode',
     'audioSeparatorPath',
   ] as const
 

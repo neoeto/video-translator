@@ -207,7 +207,26 @@ function createTtsFingerprint(translatedSegments: TranslatedSegment[], config: A
     ttsMode: config.ttsMode,
     syncMode: config.syncMode,
     speakerProfiles: speakerProfiles?.map(p => ({ id: p.id, gender: p.gender })),
+    indexttsReferenceMode: config.indexttsReferenceMode ?? 'speaker-sample',
+    indexttsReferenceAudio: config.indexttsReferenceAudio,
+    referenceResolverVersion: 1,
   })
+}
+
+/**
+ * Prefer separated vocals (if a `(Vocals)` wav exists in the work dir) over
+ * the raw mixed audio for segment-original reference extraction. This avoids
+ * leaking background music into the reference clip used for voice cloning.
+ */
+async function pickReferenceSourceAudio(workDir: string, audioPath: string): Promise<string> {
+  try {
+    const files = await fs.readdir(workDir)
+    const vocals = files.find(f => f.includes('(Vocals)') && f.toLowerCase().endsWith('.wav'))
+    if (vocals) return path.join(workDir, vocals)
+  } catch {
+    // ignore
+  }
+  return audioPath
 }
 
 function getVideoDimensions(videoPath: string): Promise<VideoDimensions> {
@@ -468,6 +487,7 @@ export class PipelineOrchestrator {
           }
 
           const speakers = [...new Set(translationResult.map((s) => s.speaker))]
+          const sourceAudioPath = await pickReferenceSourceAudio(this.workDir, audioPath)
           const result = await this.strategies.synthesizer.synthesize({
             segments: translationResult,
             workDir: this.workDir,
@@ -476,6 +496,8 @@ export class PipelineOrchestrator {
             onProgress,
             signal,
             syncMode: config.syncMode,
+            sourceAudioPath,
+            originalSegments: transcription,
           })
           await writeCachedOutput(ttsCachePath, ttsFingerprint, result.audioPath)
           return result

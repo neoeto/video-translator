@@ -457,6 +457,22 @@ export const SettingsView: React.FC = () => {
                         {t('settings.tts.indextts.referenceAudioHelp')}
                       </p>
                     </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-on-surface-variant mb-2 uppercase tracking-wider">
+                        {t('settings.tts.indextts.referenceMode')}
+                      </label>
+                      <select
+                        value={config.indexttsReferenceMode || 'speaker-sample'}
+                        onChange={(e) => saveConfig({ indexttsReferenceMode: e.target.value as 'speaker-sample' | 'segment-original' })}
+                        className="w-full bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface text-[13px] focus:border-primary focus:outline-none transition-colors"
+                      >
+                        <option value="speaker-sample">{t('settings.tts.indextts.referenceMode.speakerSample')}</option>
+                        <option value="segment-original">{t('settings.tts.indextts.referenceMode.segmentOriginal')}</option>
+                      </select>
+                      <p className="text-[12px] text-on-surface-variant mt-1">
+                        {t('settings.tts.indextts.referenceModeHelp')}
+                      </p>
+                    </div>
                   </div>
                 )}
 
