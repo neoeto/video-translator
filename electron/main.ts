@@ -275,6 +275,10 @@ function registerIpcHandlers(): void {
     }
   })
 
+  ipcMain.handle('shell:showItemInFolder', (_event, targetPath: string): void => {
+    shell.showItemInFolder(targetPath)
+  })
+
   ipcMain.handle('shell:openExternal', async (_event, url: string): Promise<void> => {
     let parsedUrl: URL
     try {

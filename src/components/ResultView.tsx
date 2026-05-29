@@ -81,6 +81,12 @@ export const ResultView: React.FC = () => {
     window.electronAPI.openPath(filePath)
   }
 
+  const handleShowInFolder = (filePath: string) => {
+    window.electronAPI.showItemInFolder(filePath).catch((err) => {
+      console.error('Failed to show in folder:', err)
+    })
+  }
+
   const handleOpenOriginalLink = (url: string) => {
     window.electronAPI.openExternal(url).catch((error) => {
       console.error('Failed to open original link', { url, error })
@@ -126,6 +132,13 @@ export const ResultView: React.FC = () => {
                   title={t('result.playVideo')}
                 >
                   <span className="material-symbols-outlined text-[24px]">play_arrow</span>
+                </button>
+                <button
+                  onClick={() => handleShowInFolder(entry.outputPath)}
+                  className="w-12 h-12 rounded-full bg-surface-variant text-on-surface flex items-center justify-center hover:scale-105 transition-transform"
+                  title={t('result.showInFolder')}
+                >
+                  <span className="material-symbols-outlined text-[24px]">folder_open</span>
                 </button>
                 <button
                   onClick={() => handleDeleteHistory(entry.id)}
@@ -313,6 +326,23 @@ export const ResultView: React.FC = () => {
               ) : (
                 <p className="text-sm text-outline italic">{t('result.detail.noSubtitles')}</p>
               )}
+            </div>
+
+            <div className="p-6 border-t border-surface-variant flex gap-3">
+              <button
+                onClick={() => handleOpenVideo(selectedEntry.outputPath)}
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-opacity"
+              >
+                <span className="material-symbols-outlined text-[18px]">play_arrow</span>
+                {t('result.playVideo')}
+              </button>
+              <button
+                onClick={() => handleShowInFolder(selectedEntry.outputPath)}
+                className="flex items-center gap-2 px-4 py-2 bg-surface-variant text-on-surface rounded-lg hover:bg-surface-container-highest transition-colors"
+              >
+                <span className="material-symbols-outlined text-[18px]">folder_open</span>
+                {t('result.showInFolder')}
+              </button>
             </div>
           </div>
         </div>

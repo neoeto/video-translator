@@ -49,6 +49,7 @@ export interface ElectronAPI {
   selectDirectory: () => Promise<string | null>
   selectVideoFile: () => Promise<string | null>
   openPath: (path: string) => Promise<void>
+  showItemInFolder: (path: string) => Promise<void>
   openExternal: (url: string) => Promise<void>
 }
 

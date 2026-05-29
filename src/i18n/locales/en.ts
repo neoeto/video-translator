@@ -86,6 +86,7 @@ export const en = {
   'result.heading': 'Video Library',
   'result.newTranslation': 'New Translation',
   'result.playVideo': 'Play Video',
+  'result.showInFolder': 'Show in Folder',
   'result.openDirectory': 'Open Directory',
   'result.justNow': 'Just now',
   'result.translatedVideo': 'Translated Video',

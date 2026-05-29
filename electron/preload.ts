@@ -39,6 +39,8 @@ const electronAPI = {
     ipcRenderer.invoke('dialog:selectVideoFile'),
   openPath: (path: string): Promise<void> =>
     ipcRenderer.invoke('shell:openPath', path),
+  showItemInFolder: (path: string): Promise<void> =>
+    ipcRenderer.invoke('shell:showItemInFolder', path),
   openExternal: (url: string): Promise<void> =>
     ipcRenderer.invoke('shell:openExternal', url),
 }

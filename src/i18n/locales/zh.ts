@@ -88,6 +88,7 @@ export const zh: Record<TranslationKey, string> = {
   'result.heading': '视频库',
   'result.newTranslation': '新建翻译',
   'result.playVideo': '播放视频',
+  'result.showInFolder': '在文件夹中显示',
   'result.openDirectory': '打开目录',
   'result.justNow': '刚刚',
   'result.translatedVideo': '已翻译视频',
