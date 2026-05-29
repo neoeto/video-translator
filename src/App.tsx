@@ -62,6 +62,8 @@ function App() {
     }
   }, [configThemeMode])
 
+  const wasProcessingRef = useRef(false)
+
   useEffect(() => {
     const prevStage = prevStageRef.current
     prevStageRef.current = stage
@@ -70,11 +72,20 @@ function App() {
     if ((prevStage === 'idle' || prevStage === 'completed') && stage === 'downloading') {
       setActiveView('processing')
     }
-    // Auto-navigate to library when all tasks complete
-    if (stage === 'completed' && !queueState.active && queueState.pending.length === 0) {
+  }, [stage])
+
+  useEffect(() => {
+    // Track when we have active tasks
+    if (queueState.active) {
+      wasProcessingRef.current = true
+    }
+
+    // Auto-navigate to library when all tasks complete (not on error — let user see it)
+    if (wasProcessingRef.current && !queueState.active && queueState.pending.length === 0 && stage !== 'error') {
+      wasProcessingRef.current = false
       setActiveView('library')
     }
-  }, [stage, queueState])
+  }, [queueState, stage])
 
   const getViewTitle = () => {
     switch (activeView) {

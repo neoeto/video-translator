@@ -130,6 +130,7 @@ export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
       } else {
         startPipeline(buildFullUrl(videoId, sourceType), sourceType)
       }
+      onNavigate('processing')
     }
   }
 

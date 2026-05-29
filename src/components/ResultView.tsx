@@ -136,12 +136,12 @@ export const ResultView: React.FC = () => {
                 </button>
               </div>
 
-              <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/80 rounded text-[11px] font-mono text-on-surface">
+              <div className="absolute bottom-2 right-2 px-2 py-1 bg-surface-container-highest/80 rounded text-[11px] font-mono text-on-surface-variant">
                 {formatCompletedAt(entry.completedAt)}
               </div>
 
               {entry.duration != null && entry.duration > 0 && (
-                <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/80 rounded text-[11px] font-mono text-on-surface">
+                <div className="absolute bottom-2 left-2 px-2 py-1 bg-surface-container-highest/80 rounded text-[11px] font-mono text-on-surface-variant">
                   {formatDuration(entry.duration)}
                 </div>
               )}

@@ -85,11 +85,13 @@ export const ProgressView: React.FC = () => {
   const { state, config, queueState, cancelPipeline, skipError, removeQueued, submitSpeakerLabels, reset } = usePipelineStore()
   const t = useI18n((s) => s.t)
 
+  const activePipelineMode = queueState.active?.pipelineMode ?? config.pipelineMode
+
   const STAGES = useMemo(() =>
-    config.pipelineMode === 'subtitleOnly'
+    activePipelineMode === 'subtitleOnly'
       ? ALL_STAGES.filter(s => s.id !== 'synthesizing')
       : ALL_STAGES,
-    [config.pipelineMode]
+    [activePipelineMode]
   )
   const currentStage = STAGES.find(s => s.id === state.stage)
   const taskId = useMemo(() => Date.now().toString().slice(-6), [])
@@ -160,8 +162,8 @@ export const ProgressView: React.FC = () => {
                 <span className="material-symbols-outlined text-[48px] text-outline opacity-50">movie</span>
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/80 to-transparent flex items-end p-4">
-                 <span className="text-xs text-on-surface font-mono bg-black/60 px-2 py-1 rounded">
-                   {getLanguageDisplayName(config.sourceLanguage, config.locale)} → {getLanguageDisplayName(config.targetLanguage, config.locale)}
+                 <span className="text-xs text-on-surface-variant font-mono bg-surface-container-highest/80 px-2 py-1 rounded">
+                   {getLanguageDisplayName(queueState.active?.sourceLanguage ?? config.sourceLanguage, config.locale)} → {getLanguageDisplayName(queueState.active?.targetLanguage ?? config.targetLanguage, config.locale)}
                  </span>
               </div>
             </div>

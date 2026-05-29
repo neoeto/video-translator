@@ -1,11 +1,13 @@
-import type { PipelineState, AppConfig, SpeakerProfile, VideoSourceType } from './types'
+import type { PipelineState, AppConfig, SpeakerProfile, VideoSourceType, TranslationLanguage, PipelineMode } from './types'
 
 export interface QueueTask {
   id: string
   url: string
-  outputDir: string
   sourceType: string
   title?: string
+  sourceLanguage: TranslationLanguage
+  targetLanguage: TranslationLanguage
+  pipelineMode: PipelineMode
 }
 
 export interface QueueState {

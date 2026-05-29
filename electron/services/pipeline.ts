@@ -331,11 +331,10 @@ export class PipelineOrchestrator {
     this.speakerLabelsResolver = null
   }
 
-  async start(url: string, outputDir: string, sourceType: VideoSourceType = 'youtube'): Promise<void> {
+  async start(url: string, outputDir: string, sourceType: VideoSourceType = 'youtube', config: AppConfig = getConfig()): Promise<void> {
     this.cancelled = false
     this.abortController = new AbortController()
     this.workDir = path.join(outputDir, '.tmp', getVideoStorageKey(url, sourceType))
-    const config = getConfig()
     const isSubtitleOnly = config.pipelineMode === 'subtitleOnly'
     const useVocalRemoval = !isSubtitleOnly && config.audioMixMode === 'mix-vocal-removal'
     this.totalSteps = isSubtitleOnly

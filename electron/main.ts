@@ -8,7 +8,7 @@ import { createPipelineStrategies } from './services/factories.js'
 import { buildHistorySourceUrl } from './services/history-source-link.js'
 import { addHistoryEntry, deleteHistoryEntry, getHistory, type HistoryEntry } from './services/history.js'
 import { PipelineOrchestrator } from './services/pipeline.js'
-import type { AppConfig, PipelineState, SpeakerProfile, VideoSourceType } from './services/types.js'
+import type { AppConfig, PipelineMode, PipelineState, SpeakerProfile, TranslationLanguage, VideoSourceType } from './services/types.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 let mainWindow: BrowserWindow | null = null
@@ -21,19 +21,45 @@ interface QueueTask {
   outputDir: string
   sourceType: VideoSourceType
   title?: string
+  config: AppConfig
 }
 
-interface QueueState {
-  active: QueueTask | null
-  pending: QueueTask[]
+interface BroadcastQueueTask {
+  id: string
+  url: string
+  sourceType: VideoSourceType
+  title?: string
+  sourceLanguage: TranslationLanguage
+  targetLanguage: TranslationLanguage
+  pipelineMode: PipelineMode
+}
+
+interface BroadcastQueueState {
+  active: BroadcastQueueTask | null
+  pending: BroadcastQueueTask[]
 }
 
 let currentPipeline: PipelineOrchestrator | null = null
 const taskQueue: QueueTask[] = []
 let activeTask: QueueTask | null = null
 
+function toBroadcastTask(task: QueueTask): BroadcastQueueTask {
+  return {
+    id: task.id,
+    url: task.url,
+    sourceType: task.sourceType,
+    title: task.title,
+    sourceLanguage: task.config.sourceLanguage,
+    targetLanguage: task.config.targetLanguage,
+    pipelineMode: task.config.pipelineMode,
+  }
+}
+
 function broadcastQueueState(): void {
-  const state: QueueState = { active: activeTask, pending: [...taskQueue] }
+  const state: BroadcastQueueState = {
+    active: activeTask ? toBroadcastTask(activeTask) : null,
+    pending: taskQueue.map(toBroadcastTask),
+  }
   mainWindow?.webContents.send('pipeline:queue-state', state)
 }
 
@@ -44,8 +70,7 @@ function processNextTask(): void {
   activeTask = task
   broadcastQueueState()
 
-  const config = getConfig()
-  const strategies = createPipelineStrategies(config, task.sourceType)
+  const strategies = createPipelineStrategies(task.config, task.sourceType)
   const pipeline = new PipelineOrchestrator(strategies)
   currentPipeline = pipeline
 
@@ -59,7 +84,6 @@ function processNextTask(): void {
     mainWindow?.webContents.send('pipeline:progress', state)
 
     if (state.stage === 'completed' && state.outputPath) {
-      const currentConfig = getConfig()
       const sourceUrl = buildHistorySourceUrl({
         sourceType: task.sourceType,
         taskUrl: task.url,
@@ -75,20 +99,20 @@ function processNextTask(): void {
         outputPath: state.outputPath,
         thumbnailDataUrl: state.thumbnailDataUrl,
         completedAt: state.completedAt || Date.now(),
-        sourceLanguage: currentConfig.sourceLanguage,
-        targetLanguage: currentConfig.targetLanguage,
+        sourceLanguage: task.config.sourceLanguage,
+        targetLanguage: task.config.targetLanguage,
         duration: state.duration,
         sourceType: task.sourceType,
         ...(sourceUrl ? { sourceUrl } : {}),
         fileSize,
-        pipelineMode: currentConfig.pipelineMode,
+        pipelineMode: task.config.pipelineMode,
         summary: state.summary,
         translatedSegments: state.translatedSegments,
       })
     }
   })
 
-  pipeline.start(task.url, task.outputDir, task.sourceType)
+  pipeline.start(task.url, task.outputDir, task.sourceType, task.config)
     .then(() => {
       activeTask = null
       currentPipeline = null
@@ -162,6 +186,7 @@ function registerIpcHandlers(): void {
       url,
       outputDir,
       sourceType,
+      config: getConfig(),
     }
 
     if (activeTask) {
@@ -195,8 +220,11 @@ function registerIpcHandlers(): void {
     }
   })
 
-  ipcMain.handle('pipeline:get-queue', (): QueueState => {
-    return { active: activeTask, pending: [...taskQueue] }
+  ipcMain.handle('pipeline:get-queue', (): BroadcastQueueState => {
+    return {
+      active: activeTask ? toBroadcastTask(activeTask) : null,
+      pending: taskQueue.map(toBroadcastTask),
+    }
   })
 
   ipcMain.handle('pipeline:submit-speaker-labels', (_event, profiles: SpeakerProfile[]): void => {
