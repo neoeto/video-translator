@@ -69,6 +69,8 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
     indexttsReferenceAudio: '',
     indexttsReferenceMode: 'speaker-sample' as const,
     audioSeparatorPath: '',
+    subtitleTrack1: 'target' as const,
+    subtitleTrack2: 'source' as const,
     subtitleStyle: {
       enFontSize: 36,
       cnFontSize: 50,

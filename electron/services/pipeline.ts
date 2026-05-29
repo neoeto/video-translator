@@ -561,9 +561,14 @@ export class PipelineOrchestrator {
         const { width, height } = await getVideoDimensions(download.videoPath)
         this.assertNotCancelled()
 
-        const assContent = generateAss(subtitleSegments, config.subtitleStyle, width, height, config.subtitleMinSplitWidth)
-        const subtitlePath = path.join(this.workDir, 'subtitles.ass')
-        await fs.writeFile(subtitlePath, assContent, 'utf8')
+        const noSubtitles = config.subtitleTrack1 === 'none' && config.subtitleTrack2 === 'none'
+        const assContent = noSubtitles
+          ? null
+          : generateAss(subtitleSegments, config.subtitleStyle, width, height, config.subtitleMinSplitWidth, config.subtitleTrack1, config.subtitleTrack2)
+        const subtitlePath = noSubtitles ? undefined : path.join(this.workDir, 'subtitles.ass')
+        if (assContent && subtitlePath) {
+          await fs.writeFile(subtitlePath, assContent, 'utf8')
+        }
         this.assertNotCancelled()
 
         const finalOutputPath = await buildUniqueOutputPath({ outputDir, title: download.title, isSubtitleOnly })

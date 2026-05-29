@@ -171,49 +171,18 @@ export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
         </p>
       </div>
 
-      {/* 管道模式 + 语言选择 — 同一行 */}
-      <div className="flex justify-center items-center gap-3 mb-6">
-        <div className="inline-flex bg-surface-container-low border border-outline-variant rounded-lg p-0.5">
-          <button
-            type="button"
-            onClick={() => saveConfig({ pipelineMode: 'full' })}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap ${
-              config.pipelineMode !== 'subtitleOnly'
-                ? 'bg-primary text-on-primary shadow-sm'
-                : 'text-outline hover:text-on-surface'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[16px]">record_voice_over</span>
-            {t('pipeline.modeFull')}
-          </button>
-          <button
-            type="button"
-            onClick={() => saveConfig({ pipelineMode: 'subtitleOnly' })}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap ${
-              config.pipelineMode === 'subtitleOnly'
-                ? 'bg-primary text-on-primary shadow-sm'
-                : 'text-outline hover:text-on-surface'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[16px]">subtitles</span>
-            {t('pipeline.modeSubtitleOnly')}
-          </button>
-        </div>
-
-        <span className="text-outline-variant text-lg select-none">|</span>
-
+      {/* 语言选择 + 字幕轨道 — 同一行 */}
+      <div className="w-full max-w-3xl mx-auto flex justify-between items-center gap-3 mb-6 flex-wrap">
         <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined text-outline text-[18px]" title={t('input.translationLanguage')}>translate</span>
           <select
             value={config.sourceLanguage}
             onChange={(e) => saveConfig({ sourceLanguage: e.target.value as TranslationLanguage })}
-            className="bg-surface-container-low border border-outline-variant text-on-surface rounded-lg px-2.5 py-1.5 text-xs focus:border-primary focus:ring-1 focus:ring-primary outline-none cursor-pointer"
+            className="bg-surface-container-low border border-outline-variant text-on-surface rounded-lg px-2.5 py-1.5 text-xs focus:border-primary focus:ring-1 focus:ring-primary outline-none cursor-pointer min-w-[100px]"
           >
             {SOURCE_LANGUAGE_OPTIONS.map((code) => (
               <option key={code} value={code}>
-                {code === 'auto'
-                  ? t('input.autoDetect')
-                  : `${TRANSLATION_LANGUAGES[code].native} (${getLanguageDisplayName(code, config.locale)})`
-                }
+                {getLanguageDisplayName(code, config.locale)}
               </option>
             ))}
           </select>
@@ -223,20 +192,58 @@ export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
           <select
             value={config.targetLanguage}
             onChange={(e) => saveConfig({ targetLanguage: e.target.value as TranslationLanguage })}
-            className="bg-surface-container-low border border-outline-variant text-on-surface rounded-lg px-2.5 py-1.5 text-xs focus:border-primary focus:ring-1 focus:ring-primary outline-none cursor-pointer"
+            className="bg-surface-container-low border border-outline-variant text-on-surface rounded-lg px-2.5 py-1.5 text-xs focus:border-primary focus:ring-1 focus:ring-primary outline-none cursor-pointer min-w-[100px]"
           >
             {TARGET_LANGUAGE_OPTIONS.map((code) => (
               <option key={code} value={code}>
-                {`${TRANSLATION_LANGUAGES[code].native} (${getLanguageDisplayName(code, config.locale)})`}
+                {getLanguageDisplayName(code, config.locale)}
               </option>
             ))}
+          </select>
+        </div>
+
+        <span className="text-outline-variant text-lg select-none">|</span>
+
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined text-outline text-[18px]" title={t('input.subtitleTracks')}>subtitles</span>
+          <select
+            value={config.subtitleTrack1}
+            onChange={(e) => saveConfig({ subtitleTrack1: e.target.value as 'target' | 'source' | 'none' })}
+            className="bg-surface-container-low border border-outline-variant text-on-surface rounded-lg px-2.5 py-1.5 text-xs focus:border-primary focus:ring-1 focus:ring-primary outline-none cursor-pointer min-w-[100px]"
+          >
+            <option value="target">
+              {getLanguageDisplayName(config.targetLanguage, config.locale)}
+            </option>
+            <option value="source">
+              {config.sourceLanguage !== 'auto'
+                ? getLanguageDisplayName(config.sourceLanguage, config.locale)
+                : t('input.subtitleSource')}
+            </option>
+            <option value="none">{t('input.subtitleNone')}</option>
+          </select>
+          <span className="text-outline text-xs">+</span>
+          <select
+            value={config.subtitleTrack2}
+            onChange={(e) => saveConfig({ subtitleTrack2: e.target.value as 'target' | 'source' | 'none' })}
+            className="bg-surface-container-low border border-outline-variant text-on-surface rounded-lg px-2.5 py-1.5 text-xs focus:border-primary focus:ring-1 focus:ring-primary outline-none cursor-pointer min-w-[100px]"
+          >
+            <option value="source">
+              {config.sourceLanguage !== 'auto'
+                ? getLanguageDisplayName(config.sourceLanguage, config.locale)
+                : t('input.subtitleSource')}
+            </option>
+            <option value="target">
+              {getLanguageDisplayName(config.targetLanguage, config.locale)}
+            </option>
+            <option value="none">{t('input.subtitleNone')}</option>
           </select>
         </div>
       </div>
 
       {/* 输入框 — 来源类型前缀下拉 + URL 前缀 */}
-      <form onSubmit={handleSubmit} className="relative w-full max-w-2xl mx-auto">
-        <div className="relative flex items-center w-full bg-surface-container-low border border-outline-variant rounded-xl focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all p-1.5 sharp-shadow">
+      <form onSubmit={handleSubmit} className="relative w-full max-w-3xl mx-auto">
+        <div className="flex items-center gap-3">
+        <div className="relative flex items-center flex-1 min-w-0 bg-surface-container-low border border-outline-variant rounded-xl focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all p-1.5 sharp-shadow">
           {/* 来源类型前缀下拉 */}
           <div className="relative shrink-0">
             <select
@@ -303,15 +310,44 @@ export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
           <button
             type="submit"
             disabled={!hasInput}
-            className={`shrink-0 ml-1.5 px-5 py-2.5 rounded-lg font-semibold text-sm transition-colors flex items-center gap-1.5 ${
+            title={isQueueActive ? t('input.addToQueue') : t('input.translate')}
+            className={`shrink-0 ml-1.5 p-2.5 rounded-lg font-semibold transition-colors flex items-center justify-center ${
               hasInput
                 ? 'bg-primary text-on-primary hover:bg-primary-container hover:text-on-primary-container'
                 : 'bg-surface-variant text-outline cursor-not-allowed'
             }`}
           >
-            <span className="material-symbols-outlined text-[18px]">{isQueueActive ? 'queue' : 'translate'}</span>
-            {isQueueActive ? t('input.addToQueue') : t('input.translate')}
+            <span className="material-symbols-outlined text-[20px]">{isQueueActive ? 'queue' : 'arrow_forward'}</span>
           </button>
+        </div>
+
+        {/* 管道模式切换 */}
+        <div className="inline-flex bg-surface-container-low border border-outline-variant rounded-lg p-0.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => saveConfig({ pipelineMode: 'full' })}
+            className={`px-2.5 py-2.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1 whitespace-nowrap ${
+              config.pipelineMode !== 'subtitleOnly'
+                ? 'bg-primary text-on-primary shadow-sm'
+                : 'text-outline hover:text-on-surface'
+            }`}
+            title={t('pipeline.modeFull')}
+          >
+            <span className="material-symbols-outlined text-[16px]">record_voice_over</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => saveConfig({ pipelineMode: 'subtitleOnly' })}
+            className={`px-2.5 py-2.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1 whitespace-nowrap ${
+              config.pipelineMode === 'subtitleOnly'
+                ? 'bg-primary text-on-primary shadow-sm'
+                : 'text-outline hover:text-on-surface'
+            }`}
+            title={t('pipeline.modeSubtitleOnly')}
+          >
+            <span className="material-symbols-outlined text-[16px]">subtitles</span>
+          </button>
+        </div>
         </div>
 
         {!isFormValid && hasInput && validationError && (

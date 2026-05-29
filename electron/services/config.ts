@@ -111,6 +111,8 @@ const defaultConfig: AppConfig = {
   indexttsReferenceAudio: '',
   indexttsReferenceMode: 'speaker-sample',
   audioSeparatorPath: detectAudioSeparatorPath(),
+  subtitleTrack1: 'target',
+  subtitleTrack2: 'source',
   subtitleStyle: {
     enFontSize: 36,
     cnFontSize: 50,
@@ -251,6 +253,16 @@ const store = new Store<AppConfig>({
     audioSeparatorPath: {
       type: 'string',
       default: defaultConfig.audioSeparatorPath,
+    },
+    subtitleTrack1: {
+      type: 'string',
+      enum: ['target', 'source', 'none'],
+      default: defaultConfig.subtitleTrack1,
+    },
+    subtitleTrack2: {
+      type: 'string',
+      enum: ['target', 'source', 'none'],
+      default: defaultConfig.subtitleTrack2,
     },
     subtitleStyle: {
       type: 'object',

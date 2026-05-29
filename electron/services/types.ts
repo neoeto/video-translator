@@ -155,7 +155,7 @@ export interface CombinerStrategy {
   combine(input: {
     videoPath: string
     audioPath?: string
-    subtitlePath: string
+    subtitlePath?: string
     outputPath: string
     onProgress: (pct: number) => void
     signal?: AbortSignal
@@ -216,6 +216,7 @@ export type PipelineMode = 'full' | 'subtitleOnly'
 export type AudioMixMode = 'replace' | 'mix-gate' | 'mix-vocal-removal'
 export type ThemeMode = 'dark' | 'light' | 'system'
 export type Locale = 'en' | 'zh'
+export type SubtitleTrack = 'target' | 'source' | 'none'
 
 // 'auto' 仅用于源语言，表示由 Whisper 自动检测。
 export type TranslationLanguage =
@@ -289,4 +290,6 @@ export interface AppConfig {
   indexttsReferenceAudio: string
   indexttsReferenceMode: IndexTtsReferenceMode
   audioSeparatorPath: string
+  subtitleTrack1: SubtitleTrack
+  subtitleTrack2: SubtitleTrack
 }

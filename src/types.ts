@@ -75,6 +75,7 @@ export type PipelineMode = 'full' | 'subtitleOnly'
 export type AudioMixMode = 'replace' | 'mix-gate' | 'mix-vocal-removal'
 export type ThemeMode = 'dark' | 'light' | 'system'
 export type Locale = 'en' | 'zh'
+export type SubtitleTrack = 'target' | 'source' | 'none'
 
 export type TranslationLanguage =
   | 'auto'
@@ -141,4 +142,6 @@ export interface AppConfig {
   indexttsReferenceAudio: string
   indexttsReferenceMode: IndexTtsReferenceMode
   audioSeparatorPath: string
+  subtitleTrack1: SubtitleTrack
+  subtitleTrack2: SubtitleTrack
 }

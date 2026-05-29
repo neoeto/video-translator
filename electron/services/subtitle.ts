@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 
-import type { SubtitleStyle, TranslatedSegment } from './types.js'
+import type { SubtitleStyle, SubtitleTrack, TranslatedSegment } from './types.js'
 import { splitSegmentIntoSubtitleTracks } from './subtitle-tracks.js'
 
 const DEFAULT_VIDEO_WIDTH = 1920
@@ -83,7 +83,9 @@ export function generateAss(
   style: SubtitleStyle,
   videoWidth: number,
   videoHeight: number,
-  minSplitWidth = 20
+  minSplitWidth = 20,
+  track1: SubtitleTrack = 'target',
+  track2: SubtitleTrack = 'source',
 ): string {
   const width = videoWidth || DEFAULT_VIDEO_WIDTH
   const height = videoHeight || DEFAULT_VIDEO_HEIGHT
@@ -94,9 +96,23 @@ export function generateAss(
 
   const bottomMargin = Math.max(60, Math.round(height * 0.06))
   const lineGap = Math.max(12, Math.round(Math.max(style.enFontSize, style.cnFontSize) * 0.35))
-  const sourceY = height - bottomMargin
-  const targetY = sourceY - Math.max(style.enFontSize, style.cnFontSize) - lineGap
   const centerX = width / 2
+
+  // Determine active tracks
+  const activeTracks: { role: 'source' | 'target'; styleName: 'Source' | 'Target'; y: number }[] = []
+  const bottomY = height - bottomMargin
+
+  // Collect which roles are active (bottom-to-top ordering)
+  const roles: ('source' | 'target')[] = []
+  if (track2 !== 'none') roles.push(track2 as 'source' | 'target')
+  if (track1 !== 'none') roles.push(track1 as 'source' | 'target')
+
+  if (roles.length === 2) {
+    activeTracks.push({ role: roles[0], styleName: roles[0] === 'source' ? 'Source' : 'Target', y: bottomY })
+    activeTracks.push({ role: roles[1], styleName: roles[1] === 'source' ? 'Source' : 'Target', y: bottomY - Math.max(style.enFontSize, style.cnFontSize) - lineGap })
+  } else if (roles.length === 1) {
+    activeTracks.push({ role: roles[0], styleName: roles[0] === 'source' ? 'Source' : 'Target', y: bottomY })
+  }
 
   // BorderStyle 3 = opaque box (uses BackColour as solid background).
   // BorderStyle 1 = outline + drop shadow (no background box).
@@ -121,14 +137,12 @@ export function generateAss(
     'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
     ...translatedSegments.flatMap((segment) => {
       const tracks = splitSegmentIntoSubtitleTracks(segment, minSplitWidth)
-      return [
-        ...tracks.source.map((chunk) =>
-          buildDialogueLine(chunk.start, chunk.end, 'Source', chunk.text, centerX, sourceY, bgAlpha)
-        ),
-        ...tracks.target.map((chunk) =>
-          buildDialogueLine(chunk.start, chunk.end, 'Target', chunk.text, centerX, targetY, bgAlpha)
-        ),
-      ]
+      return activeTracks.flatMap(({ role, styleName, y }) => {
+        const chunks = role === 'source' ? tracks.source : tracks.target
+        return chunks.map((chunk) =>
+          buildDialogueLine(chunk.start, chunk.end, styleName, chunk.text, centerX, y, bgAlpha)
+        )
+      })
     }),
   ]
 

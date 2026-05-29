@@ -16,7 +16,7 @@ export default class FfmpegCombiner implements CombinerStrategy {
   async combine(input: {
     videoPath: string
     audioPath?: string
-    subtitlePath: string
+    subtitlePath?: string
     outputPath: string
     onProgress: (pct: number) => void
     signal?: AbortSignal
@@ -30,16 +30,26 @@ export default class FfmpegCombiner implements CombinerStrategy {
 
     const duration = await getDuration(videoPath)
     await fs.mkdir(path.dirname(outputPath), { recursive: true })
-    const subtitleFilter = buildSubtitleFilter(subtitlePath)
+    const subtitleFilter = subtitlePath ? buildSubtitleFilter(subtitlePath) : null
 
     const useMixGate = this.config.audioMixMode === 'mix-gate' && speechSegments && speechSegments.length > 0
     const useVocalRemoval = this.config.audioMixMode === 'mix-vocal-removal' && !!instrumentalPath
 
-    const filterComplex = useMixGate
-      ? buildMixGateFilterComplex(subtitleFilter, speechSegments, duration)
-      : useVocalRemoval
-        ? buildVocalRemovalFilterComplex(subtitleFilter, duration)
-        : `${subtitleFilter};[1:a]apad=whole_dur=${duration}[a]`
+    let filterComplex: string
+    if (subtitleFilter) {
+      filterComplex = useMixGate
+        ? buildMixGateFilterComplex(subtitleFilter, speechSegments, duration)
+        : useVocalRemoval
+          ? buildVocalRemovalFilterComplex(subtitleFilter, duration)
+          : `${subtitleFilter};[1:a]apad=whole_dur=${duration}[a]`
+    } else {
+      // No subtitles — just handle audio
+      filterComplex = useMixGate
+        ? buildMixGateFilterComplex('[0:v]copy[v]', speechSegments, duration)
+        : useVocalRemoval
+          ? buildVocalRemovalFilterComplex('[0:v]copy[v]', duration)
+          : `[0:v]copy[v];[1:a]apad=whole_dur=${duration}[a]`
+    }
 
     await new Promise<void>((resolve, reject) => {
       if (signal?.aborted) {
