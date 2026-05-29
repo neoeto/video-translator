@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { usePipelineStore } from '../store/usePipelineStore'
 import { useI18n } from '../i18n'
 import { getLanguageDisplayName, type TranslationLanguage } from '../types'
 import type { HistoryEntry } from '../preload'
+import { ConfirmDialog } from './ConfirmDialog'
 
 const formatTime = (seconds: number) => {
   const m = Math.floor(seconds / 60)
@@ -67,6 +68,11 @@ export const ResultView: React.FC = () => {
   const [showSegments, setShowSegments] = useState(false)
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [selectedEntry, setSelectedEntry] = useState<HistoryEntry | null>(null)
+  const [confirmAction, setConfirmAction] = useState<{ message: string; action: () => void } | null>(null)
+
+  const requestConfirm = useCallback((message: string, action: () => void) => {
+    setConfirmAction({ message, action })
+  }, [])
 
   useEffect(() => {
     window.electronAPI.getHistory().then(setHistory).catch(() => {})
@@ -141,7 +147,7 @@ export const ResultView: React.FC = () => {
                   <span className="material-symbols-outlined text-[24px]">folder_open</span>
                 </button>
                 <button
-                  onClick={() => handleDeleteHistory(entry.id)}
+                  onClick={() => requestConfirm(t('result.confirmDelete'), () => handleDeleteHistory(entry.id))}
                   className="w-12 h-12 rounded-full bg-surface-variant text-on-surface flex items-center justify-center hover:bg-error-container transition-colors"
                   title={t('result.delete')}
                 >
@@ -347,6 +353,13 @@ export const ResultView: React.FC = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmAction}
+        message={confirmAction?.message ?? ''}
+        onConfirm={() => { confirmAction?.action(); setConfirmAction(null) }}
+        onCancel={() => setConfirmAction(null)}
+      />
     </div>
   )
 }

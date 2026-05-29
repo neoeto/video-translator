@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useCallback } from 'react'
 import { usePipelineStore } from '../store/usePipelineStore'
 import type { PipelineStage, SpeakerGender, SpeakerProfile } from '../types'
 import { getLanguageDisplayName } from '../types'
 import { useI18n } from '../i18n'
+import { ConfirmDialog } from './ConfirmDialog'
 
 const ALL_STAGES: { id: PipelineStage; nameKey: string }[] = [
   { id: 'downloading', nameKey: 'progress.stages.downloading' },
@@ -84,6 +85,12 @@ const SpeakerLabelingPanel: React.FC<{
 export const ProgressView: React.FC = () => {
   const { state, config, queueState, cancelPipeline, skipError, removeQueued, submitSpeakerLabels, reset } = usePipelineStore()
   const t = useI18n((s) => s.t)
+
+  const [confirmAction, setConfirmAction] = useState<{ message: string; action: () => void } | null>(null)
+
+  const requestConfirm = useCallback((message: string, action: () => void) => {
+    setConfirmAction({ message, action })
+  }, [])
 
   const activePipelineMode = queueState.active?.pipelineMode ?? config.pipelineMode
 
@@ -280,7 +287,7 @@ export const ProgressView: React.FC = () => {
               </>
             ) : (
               <button
-                onClick={cancelPipeline}
+                onClick={() => requestConfirm(t('progress.confirmCancel'), cancelPipeline)}
                 className="px-5 py-2 text-error border border-error/50 hover:bg-error-container/10 rounded-lg font-semibold transition-colors"
               >
                 {t('progress.cancelPipeline')}
@@ -314,7 +321,7 @@ export const ProgressView: React.FC = () => {
                   </span>
                 </div>
                 <button
-                  onClick={() => removeQueued(task.id)}
+                  onClick={() => requestConfirm(t('progress.confirmRemoveFromQueue'), () => removeQueued(task.id))}
                   className="shrink-0 p-1 rounded hover:bg-error-container/20 text-outline hover:text-error transition-colors"
                   title={t('progress.removeFromQueue')}
                 >
@@ -325,6 +332,13 @@ export const ProgressView: React.FC = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmAction}
+        message={confirmAction?.message ?? ''}
+        onConfirm={() => { confirmAction?.action(); setConfirmAction(null) }}
+        onCancel={() => setConfirmAction(null)}
+      />
     </div>
   )
 }

@@ -69,11 +69,13 @@ export const en = {
   'progress.unknownError': 'Unknown error occurred during processing.',
   'progress.backToHome': 'Back to Home',
   'progress.cancelPipeline': 'Cancel Pipeline',
+  'progress.confirmCancel': 'Are you sure you want to cancel the current task? Progress will be lost.',
   'progress.noActiveTask': 'No active task',
   'progress.queuePending': '{count} task(s) in queue',
   'progress.skipAndContinue': 'Skip & Continue Queue',
   'progress.queueTitle': 'Pending Queue',
   'progress.removeFromQueue': 'Remove from queue',
+  'progress.confirmRemoveFromQueue': 'Remove this task from the queue?',
 
   'speaker.title': 'Speaker Voice Labeling',
   'speaker.description': 'Select gender/age for each speaker to match appropriate voice.',
@@ -96,6 +98,7 @@ export const en = {
   'result.translatedSegments': 'Translated Segments',
   'result.noSegments': 'No translation segments available',
   'result.delete': 'Delete',
+  'result.confirmDelete': 'Are you sure you want to delete this record? This action cannot be undone.',
   'result.noHistory': 'No translation history',
   'result.detail.title': 'Video Details',
   'result.detail.source': 'Source',
@@ -205,6 +208,9 @@ export const en = {
   'settings.subtitles.fontSizeHelp': 'Font size in pixels for the ASS subtitle overlay.',
   'settings.subtitles.minSplitWidth': 'Minimum Split Display Width',
   'settings.subtitles.minSplitWidthHelp': '0 makes punctuation splits easier; larger values merge short fragments more aggressively.',
+
+  'confirm.cancel': 'Cancel',
+  'confirm.ok': 'Confirm',
 } as const
 
 export type TranslationKey = keyof typeof en

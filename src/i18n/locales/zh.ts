@@ -71,11 +71,13 @@ export const zh: Record<TranslationKey, string> = {
   'progress.unknownError': '处理过程中发生未知错误。',
   'progress.backToHome': '返回首页',
   'progress.cancelPipeline': '取消任务',
+  'progress.confirmCancel': '确定要取消当前任务吗？已完成的进度将丢失。',
   'progress.noActiveTask': '暂无进行中的任务',
   'progress.queuePending': '队列中有 {count} 个任务',
   'progress.skipAndContinue': '跳过并继续队列',
   'progress.queueTitle': '等待队列',
   'progress.removeFromQueue': '从队列中移除',
+  'progress.confirmRemoveFromQueue': '确定要从队列中移除此任务吗？',
 
   'speaker.title': '说话人音色标注',
   'speaker.description': '请为每位说话人选择性别/年龄，以匹配合适的语音音色。',
@@ -98,6 +100,7 @@ export const zh: Record<TranslationKey, string> = {
   'result.translatedSegments': '翻译片段',
   'result.noSegments': '暂无翻译片段',
   'result.delete': '删除记录',
+  'result.confirmDelete': '确定要删除此记录吗？此操作无法撤销。',
   'result.noHistory': '暂无翻译记录',
   'result.detail.title': '视频详情',
   'result.detail.source': '视频来源',
@@ -207,4 +210,7 @@ export const zh: Record<TranslationKey, string> = {
   'settings.subtitles.fontSizeHelp': '字幕覆盖层（ASS 格式）的字体大小（像素）。',
   'settings.subtitles.minSplitWidth': '最小拆分显示宽度',
   'settings.subtitles.minSplitWidthHelp': '0 表示尽量按标点拆分；值越大，越倾向于合并短片段。',
+
+  'confirm.cancel': '取消',
+  'confirm.ok': '确认',
 }
