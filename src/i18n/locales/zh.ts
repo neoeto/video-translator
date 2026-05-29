@@ -213,4 +213,18 @@ export const zh: Record<TranslationKey, string> = {
 
   'confirm.cancel': '取消',
   'confirm.ok': '确认',
+
+  'export.title': '导出视频',
+  'export.resolution': '分辨率',
+  'export.resOriginal': '原始分辨率',
+  'export.res1080p': '1080p',
+  'export.res720p': '720p',
+  'export.res480p': '480p',
+  'export.startExport': '导出',
+  'export.cancelExport': '取消',
+  'export.copying': '正在复制...',
+  'export.encoding': '正在编码...',
+  'export.error': '导出失败',
+  'export.retry': '重试',
+  'export.button': '导出',
 }

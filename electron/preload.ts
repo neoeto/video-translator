@@ -43,6 +43,17 @@ const electronAPI = {
     ipcRenderer.invoke('shell:showItemInFolder', path),
   openExternal: (url: string): Promise<void> =>
     ipcRenderer.invoke('shell:openExternal', url),
+  exportVideo: (sourcePath: string, targetPath: string, resolution: string): Promise<void> =>
+    ipcRenderer.invoke('export:start', sourcePath, targetPath, resolution),
+  cancelExport: (): Promise<void> =>
+    ipcRenderer.invoke('export:cancel'),
+  onExportProgress: (callback: (data: { percent: number; stage: string }) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: { percent: number; stage: string }) => callback(data)
+    ipcRenderer.on('export:progress', handler)
+    return () => ipcRenderer.removeListener('export:progress', handler)
+  },
+  saveFileDialog: (defaultName: string): Promise<string | null> =>
+    ipcRenderer.invoke('dialog:saveFile', defaultName),
 }
 
 // 使用 contextBridge 暴露白名单 API，隔离渲染进程与 ipcRenderer，避免直接挂载 Node/Electron 能力。

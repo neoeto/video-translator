@@ -211,6 +211,20 @@ export const en = {
 
   'confirm.cancel': 'Cancel',
   'confirm.ok': 'Confirm',
+
+  'export.title': 'Export Video',
+  'export.resolution': 'Resolution',
+  'export.resOriginal': 'Original',
+  'export.res1080p': '1080p',
+  'export.res720p': '720p',
+  'export.res480p': '480p',
+  'export.startExport': 'Export',
+  'export.cancelExport': 'Cancel',
+  'export.copying': 'Copying...',
+  'export.encoding': 'Encoding...',
+  'export.error': 'Export failed',
+  'export.retry': 'Retry',
+  'export.button': 'Export',
 } as const
 
 export type TranslationKey = keyof typeof en

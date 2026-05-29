@@ -33,6 +33,8 @@ export interface HistoryEntry {
   translatedSegments?: { start: number; end: number; sourceText: string; targetText: string; speaker: string }[]
 }
 
+export type ExportResolution = 'original' | '1080p' | '720p' | '480p'
+
 export interface ElectronAPI {
   pipelineStart: (url: string, outputDir: string, sourceType?: VideoSourceType) => Promise<void>
   pipelineCancel: () => Promise<void>
@@ -51,6 +53,10 @@ export interface ElectronAPI {
   openPath: (path: string) => Promise<void>
   showItemInFolder: (path: string) => Promise<void>
   openExternal: (url: string) => Promise<void>
+  exportVideo: (sourcePath: string, targetPath: string, resolution: ExportResolution) => Promise<void>
+  cancelExport: () => Promise<void>
+  onExportProgress: (callback: (data: { percent: number; stage: string }) => void) => () => void
+  saveFileDialog: (defaultName: string) => Promise<string | null>
 }
 
 declare global {

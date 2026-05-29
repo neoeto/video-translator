@@ -4,6 +4,7 @@ import { useI18n } from '../i18n'
 import { getLanguageDisplayName, type TranslationLanguage } from '../types'
 import type { HistoryEntry } from '../preload'
 import { ConfirmDialog } from './ConfirmDialog'
+import { ExportDialog } from './ExportDialog'
 
 const formatTime = (seconds: number) => {
   const m = Math.floor(seconds / 60)
@@ -69,6 +70,7 @@ export const ResultView: React.FC = () => {
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [selectedEntry, setSelectedEntry] = useState<HistoryEntry | null>(null)
   const [confirmAction, setConfirmAction] = useState<{ message: string; action: () => void } | null>(null)
+  const [exportEntry, setExportEntry] = useState<HistoryEntry | null>(null)
 
   const requestConfirm = useCallback((message: string, action: () => void) => {
     setConfirmAction({ message, action })
@@ -349,10 +351,24 @@ export const ResultView: React.FC = () => {
                 <span className="material-symbols-outlined text-[18px]">folder_open</span>
                 {t('result.showInFolder')}
               </button>
+              <button
+                onClick={() => setExportEntry(selectedEntry)}
+                className="flex items-center gap-2 px-4 py-2 bg-surface-variant text-on-surface rounded-lg hover:bg-surface-container-highest transition-colors"
+              >
+                <span className="material-symbols-outlined text-[18px]">download</span>
+                {t('export.button')}
+              </button>
             </div>
           </div>
         </div>
       )}
+
+      <ExportDialog
+        open={!!exportEntry}
+        videoTitle={exportEntry?.videoTitle ?? ''}
+        sourcePath={exportEntry?.outputPath ?? ''}
+        onClose={() => setExportEntry(null)}
+      />
 
       <ConfirmDialog
         open={!!confirmAction}

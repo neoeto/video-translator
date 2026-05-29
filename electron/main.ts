@@ -7,6 +7,7 @@ import { getConfig, setConfig } from './services/config.js'
 import { createPipelineStrategies } from './services/factories.js'
 import { buildHistorySourceUrl } from './services/history-source-link.js'
 import { addHistoryEntry, deleteHistoryEntry, getHistory, type HistoryEntry } from './services/history.js'
+import { cancelExport, exportVideo, type ExportResolution } from './services/export-video.js'
 import { PipelineOrchestrator } from './services/pipeline.js'
 import type { AppConfig, PipelineMode, PipelineState, SpeakerProfile, TranslationLanguage, VideoSourceType } from './services/types.js'
 
@@ -292,6 +293,25 @@ function registerIpcHandlers(): void {
     }
 
     await shell.openExternal(parsedUrl.toString())
+  })
+
+  // ─── Export Handlers ────────────────────────────────────────────
+  ipcMain.handle('export:start', async (_event, sourcePath: string, targetPath: string, resolution: ExportResolution): Promise<void> => {
+    if (!mainWindow) throw new Error('No window available')
+    await exportVideo({ sourcePath, targetPath, resolution }, mainWindow)
+  })
+
+  ipcMain.handle('export:cancel', (): void => {
+    cancelExport()
+  })
+
+  ipcMain.handle('dialog:saveFile', async (_event, defaultName: string): Promise<string | null> => {
+    if (!mainWindow) return null
+    const result = await dialog.showSaveDialog(mainWindow, {
+      defaultPath: defaultName,
+      filters: [{ name: 'Video', extensions: ['mp4'] }],
+    })
+    return result.canceled ? null : result.filePath
   })
 }
 
