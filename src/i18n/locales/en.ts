@@ -116,6 +116,7 @@ export const en = {
   'result.detail.summary': 'Summary',
   'result.detail.subtitles': 'Subtitles',
   'result.detail.noSubtitles': 'No subtitles available',
+  'result.detail.resolution': 'Resolution',
   'result.detail.close': 'Close',
 
   'settings.heading': 'Settings',

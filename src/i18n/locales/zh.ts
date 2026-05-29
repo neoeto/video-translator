@@ -118,6 +118,7 @@ export const zh: Record<TranslationKey, string> = {
   'result.detail.summary': '内容简介',
   'result.detail.subtitles': '字幕',
   'result.detail.noSubtitles': '暂无字幕',
+  'result.detail.resolution': '分辨率',
   'result.detail.close': '关闭',
 
   'settings.heading': '设置',

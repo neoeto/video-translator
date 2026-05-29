@@ -313,6 +313,16 @@ function registerIpcHandlers(): void {
     })
     return result.canceled ? null : result.filePath
   })
+
+  // ─── Video Info Handlers ──────────────────────────────────────────
+  ipcMain.handle('video:getDimensions', async (_event, videoPath: string): Promise<{ width: number; height: number } | null> => {
+    const { getVideoDimensions } = await import('./services/export-video.js')
+    try {
+      return await getVideoDimensions(videoPath)
+    } catch {
+      return null
+    }
+  })
 }
 
 app.whenReady().then(() => {

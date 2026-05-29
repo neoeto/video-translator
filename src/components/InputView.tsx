@@ -172,12 +172,12 @@ export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
       </div>
 
       {/* 管道模式 + 语言选择 — 同一行 */}
-      <div className="flex justify-center items-center gap-4 mb-6 flex-wrap">
+      <div className="flex justify-center items-center gap-3 mb-6">
         <div className="inline-flex bg-surface-container-low border border-outline-variant rounded-lg p-0.5">
           <button
             type="button"
             onClick={() => saveConfig({ pipelineMode: 'full' })}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap ${
               config.pipelineMode !== 'subtitleOnly'
                 ? 'bg-primary text-on-primary shadow-sm'
                 : 'text-outline hover:text-on-surface'
@@ -189,7 +189,7 @@ export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
           <button
             type="button"
             onClick={() => saveConfig({ pipelineMode: 'subtitleOnly' })}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap ${
               config.pipelineMode === 'subtitleOnly'
                 ? 'bg-primary text-on-primary shadow-sm'
                 : 'text-outline hover:text-on-surface'

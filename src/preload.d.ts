@@ -57,6 +57,7 @@ export interface ElectronAPI {
   cancelExport: () => Promise<void>
   onExportProgress: (callback: (data: { percent: number; stage: string }) => void) => () => void
   saveFileDialog: (defaultName: string) => Promise<string | null>
+  getVideoDimensions: (videoPath: string) => Promise<{ width: number; height: number } | null>
 }
 
 declare global {

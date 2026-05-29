@@ -17,7 +17,7 @@ interface VideoDimensions {
   height: number
 }
 
-function getVideoDimensions(videoPath: string): Promise<VideoDimensions> {
+export function getVideoDimensions(videoPath: string): Promise<VideoDimensions> {
   if (!ffprobePath) return Promise.reject(new Error('ffprobe binary not found'))
   return new Promise((resolve, reject) => {
     ffmpeg.ffprobe(videoPath, (error, data) => {

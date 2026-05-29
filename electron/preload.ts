@@ -54,6 +54,8 @@ const electronAPI = {
   },
   saveFileDialog: (defaultName: string): Promise<string | null> =>
     ipcRenderer.invoke('dialog:saveFile', defaultName),
+  getVideoDimensions: (videoPath: string): Promise<{ width: number; height: number } | null> =>
+    ipcRenderer.invoke('video:getDimensions', videoPath),
 }
 
 // 使用 contextBridge 暴露白名单 API，隔离渲染进程与 ipcRenderer，避免直接挂载 Node/Electron 能力。

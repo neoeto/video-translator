@@ -4,13 +4,6 @@ import { useI18n } from '../i18n'
 import { getLanguageDisplayName, type TranslationLanguage } from '../types'
 import type { HistoryEntry } from '../preload'
 import { ConfirmDialog } from './ConfirmDialog'
-import { ExportDialog } from './ExportDialog'
-
-const formatTime = (seconds: number) => {
-  const m = Math.floor(seconds / 60)
-  const s = Math.floor(seconds % 60)
-  return `[${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}]`
-}
 
 function formatCompletedAt(timestamp: number | undefined): string {
   if (!timestamp) return ''
@@ -30,47 +23,15 @@ function formatDuration(seconds: number | undefined): string {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
 }
 
-function formatFileSize(bytes: number | undefined): string {
-  if (!bytes || bytes <= 0) return '--'
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
+interface ResultViewProps {
+  onNavigate: (view: string, params?: { entryId?: string }) => void
 }
 
-function getSourceLabel(sourceType: string | undefined, t: (key: string) => string): string {
-  switch (sourceType) {
-    case 'youtube': return t('result.detail.sourceYoutube')
-    case 'bilibili': return t('result.detail.sourceBilibili')
-    case 'local-file': return t('result.detail.sourceLocalFile')
-    default: return '--'
-  }
-}
-
-function isRemoteSource(sourceType: string | undefined): boolean {
-  return sourceType === 'youtube' || sourceType === 'bilibili'
-}
-
-function getOriginalLink(sourceType: string | undefined, sourceUrl: string | undefined): string | null {
-  if (!isRemoteSource(sourceType)) return null
-  const url = sourceUrl?.trim()
-  return url ? url : null
-}
-
-function generateSummary(segments: { sourceText: string }[] | undefined): string {
-  if (!segments || segments.length === 0) return ''
-  const text = segments.map(s => s.sourceText).join(' ')
-  return text.length > 200 ? text.slice(0, 200) + '...' : text
-}
-
-export const ResultView: React.FC = () => {
+export const ResultView: React.FC<ResultViewProps> = ({ onNavigate }) => {
   const { state, config, reset } = usePipelineStore()
   const t = useI18n((s) => s.t)
-  const [showSegments, setShowSegments] = useState(false)
   const [history, setHistory] = useState<HistoryEntry[]>([])
-  const [selectedEntry, setSelectedEntry] = useState<HistoryEntry | null>(null)
   const [confirmAction, setConfirmAction] = useState<{ message: string; action: () => void } | null>(null)
-  const [exportEntry, setExportEntry] = useState<HistoryEntry | null>(null)
 
   const requestConfirm = useCallback((message: string, action: () => void) => {
     setConfirmAction({ message, action })
@@ -94,16 +55,6 @@ export const ResultView: React.FC = () => {
       console.error('Failed to show in folder:', err)
     })
   }
-
-  const handleOpenOriginalLink = (url: string) => {
-    window.electronAPI.openExternal(url).catch((error) => {
-      console.error('Failed to open original link', { url, error })
-    })
-  }
-
-  const selectedEntryOriginalLink = selectedEntry
-    ? getOriginalLink(selectedEntry.sourceType, selectedEntry.sourceUrl)
-    : null
 
   return (
     <div className="w-full max-w-5xl mx-auto pt-10 px-6 pb-12">
@@ -172,7 +123,7 @@ export const ResultView: React.FC = () => {
               <h3
                 className="font-bold text-on-surface line-clamp-2 leading-tight cursor-pointer hover:text-primary transition-colors"
                 title={entry.videoTitle}
-                onClick={() => setSelectedEntry(entry)}
+                onClick={() => onNavigate('detail', { entryId: entry.id })}
               >
                 {entry.videoTitle}
               </h3>
@@ -197,178 +148,6 @@ export const ResultView: React.FC = () => {
           </div>
         )}
       </div>
-
-      {showSegments && state.translatedSegments && (
-        <div className="bg-surface-container rounded-xl border border-surface-variant p-6 sharp-shadow">
-          <h3 className="text-lg font-bold text-on-surface mb-4 flex items-center gap-2">
-            <span className="material-symbols-outlined">subtitles</span>
-            {t('result.translatedSegments')}
-          </h3>
-          <div className="bg-surface-container-lowest rounded-lg p-4 max-h-[400px] overflow-y-auto font-mono text-sm border border-outline-variant">
-            {state.translatedSegments && state.translatedSegments.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                {state.translatedSegments.map((segment, index) => (
-                  <div 
-                    key={index} 
-                    className={`py-3 px-3 rounded flex flex-col gap-1 ${index % 2 === 0 ? 'bg-surface-variant/50' : 'bg-transparent'}`}
-                  >
-                    <div className="flex gap-4 text-on-surface-variant">
-                      <span className="text-outline shrink-0">{formatTime(segment.start)}</span>
-                      <span>{segment.sourceText}</span>
-                    </div>
-                    <div className="flex gap-4 text-on-surface">
-                      <span className="text-outline shrink-0 opacity-0">{formatTime(segment.start)}</span>
-                      <span className="text-primary-fixed-dim">{segment.targetText}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-32 text-outline italic">
-                {t('result.noSegments')}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {selectedEntry && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setSelectedEntry(null)}>
-          <div
-            className="bg-surface-container rounded-xl border border-surface-variant w-full max-w-2xl max-h-[80vh] overflow-y-auto sharp-shadow mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between p-6 border-b border-surface-variant">
-              <h2 className="text-lg font-bold text-on-surface flex items-center gap-2">
-                <span className="material-symbols-outlined">info</span>
-                {t('result.detail.title')}
-              </h2>
-              <button onClick={() => setSelectedEntry(null)} className="text-outline hover:text-on-surface transition-colors">
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-
-            <div className="p-6 border-b border-surface-variant">
-              <h3 className="text-xl font-bold text-on-surface mb-1">{selectedEntry.videoTitle}</h3>
-              {selectedEntry.translatedTitle && (
-                <p className="text-sm text-on-surface-variant">{selectedEntry.translatedTitle}</p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 p-6 border-b border-surface-variant text-sm">
-              <div>
-                <span className="text-outline block mb-1">{t('result.detail.source')}</span>
-                <span className="text-on-surface">{getSourceLabel(selectedEntry.sourceType, t)}</span>
-              </div>
-              <div>
-                <span className="text-outline block mb-1">{t('result.detail.originalLink')}</span>
-                {selectedEntryOriginalLink ? (
-                  <button
-                    type="button"
-                    onClick={() => handleOpenOriginalLink(selectedEntryOriginalLink)}
-                    className="text-primary hover:underline text-left break-all"
-                  >
-                    {selectedEntryOriginalLink}
-                  </button>
-                ) : (
-                  <span className="text-on-surface">--</span>
-                )}
-              </div>
-              <div>
-                <span className="text-outline block mb-1">{t('result.detail.duration')}</span>
-                <span className="text-on-surface font-mono">{formatDuration(selectedEntry.duration)}</span>
-              </div>
-              <div>
-                <span className="text-outline block mb-1">{t('result.detail.fileSize')}</span>
-                <span className="text-on-surface font-mono">{formatFileSize(selectedEntry.fileSize)}</span>
-              </div>
-              <div>
-                <span className="text-outline block mb-1">{t('result.detail.language')}</span>
-                <span className="text-on-surface">
-                  {getLanguageDisplayName((selectedEntry.sourceLanguage || config.sourceLanguage) as TranslationLanguage, config.locale)} → {getLanguageDisplayName((selectedEntry.targetLanguage || config.targetLanguage) as TranslationLanguage, config.locale)}
-                </span>
-              </div>
-              <div>
-                <span className="text-outline block mb-1">{t('result.detail.generatedAt')}</span>
-                <span className="text-on-surface font-mono">{formatCompletedAt(selectedEntry.completedAt)}</span>
-              </div>
-              <div>
-                <span className="text-outline block mb-1">{t('result.detail.pipelineMode')}</span>
-                <span className="text-on-surface">
-                  {selectedEntry.pipelineMode === 'subtitleOnly' ? t('result.detail.modeSubtitleOnly') : t('result.detail.modeFull')}
-                </span>
-              </div>
-            </div>
-
-            {(selectedEntry.summary || (selectedEntry.translatedSegments && selectedEntry.translatedSegments.length > 0)) && (
-              <div className="p-6 border-b border-surface-variant">
-                <h4 className="text-sm text-outline mb-2">{t('result.detail.summary')}</h4>
-                <p className="text-sm text-on-surface-variant leading-relaxed">
-                  {selectedEntry.summary || generateSummary(selectedEntry.translatedSegments)}
-                </p>
-              </div>
-            )}
-
-            <div className="p-6">
-              <h4 className="text-sm text-outline mb-3">{t('result.detail.subtitles')}</h4>
-              {selectedEntry.translatedSegments && selectedEntry.translatedSegments.length > 0 ? (
-                <div className="bg-surface-container-lowest rounded-lg p-4 max-h-[300px] overflow-y-auto font-mono text-sm border border-outline-variant">
-                  <div className="flex flex-col gap-2">
-                    {selectedEntry.translatedSegments.map((segment, index) => (
-                      <div
-                        key={index}
-                        className={`py-2 px-3 rounded flex flex-col gap-1 ${index % 2 === 0 ? 'bg-surface-variant/50' : 'bg-transparent'}`}
-                      >
-                        <div className="flex gap-4 text-on-surface-variant">
-                          <span className="text-outline shrink-0">{formatTime(segment.start)}</span>
-                          <span>{segment.sourceText}</span>
-                        </div>
-                        <div className="flex gap-4 text-on-surface">
-                          <span className="text-outline shrink-0 opacity-0">{formatTime(segment.start)}</span>
-                          <span className="text-primary-fixed-dim">{segment.targetText}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-outline italic">{t('result.detail.noSubtitles')}</p>
-              )}
-            </div>
-
-            <div className="p-6 border-t border-surface-variant flex gap-3">
-              <button
-                onClick={() => handleOpenVideo(selectedEntry.outputPath)}
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-opacity"
-              >
-                <span className="material-symbols-outlined text-[18px]">play_arrow</span>
-                {t('result.playVideo')}
-              </button>
-              <button
-                onClick={() => handleShowInFolder(selectedEntry.outputPath)}
-                className="flex items-center gap-2 px-4 py-2 bg-surface-variant text-on-surface rounded-lg hover:bg-surface-container-highest transition-colors"
-              >
-                <span className="material-symbols-outlined text-[18px]">folder_open</span>
-                {t('result.showInFolder')}
-              </button>
-              <button
-                onClick={() => setExportEntry(selectedEntry)}
-                className="flex items-center gap-2 px-4 py-2 bg-surface-variant text-on-surface rounded-lg hover:bg-surface-container-highest transition-colors"
-              >
-                <span className="material-symbols-outlined text-[18px]">download</span>
-                {t('export.button')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <ExportDialog
-        open={!!exportEntry}
-        videoTitle={exportEntry?.videoTitle ?? ''}
-        sourcePath={exportEntry?.outputPath ?? ''}
-        onClose={() => setExportEntry(null)}
-      />
 
       <ConfirmDialog
         open={!!confirmAction}

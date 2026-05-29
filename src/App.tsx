@@ -4,6 +4,7 @@ import { InputView } from './components/InputView'
 import { ProgressView } from './components/ProgressView'
 import { ResultView } from './components/ResultView'
 import { SettingsView } from './components/SettingsView'
+import { VideoDetailView } from './components/VideoDetailView'
 import { SideNavBar } from './components/SideNavBar'
 import { TopAppBar } from './components/TopAppBar'
 import { useI18n } from './i18n'
@@ -18,7 +19,8 @@ function App() {
   const isLoadingConfig = usePipelineStore((s) => s.isLoadingConfig)
   const initLocale = useI18n((s) => s.initLocale)
   const t = useI18n((s) => s.t)
-  const [activeView, setActiveView] = useState<'home' | 'processing' | 'library' | 'settings'>('home')
+  const [activeView, setActiveView] = useState<'home' | 'processing' | 'library' | 'settings' | 'detail'>('home')
+  const [detailEntryId, setDetailEntryId] = useState<string | null>(null)
   const prevStageRef = useRef(stage)
 
   useEffect(() => {
@@ -92,20 +94,24 @@ function App() {
       case 'home': return t('app.views.home')
       case 'processing': return t('app.views.processing')
       case 'library': return t('app.views.library')
+      case 'detail': return t('result.detail.title')
       case 'settings': return t('app.views.settings')
       default: return ''
     }
   }
 
-  const handleNavigate = (view: string) => {
-    if (view === 'home' || view === 'processing' || view === 'library' || view === 'settings') {
+  const handleNavigate = (view: string, params?: { entryId?: string }) => {
+    if (view === 'detail' && params?.entryId) {
+      setDetailEntryId(params.entryId)
+      setActiveView('detail')
+    } else if (view === 'home' || view === 'processing' || view === 'library' || view === 'settings') {
       setActiveView(view)
     }
   }
 
   return (
     <div className="min-h-screen bg-background text-on-background flex flex-row font-body">
-      <SideNavBar activeView={activeView} onNavigate={handleNavigate} />
+      <SideNavBar activeView={activeView === 'detail' ? 'library' : activeView} onNavigate={handleNavigate} />
       
       <div className="flex-1 ml-sidebar-width flex flex-col min-w-0">
         <TopAppBar title={getViewTitle()} />
@@ -113,7 +119,8 @@ function App() {
         <main className="flex-1 overflow-auto bg-background">
           {activeView === 'home' && <InputView onNavigate={handleNavigate} />}
           {activeView === 'processing' && <ProgressView />}
-          {activeView === 'library' && <ResultView />}
+          {activeView === 'library' && <ResultView onNavigate={handleNavigate} />}
+          {activeView === 'detail' && detailEntryId && <VideoDetailView entryId={detailEntryId} onNavigate={handleNavigate} />}
           {activeView === 'settings' && <SettingsView />}
         </main>
       </div>
