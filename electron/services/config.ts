@@ -113,6 +113,7 @@ const defaultConfig: AppConfig = {
   audioSeparatorPath: detectAudioSeparatorPath(),
   subtitleTrack1: 'target',
   subtitleTrack2: 'source',
+  manualReviewEnabled: false,
   subtitleStyle: {
     enFontSize: 36,
     cnFontSize: 50,
@@ -264,6 +265,10 @@ const store = new Store<AppConfig>({
       enum: ['target', 'source', 'none'],
       default: defaultConfig.subtitleTrack2,
     },
+    manualReviewEnabled: {
+      type: 'boolean',
+      default: false,
+    },
     subtitleStyle: {
       type: 'object',
       default: defaultConfig.subtitleStyle,
@@ -345,6 +350,9 @@ export function setConfig(partial: Partial<AppConfig>): void {
     'indexttsReferenceAudio',
     'indexttsReferenceMode',
     'audioSeparatorPath',
+    'subtitleTrack1',
+    'subtitleTrack2',
+    'manualReviewEnabled',
   ] as const
 
   for (const key of simpleKeys) {

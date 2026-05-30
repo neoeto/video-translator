@@ -231,6 +231,38 @@ export const en = {
   'export.error': 'Export failed',
   'export.retry': 'Retry',
   'export.button': 'Export',
+
+  // Editor
+  'editor.title': 'Review & Edit',
+  'editor.confirm': 'Confirm & Continue',
+  'editor.cancel': 'Skip Review',
+  'editor.subtitles': 'Subtitles',
+  'editor.audio': 'Audio',
+  'editor.info': 'Info',
+  'editor.toolSelect': 'Select',
+  'editor.toolCut': 'Split',
+  'editor.toolDelete': 'Delete',
+  'editor.zoomIn': 'Zoom In',
+  'editor.zoomOut': 'Zoom Out',
+  'editor.undo': 'Undo',
+  'editor.redo': 'Redo',
+  'editor.play': 'Play',
+  'editor.pause': 'Pause',
+  'editor.trackVideo': 'V1',
+  'editor.trackAudio': 'A1',
+  'editor.trackSubtitle': 'T1',
+  'editor.noSegments': 'No subtitle segments',
+  'editor.deleteSegment': 'Delete segment',
+  'editor.splitSegment': 'Split at playhead',
+  'editor.confirmTitle': 'Continue with edits?',
+  'editor.confirmMessage': 'Your edits will be applied to the final video.',
+  'progress.stages.manualReview': 'Manual Review',
+
+  // Settings: Manual Review
+  'settings.system.manualReview': 'Manual Review Before Merge',
+  'settings.system.manualReviewDescription': 'Pause after TTS synthesis to manually adjust subtitles, audio timing, and segments before final video merge.',
+  'settings.system.manualReviewEnabled': 'Enabled',
+  'settings.system.manualReviewDisabled': 'Disabled',
 } as const
 
 export type TranslationKey = keyof typeof en

@@ -802,6 +802,35 @@ export const SettingsView: React.FC = () => {
                 </div>
               </div>
             </section>
+            <section className="bg-surface-container rounded-xl border border-outline-variant/40 p-unit-lg shadow-sm">
+              <div className="border-b border-outline-variant/30 pb-4 mb-6">
+                <h3 className="text-lg font-semibold text-on-surface flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">rate_review</span>
+                  {t('settings.system.manualReview')}
+                </h3>
+                <p className="text-[13px] text-on-surface-variant mt-1">
+                  {t('settings.system.manualReviewDescription')}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => saveConfig({ manualReviewEnabled: !config.manualReviewEnabled })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    config.manualReviewEnabled ? 'bg-primary-container' : 'bg-surface-variant'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-on-surface transition-transform ${
+                      config.manualReviewEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+                <span className="text-sm text-on-surface-variant">
+                  {config.manualReviewEnabled ? t('settings.system.manualReviewEnabled') : t('settings.system.manualReviewDisabled')}
+                </span>
+              </div>
+            </section>
             </>
           )}
         </div>

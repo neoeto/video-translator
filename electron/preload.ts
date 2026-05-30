@@ -15,6 +15,10 @@ const electronAPI = {
     ipcRenderer.invoke('pipeline:get-queue'),
   submitSpeakerLabels: (profiles: SpeakerProfile[]): Promise<void> =>
     ipcRenderer.invoke('pipeline:submit-speaker-labels', profiles),
+  submitManualReview: (result: { segments: { start: number; end: number; sourceText: string; targetText: string; speaker: string }[] }): Promise<void> =>
+    ipcRenderer.invoke('pipeline:submit-manual-review', result),
+  cancelManualReview: (): Promise<void> =>
+    ipcRenderer.invoke('pipeline:cancel-manual-review'),
   onProgress: (callback: (state: PipelineState) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, state: PipelineState) => callback(state)
     ipcRenderer.on('pipeline:progress', handler)
@@ -56,6 +60,12 @@ const electronAPI = {
     ipcRenderer.invoke('dialog:saveFile', defaultName),
   getVideoDimensions: (videoPath: string): Promise<{ width: number; height: number } | null> =>
     ipcRenderer.invoke('video:getDimensions', videoPath),
+  getAudioWaveform: (audioPath: string, samples: number): Promise<number[]> =>
+    ipcRenderer.invoke('audio:getWaveform', audioPath, samples),
+  getVideoFrames: (videoPath: string, timestamps: number[]): Promise<string[]> =>
+    ipcRenderer.invoke('video:getFrames', videoPath, timestamps),
+  getMediaServerPort: (): Promise<number> =>
+    ipcRenderer.invoke('media:getServerPort'),
 }
 
 // 使用 contextBridge 暴露白名单 API，隔离渲染进程与 ipcRenderer，避免直接挂载 Node/Electron 能力。

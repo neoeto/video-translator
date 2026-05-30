@@ -1,4 +1,4 @@
-import type { PipelineState, AppConfig, SpeakerProfile, VideoSourceType, TranslationLanguage, PipelineMode } from './types'
+import type { PipelineState, AppConfig, SpeakerProfile, VideoSourceType, TranslationLanguage, PipelineMode, ManualReviewResult } from './types'
 
 export interface QueueTask {
   id: string
@@ -42,6 +42,8 @@ export interface ElectronAPI {
   pipelineRemoveQueued: (taskId: string) => Promise<void>
   pipelineGetQueue: () => Promise<QueueState>
   submitSpeakerLabels: (profiles: SpeakerProfile[]) => Promise<void>
+  submitManualReview: (result: ManualReviewResult) => Promise<void>
+  cancelManualReview: () => Promise<void>
   onProgress: (callback: (state: PipelineState) => void) => () => void
   onQueueState: (callback: (state: QueueState) => void) => () => void
   getConfig: () => Promise<AppConfig>
@@ -58,6 +60,9 @@ export interface ElectronAPI {
   onExportProgress: (callback: (data: { percent: number; stage: string }) => void) => () => void
   saveFileDialog: (defaultName: string) => Promise<string | null>
   getVideoDimensions: (videoPath: string) => Promise<{ width: number; height: number } | null>
+  getAudioWaveform: (audioPath: string, samples: number) => Promise<number[]>
+  getVideoFrames: (videoPath: string, timestamps: number[]) => Promise<string[]>
+  getMediaServerPort: () => Promise<number>
 }
 
 declare global {

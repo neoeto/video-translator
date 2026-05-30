@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { PipelineState, AppConfig, SpeakerProfile, VideoSourceType } from '../types'
+import type { PipelineState, AppConfig, SpeakerProfile, VideoSourceType, ManualReviewResult } from '../types'
 import type { QueueState } from '../preload'
 
 interface PipelineStore {
@@ -19,6 +19,8 @@ interface PipelineStore {
   skipError: () => Promise<void>
   removeQueued: (taskId: string) => Promise<void>
   submitSpeakerLabels: (profiles: SpeakerProfile[]) => Promise<void>
+  submitManualReview: (result: ManualReviewResult) => Promise<void>
+  cancelManualReview: () => Promise<void>
   reset: () => void
   updateState: (state: Partial<PipelineState>) => void
 }
@@ -71,6 +73,7 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
     audioSeparatorPath: '',
     subtitleTrack1: 'target' as const,
     subtitleTrack2: 'source' as const,
+    manualReviewEnabled: false,
     subtitleStyle: {
       enFontSize: 36,
       cnFontSize: 50,
@@ -133,6 +136,14 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
 
   submitSpeakerLabels: async (profiles: SpeakerProfile[]) => {
     await window.electronAPI.submitSpeakerLabels(profiles)
+  },
+
+  submitManualReview: async (result: ManualReviewResult) => {
+    await window.electronAPI.submitManualReview(result)
+  },
+
+  cancelManualReview: async () => {
+    await window.electronAPI.cancelManualReview()
   },
 
   reset: () => {

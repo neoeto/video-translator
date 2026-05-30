@@ -8,7 +8,7 @@ import { getConfig } from './config.js'
 import { generateAss } from './subtitle.js'
 import { extractSpeakerSamples } from './speaker-sample.js'
 import { separateVocals } from './strategies/vocal-separator.js'
-import type { AppConfig, PipelineStage, PipelineState, PipelineStrategies, SpeakerProfile, TranscriptSegment, TranslatedSegment, VideoSourceType } from './types.js'
+import type { AppConfig, PipelineStage, PipelineState, ManualReviewResult, PipelineStrategies, SpeakerProfile, TranscriptSegment, TranslatedSegment, VideoSourceType } from './types.js'
 import { getLanguageDisplayName } from './types.js'
 import { getVideoStorageKey } from './video-key.js'
 
@@ -316,6 +316,8 @@ export class PipelineOrchestrator {
   private workDir: string
   private totalSteps: number
   private speakerLabelsResolver: ((profiles: SpeakerProfile[]) => void) | null
+  private manualReviewResolver: ((result: ManualReviewResult) => void) | null
+  private pendingPauseReject: ((error: Error) => void) | null
 
   constructor(private readonly strategies: PipelineStrategies) {
     this.state = {
@@ -329,6 +331,8 @@ export class PipelineOrchestrator {
     this.workDir = ''
     this.totalSteps = TOTAL_STEPS_FULL
     this.speakerLabelsResolver = null
+    this.manualReviewResolver = null
+    this.pendingPauseReject = null
   }
 
   async start(url: string, outputDir: string, sourceType: VideoSourceType = 'youtube', config: AppConfig = getConfig()): Promise<void> {
@@ -420,10 +424,12 @@ export class PipelineOrchestrator {
               progress: 0,
               speakerProfiles: profiles,
             })
-            speakerProfiles = await new Promise<SpeakerProfile[]>((resolve) => {
+            speakerProfiles = await new Promise<SpeakerProfile[]>((resolve, reject) => {
               this.speakerLabelsResolver = resolve
+              this.pendingPauseReject = reject as (error: Error) => void
             })
             this.speakerLabelsResolver = null
+            this.pendingPauseReject = null
           } else {
             // Voice cloning: use samples directly without user labeling
             speakerProfiles = profiles
@@ -491,6 +497,7 @@ export class PipelineOrchestrator {
 
       let subtitleSegments = translationResult
       let synthesizedAudioPath: string | undefined
+      let synthesisResult: { audioPath: string; segmentTimings: { start: number; end: number; actualDuration: number }[] } | undefined
 
       if (isSubtitleOnly) {
         // Subtitle-only mode: skip TTS, use original translation timestamps
@@ -498,7 +505,7 @@ export class PipelineOrchestrator {
       } else {
         // Full translation mode: synthesize TTS audio
         this.assertNotCancelled()
-        const synthesisResult = await this.runStep('synthesizing', 4, async (onProgress, signal) => {
+        synthesisResult = await this.runStep('synthesizing', 4, async (onProgress, signal) => {
           const ttsCachePath = path.join(this.workDir, 'tts.json')
           const ttsFingerprint = createTtsFingerprint(translationResult, config, speakerProfiles)
           const cachedOutput = await readCachedOutput(ttsCachePath, ttsFingerprint)
@@ -538,6 +545,39 @@ export class PipelineOrchestrator {
               end: synthesisResult.segmentTimings[i].end,
             }))
           : translationResult
+
+      }
+
+      // Manual review pause: let user adjust subtitles/timing before final merge
+      console.log('[Pipeline] manualReviewEnabled:', config.manualReviewEnabled, 'isSubtitleOnly:', isSubtitleOnly)
+      if (config.manualReviewEnabled) {
+        this.assertNotCancelled()
+        const duration = this.state.duration ?? 0
+        const segmentTimings = isSubtitleOnly || !synthesisResult
+          ? subtitleSegments.map(s => ({ start: s.start, end: s.end, actualDuration: s.end - s.start }))
+          : synthesisResult.segmentTimings
+        this.updateState({
+          stage: 'awaiting-manual-review',
+          progress: 0,
+          manualReview: {
+            videoPath: download.videoPath,
+            synthesizedAudioPath: synthesizedAudioPath ?? '',
+            originalAudioPath: audioPath,
+            segments: subtitleSegments,
+            segmentTimings,
+            duration,
+          },
+        })
+        const reviewResult = await new Promise<ManualReviewResult>((resolve, reject) => {
+          this.manualReviewResolver = resolve
+          this.pendingPauseReject = reject
+        })
+        this.manualReviewResolver = null
+        this.pendingPauseReject = null
+        this.assertNotCancelled()
+        // Apply user edits: replace subtitle segments with edited version
+        subtitleSegments = reviewResult.segments
+        this.updateState({ manualReview: undefined, translatedSegments: subtitleSegments })
       }
 
       let instrumentalPath: string | undefined
@@ -618,11 +658,27 @@ export class PipelineOrchestrator {
   cancel(): void {
     this.cancelled = true
     this.abortController?.abort()
+    // Unblock any pending pause (speaker labels or manual review)
+    this.pendingPauseReject?.(new Error('Pipeline cancelled'))
+    this.pendingPauseReject = null
   }
 
   submitSpeakerLabels(profiles: SpeakerProfile[]): void {
     if (this.speakerLabelsResolver) {
       this.speakerLabelsResolver(profiles)
+    }
+  }
+
+  submitManualReview(result: ManualReviewResult): void {
+    if (this.manualReviewResolver) {
+      this.manualReviewResolver(result)
+    }
+  }
+
+  cancelManualReview(): void {
+    // Resume pipeline with unmodified segments
+    if (this.manualReviewResolver && this.state.manualReview) {
+      this.manualReviewResolver({ segments: this.state.manualReview.segments })
     }
   }
 

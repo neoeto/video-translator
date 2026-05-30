@@ -8,6 +8,7 @@ export type PipelineStage =
   | 'awaiting-speaker-labels'
   | 'translating'
   | 'synthesizing'
+  | 'awaiting-manual-review'
   | 'separating-vocals'
   | 'recombining'
   | 'completed'
@@ -190,6 +191,20 @@ export interface PipelineState {
   duration?: number
   sourceType?: VideoSourceType
   summary?: string
+  manualReview?: ManualReviewData
+}
+
+export interface ManualReviewData {
+  videoPath: string
+  synthesizedAudioPath: string
+  originalAudioPath: string
+  segments: TranslatedSegment[]
+  segmentTimings: { start: number; end: number; actualDuration: number }[]
+  duration: number
+}
+
+export interface ManualReviewResult {
+  segments: TranslatedSegment[]
 }
 
 // ─── Subtitle style ─────────────────────────────────────────────
@@ -292,4 +307,5 @@ export interface AppConfig {
   audioSeparatorPath: string
   subtitleTrack1: SubtitleTrack
   subtitleTrack2: SubtitleTrack
+  manualReviewEnabled: boolean
 }

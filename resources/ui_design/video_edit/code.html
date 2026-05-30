@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VidiTranslate - Video Editor</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=Geist:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-dim": "#131313",
+                      "primary": "#adc6ff",
+                      "surface-tint": "#adc6ff",
+                      "inverse-primary": "#005bc1",
+                      "surface-container": "#202020",
+                      "tertiary": "#c0c1ff",
+                      "surface-variant": "#353535",
+                      "on-secondary-fixed": "#002107",
+                      "secondary-container": "#05b046",
+                      "on-primary-container": "#00285c",
+                      "on-tertiary": "#1000a9",
+                      "on-primary": "#002e69",
+                      "on-error-container": "#ffdad6",
+                      "surface-container-high": "#2a2a2a",
+                      "on-surface-variant": "#c1c6d7",
+                      "error": "#ffb4ab",
+                      "on-tertiary-container": "#0d0096",
+                      "secondary": "#53e16f",
+                      "outline": "#8b90a0",
+                      "on-secondary-fixed-variant": "#00531c",
+                      "tertiary-fixed": "#e1e0ff",
+                      "outline-variant": "#414755",
+                      "secondary-fixed-dim": "#53e16f",
+                      "background": "#131313",
+                      "surface": "#131313",
+                      "inverse-on-surface": "#303030",
+                      "on-tertiary-fixed": "#07006c",
+                      "inverse-surface": "#e5e2e1",
+                      "tertiary-container": "#8083ff",
+                      "on-background": "#e5e2e1",
+                      "surface-container-low": "#1b1b1c",
+                      "on-primary-fixed-variant": "#004493",
+                      "surface-container-lowest": "#0e0e0e",
+                      "on-error": "#690005",
+                      "on-surface": "#e5e2e1",
+                      "primary-fixed": "#d8e2ff",
+                      "error-container": "#93000a",
+                      "surface-bright": "#393939",
+                      "surface-container-highest": "#353535",
+                      "tertiary-fixed-dim": "#c0c1ff",
+                      "primary-fixed-dim": "#adc6ff",
+                      "on-secondary-container": "#003a11",
+                      "on-secondary": "#003911",
+                      "primary-container": "#4b8eff",
+                      "secondary-fixed": "#72fe88",
+                      "on-tertiary-fixed-variant": "#2f2ebe",
+                      "on-primary-fixed": "#001a41"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "unit-sm": "8px",
+                      "unit-lg": "24px",
+                      "unit-md": "16px",
+                      "sidebar-width": "260px",
+                      "unit-xl": "48px",
+                      "unit-xs": "4px",
+                      "gutter": "16px",
+                      "container-padding": "24px"
+              },
+              "fontFamily": {
+                      "label-caps": [
+                              "Geist"
+                      ],
+                      "title-sm": [
+                              "Inter"
+                      ],
+                      "mono-data": [
+                              "Geist"
+                      ],
+                      "display-lg": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "body-sm": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "label-caps": [
+                              "11px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "title-sm": [
+                              "18px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "mono-data": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-sm": [
+                              "13px",
+                              {
+                                      "lineHeight": "18px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        body {
+            background-color: #121212;
+            color: #e5e2e1;
+        }
+        /* Custom scrollbar for timeline */
+        .timeline-scroll::-webkit-scrollbar {
+            height: 8px;
+        }
+        .timeline-scroll::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+        .timeline-scroll::-webkit-scrollbar-thumb {
+            background: #353535;
+            border-radius: 4px;
+        }
+        .timeline-scroll::-webkit-scrollbar-thumb:hover {
+            background: #414755;
+        }
+        /* Playhead line */
+        .playhead-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background-color: #ff3b30;
+            z-index: 50;
+            pointer-events: none;
+        }
+        .playhead-marker {
+            position: absolute;
+            top: 0;
+            left: -5px;
+            width: 11px;
+            height: 11px;
+            background-color: #ff3b30;
+            border-radius: 50%;
+            cursor: ew-resize;
+            z-index: 51;
+        }
+        /* Track item handles */
+        .track-item-handle {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 8px;
+            cursor: ew-resize;
+            background-color: rgba(255,255,255,0.1);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .track-item:hover .track-item-handle {
+            opacity: 1;
+        }
+        .track-item-handle.left { left: 0; }
+        .track-item-handle.right { right: 0; }
+    </style>
+</head>
+<body class="font-body-md text-body-md h-screen overflow-hidden flex">
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-full w-sidebar-width bg-surface-container-low dark:bg-surface-container-lowest border-r border-outline-variant flex flex-col h-full py-unit-lg z-20">
+<div class="px-gutter mb-unit-lg">
+<h1 class="font-display-lg text-display-lg text-primary">VidiTranslate</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Pro Workspace</p>
+</div>
+<div class="flex-1 overflow-y-auto">
+<ul class="space-y-unit-xs">
+<li>
+<a class="flex items-center px-gutter py-unit-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-unit-md" data-icon="download">download</span>
+<span>Home/Download</span>
+</a>
+</li>
+<li>
+<a class="flex items-center px-gutter py-unit-sm text-on-surface bg-white/5 border-l-2 border-primary font-bold hover:bg-surface-variant transition-colors duration-200 opacity-80 transition-all" href="#">
+<span class="material-symbols-outlined mr-unit-md" data-icon="sync" data-weight="fill" style="font-variation-settings: 'FILL' 1;">sync</span>
+<span>Processing</span>
+</a>
+</li>
+<li>
+<a class="flex items-center px-gutter py-unit-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-unit-md" data-icon="video_library">video_library</span>
+<span>Library</span>
+</a>
+</li>
+<li>
+<a class="flex items-center px-gutter py-unit-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-unit-md" data-icon="settings">settings</span>
+<span>Settings</span>
+</a>
+</li>
+</ul>
+</div>
+<div class="px-gutter mt-auto pt-unit-lg border-t border-outline-variant/30">
+<div class="flex items-center">
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center mr-3 overflow-hidden">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A professional headshot of a person looking forward, set against a dark grey background. The lighting is soft and studio-quality, emphasizing clarity and professionalism. The overall tone is modern, understated, and aligns with a premium software user profile aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAAIUcGYi9-nguav3enuHKIdl9aSQDnczMd-Wq0Dyxh6ZRlTacNbVvVOc0fXyGkp7irNcRf0ykrXNgq-VHokUdJiuj995TwhkHVubHzjZgFO0DPMgO1RqiKzOD6U-h1WxVmACLvM8oTK40O23Nd-3FTvAJrucbg4lyAdNKPANK0Wr6HKogAMugOkXpRano9608tzuPk2hfhjndiymrdUT_-ZdfRfrL1lfXaZLJCNYad1Y18Dt70OEK7D4uonUYn15oT9qs-xUmdkoo"/>
+</div>
+<div>
+<p class="font-body-md text-body-md text-on-surface">Alex Carter</p>
+<p class="font-label-caps text-label-caps text-on-surface-variant">Admin</p>
+</div>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="ml-sidebar-width flex-1 flex flex-col h-full bg-[#121212] relative">
+<!-- Header / Project Info -->
+<header class="h-16 border-b border-outline-variant/30 flex items-center justify-between px-container-padding bg-surface shrink-0 z-10">
+<div class="flex items-center">
+<span class="material-symbols-outlined text-on-surface-variant mr-3">movie</span>
+<h2 class="font-title-sm text-title-sm text-on-surface">Q3_Earnings_Global_Release</h2>
+<span class="ml-4 px-2 py-1 bg-surface-variant text-on-surface-variant rounded font-label-caps text-label-caps">H.264 1080p</span>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center justify-center w-8 h-8 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined">undo</span>
+</button>
+<button class="flex items-center justify-center w-8 h-8 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined">redo</span>
+</button>
+<div class="w-px h-6 bg-outline-variant/50 mx-2"></div>
+<button class="px-4 py-2 bg-primary text-on-primary rounded font-title-sm text-title-sm hover:bg-primary-fixed-dim transition-colors flex items-center">
+<span class="material-symbols-outlined mr-2" style="font-size: 18px;">export_notes</span>
+                    Export
+                </button>
+</div>
+</header>
+<!-- Workspace Layout -->
+<div class="flex-1 flex flex-col overflow-hidden">
+<!-- Top Half: Preview & Tools -->
+<div class="flex-1 flex min-h-[300px]">
+<!-- Video Preview -->
+<div class="flex-1 flex flex-col items-center justify-center p-container-padding bg-[#0B0B0B]">
+<div class="relative w-full max-w-4xl aspect-video bg-black rounded-lg overflow-hidden border border-surface-variant shadow-[0px_4px_12px_rgba(0,0,0,0.5)]">
+<!-- Placeholder Video Content -->
+<img alt="Video Frame" class="w-full h-full object-cover opacity-80" data-alt="A professional corporate presentation setting. A person is standing at a podium delivering a speech in a dimly lit, high-tech auditorium. The overall aesthetic is polished, corporate, and modern, suitable for an earnings release video preview. The lighting is dramatic but clean." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDC5-ubw5qQblQV69MRabFrX-kgd_EZYZ992hyD2DVZm7-yNyf7eCMDPI0TgJfP_FNvHP-hlV14XfCGj-hoMi8BmMpT5EOoDV9P7TIQqPBfvRQxpt0YYHO3w4qwZ3lV3UAkCP1cd5wWxpbccNuocx99z1HwX2CqMfbmya44VSSgJaNtaa5i2KNkm1NNzKb8cMd6fXLvUJ97yQPvzsmHayfzxZG2N9CME7TVfg-BtBeYaAqIVPP1NHH8AEVvf9TuTRGmnThtIPooRjo"/>
+<!-- Overlay Subtitles -->
+<div class="absolute bottom-10 left-0 w-full text-center px-8">
+<span class="bg-black/70 text-white px-4 py-2 rounded text-lg inline-block font-medium drop-shadow-md border border-white/10 backdrop-blur-sm">
+                                "Our global footprint expanded by 14% this quarter..."
+                            </span>
+</div>
+<!-- On-player Controls -->
+<div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-4 flex flex-col gap-2 opacity-0 hover:opacity-100 transition-opacity duration-300">
+<!-- Scrubber -->
+<div class="h-1 bg-white/20 rounded-full w-full relative cursor-pointer">
+<div class="absolute left-0 top-0 h-full bg-primary rounded-full w-1/3"></div>
+<div class="absolute left-1/3 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow"></div>
+</div>
+<!-- Controls -->
+<div class="flex justify-between items-center mt-2">
+<div class="flex items-center gap-4">
+<button class="text-white hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-weight="fill" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+<button class="text-white hover:text-primary transition-colors">
+<span class="material-symbols-outlined">volume_up</span>
+</button>
+<span class="font-mono-data text-mono-data text-white/90">00:02:14:05 / 00:15:30:00</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-white hover:text-primary transition-colors">
+<span class="material-symbols-outlined">closed_caption</span>
+</button>
+<button class="text-white hover:text-primary transition-colors">
+<span class="material-symbols-outlined">fullscreen</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Side Tools Panel -->
+<div class="w-80 bg-surface-container border-l border-outline-variant/30 flex flex-col">
+<div class="p-4 border-b border-outline-variant/30 flex gap-2">
+<button class="flex-1 py-1.5 border-b-2 border-primary text-primary font-title-sm text-title-sm">Subtitles</button>
+<button class="flex-1 py-1.5 border-b-2 border-transparent text-on-surface-variant hover:text-on-surface font-title-sm text-title-sm transition-colors">Audio</button>
+<button class="flex-1 py-1.5 border-b-2 border-transparent text-on-surface-variant hover:text-on-surface font-title-sm text-title-sm transition-colors">Info</button>
+</div>
+<div class="flex-1 overflow-y-auto p-4 space-y-3">
+<!-- Subtitle Edit Items -->
+<div class="bg-surface-container-high rounded p-3 border-l-2 border-transparent hover:bg-surface-variant transition-colors cursor-pointer">
+<div class="flex justify-between items-center mb-1">
+<span class="font-mono-data text-mono-data text-on-surface-variant">00:02:10 - 00:02:13</span>
+<span class="material-symbols-outlined text-on-surface-variant text-sm">more_vert</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface">We saw strong growth in the EMEA region.</p>
+</div>
+<div class="bg-surface-container-high rounded p-3 border-l-2 border-primary bg-surface-variant transition-colors cursor-pointer relative">
+<div class="flex justify-between items-center mb-1">
+<span class="font-mono-data text-mono-data text-primary">00:02:14 - 00:02:18</span>
+<span class="material-symbols-outlined text-on-surface-variant text-sm">more_vert</span>
+</div>
+<textarea class="w-full bg-[#181818] border border-[#333333] text-on-surface font-body-sm text-body-sm rounded p-2 focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none resize-none h-16" rows="2">"Our global footprint expanded by 14% this quarter..."</textarea>
+<div class="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r"></div>
+</div>
+<div class="bg-surface-container-high rounded p-3 border-l-2 border-transparent hover:bg-surface-variant transition-colors cursor-pointer">
+<div class="flex justify-between items-center mb-1">
+<span class="font-mono-data text-mono-data text-on-surface-variant">00:02:19 - 00:02:25</span>
+<span class="material-symbols-outlined text-on-surface-variant text-sm">more_vert</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface">Driven largely by new enterprise adoption.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Half: Timeline -->
+<div class="h-72 bg-surface-container-low border-t border-outline-variant/30 flex flex-col shrink-0">
+<!-- Timeline Toolbar -->
+<div class="h-10 border-b border-outline-variant/30 flex items-center justify-between px-4 bg-surface-container">
+<div class="flex items-center gap-1">
+<button class="w-8 h-8 rounded flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors" title="Select">
+<span class="material-symbols-outlined text-[20px]" data-weight="fill" style="font-variation-settings: 'FILL' 1;">arrow_selector_tool</span>
+</button>
+<button class="w-8 h-8 rounded flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors" title="Split">
+<span class="material-symbols-outlined text-[20px]">content_cut</span>
+</button>
+<button class="w-8 h-8 rounded flex items-center justify-center text-error hover:bg-surface-variant transition-colors" title="Delete">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+<div class="w-px h-4 bg-outline-variant/50 mx-2"></div>
+<button class="w-8 h-8 rounded flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[20px]">zoom_in</span>
+</button>
+<button class="w-8 h-8 rounded flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[20px]">zoom_out</span>
+</button>
+</div>
+<div class="font-mono-data text-mono-data text-primary border border-primary/30 bg-primary/10 px-2 py-0.5 rounded">
+                        00:02:14:05
+                    </div>
+</div>
+<!-- Timeline Body -->
+<div class="flex-1 flex overflow-hidden">
+<!-- Track Headers -->
+<div class="w-48 bg-surface-container border-r border-outline-variant/30 flex flex-col shrink-0">
+<div class="h-6 bg-[#181818] border-b border-outline-variant/30"></div> <!-- Time ruler spacer -->
+<div class="h-20 border-b border-outline-variant/30 p-2 flex flex-col justify-center bg-surface-container-low">
+<div class="flex items-center justify-between">
+<span class="font-label-caps text-label-caps text-on-surface flex items-center"><span class="material-symbols-outlined text-[16px] mr-1">videocam</span> V1</span>
+<div class="flex gap-1">
+<span class="material-symbols-outlined text-[14px] text-on-surface-variant cursor-pointer hover:text-primary">visibility</span>
+</div>
+</div>
+</div>
+<div class="h-16 border-b border-outline-variant/30 p-2 flex flex-col justify-center bg-surface-container-low">
+<div class="flex items-center justify-between">
+<span class="font-label-caps text-label-caps text-on-surface flex items-center"><span class="material-symbols-outlined text-[16px] mr-1">mic</span> A1</span>
+<div class="flex gap-1">
+<span class="material-symbols-outlined text-[14px] text-on-surface-variant cursor-pointer hover:text-primary">volume_up</span>
+</div>
+</div>
+</div>
+<div class="h-12 border-b border-outline-variant/30 p-2 flex flex-col justify-center bg-surface-container-low">
+<div class="flex items-center justify-between">
+<span class="font-label-caps text-label-caps text-primary flex items-center"><span class="material-symbols-outlined text-[16px] mr-1">subtitles</span> T1</span>
+<div class="flex gap-1">
+<span class="material-symbols-outlined text-[14px] text-on-surface-variant cursor-pointer hover:text-primary">visibility</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Track Canvas -->
+<div class="flex-1 relative overflow-x-auto overflow-y-hidden timeline-scroll bg-[#121212]">
+<!-- Time Ruler -->
+<div class="h-6 bg-[#181818] border-b border-outline-variant/30 sticky top-0 z-20 flex items-end px-4 font-mono-data text-[10px] text-on-surface-variant min-w-[1000px]">
+<!-- Simulated ruler marks -->
+<div class="w-32 border-l border-outline-variant/50 h-2 relative"><span class="absolute -top-4 -left-3">02:10</span></div>
+<div class="w-32 border-l border-outline-variant/50 h-3 relative"><span class="absolute -top-4 -left-3">02:15</span></div>
+<div class="w-32 border-l border-outline-variant/50 h-2 relative"><span class="absolute -top-4 -left-3">02:20</span></div>
+<div class="w-32 border-l border-outline-variant/50 h-3 relative"><span class="absolute -top-4 -left-3">02:25</span></div>
+<div class="w-32 border-l border-outline-variant/50 h-2 relative"><span class="absolute -top-4 -left-3">02:30</span></div>
+</div>
+<!-- Tracks Container -->
+<div class="relative min-w-[1000px] h-[calc(100%-24px)]">
+<!-- Playhead (Absolute) -->
+<div class="playhead-line" style="left: 140px;">
+<div class="playhead-marker"></div>
+</div>
+<!-- Video Track (V1) -->
+<div class="h-20 border-b border-outline-variant/20 relative group">
+<div class="absolute top-1 bottom-1 left-4 right-[500px] bg-surface-variant rounded border border-outline-variant/50 overflow-hidden flex">
+<!-- Simulated thumbnails -->
+<div class="h-full w-24 border-r border-black/50 opacity-50 bg-[url('https://images.unsplash.com/photo-1590402494587-44b71d7772f6?w=200&amp;h=100&amp;fit=crop')] bg-cover bg-center"></div>
+<div class="h-full w-24 border-r border-black/50 opacity-50 bg-[url('https://images.unsplash.com/photo-1590402494587-44b71d7772f6?w=200&amp;h=100&amp;fit=crop')] bg-cover bg-center"></div>
+<div class="h-full w-24 border-r border-black/50 opacity-50 bg-[url('https://images.unsplash.com/photo-1590402494587-44b71d7772f6?w=200&amp;h=100&amp;fit=crop')] bg-cover bg-center"></div>
+<div class="h-full w-24 border-r border-black/50 opacity-50 bg-[url('https://images.unsplash.com/photo-1590402494587-44b71d7772f6?w=200&amp;h=100&amp;fit=crop')] bg-cover bg-center"></div>
+</div>
+</div>
+<!-- Audio Track (A1) -->
+<div class="h-16 border-b border-outline-variant/20 relative group">
+<div class="absolute top-1 bottom-1 left-4 right-[500px] bg-surface-container rounded border border-secondary/30 overflow-hidden track-item">
+<div class="track-item-handle left"></div>
+<div class="track-item-handle right"></div>
+<!-- Simulated Waveform -->
+<div class="w-full h-full flex items-center px-1 gap-[1px] opacity-70">
+<div class="w-1 h-3 bg-secondary rounded-full"></div><div class="w-1 h-8 bg-secondary rounded-full"></div><div class="w-1 h-12 bg-secondary rounded-full"></div><div class="w-1 h-5 bg-secondary rounded-full"></div><div class="w-1 h-10 bg-secondary rounded-full"></div><div class="w-1 h-4 bg-secondary rounded-full"></div><div class="w-1 h-2 bg-secondary rounded-full"></div><div class="w-1 h-6 bg-secondary rounded-full"></div><div class="w-1 h-14 bg-secondary rounded-full"></div><div class="w-1 h-9 bg-secondary rounded-full"></div>
+<div class="w-1 h-3 bg-secondary rounded-full"></div><div class="w-1 h-8 bg-secondary rounded-full"></div><div class="w-1 h-12 bg-secondary rounded-full"></div><div class="w-1 h-5 bg-secondary rounded-full"></div><div class="w-1 h-10 bg-secondary rounded-full"></div><div class="w-1 h-4 bg-secondary rounded-full"></div><div class="w-1 h-2 bg-secondary rounded-full"></div>
+</div>
+</div>
+</div>
+<!-- Subtitle Track (T1) -->
+<div class="h-12 border-b border-outline-variant/20 relative">
+<!-- Block 1 -->
+<div class="absolute top-2 bottom-2 left-[10px] w-[90px] bg-surface-container rounded border border-outline-variant track-item flex items-center justify-center overflow-hidden hover:bg-surface-variant transition-colors cursor-pointer">
+<div class="track-item-handle left"></div>
+<div class="track-item-handle right"></div>
+<span class="font-body-sm text-[10px] text-on-surface-variant whitespace-nowrap truncate px-2">We saw strong...</span>
+</div>
+<!-- Block 2 (Active) -->
+<div class="absolute top-2 bottom-2 left-[110px] w-[120px] bg-primary/20 rounded border border-primary track-item flex items-center justify-center overflow-hidden cursor-pointer shadow-[0_0_8px_rgba(173,198,255,0.2)]">
+<div class="track-item-handle left bg-white/20"></div>
+<div class="track-item-handle right bg-white/20"></div>
+<span class="font-body-sm text-[10px] text-primary whitespace-nowrap truncate px-2 font-medium">"Our global footprint...</span>
+</div>
+<!-- Block 3 -->
+<div class="absolute top-2 bottom-2 left-[240px] w-[140px] bg-surface-container rounded border border-outline-variant track-item flex items-center justify-center overflow-hidden hover:bg-surface-variant transition-colors cursor-pointer">
+<div class="track-item-handle left"></div>
+<div class="track-item-handle right"></div>
+<span class="font-body-sm text-[10px] text-on-surface-variant whitespace-nowrap truncate px-2">Driven largely by...</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

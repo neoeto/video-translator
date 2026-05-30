@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, nativeTheme, screen, shell } from 'electron'
-import { statSync } from 'node:fs'
+import { createReadStream, statSync } from 'node:fs'
+import { createServer, type Server } from 'node:http'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { is } from '@electron-toolkit/utils'
@@ -13,6 +14,8 @@ import type { AppConfig, PipelineMode, PipelineState, SpeakerProfile, Translatio
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 let mainWindow: BrowserWindow | null = null
+let mediaServer: Server | null = null
+let mediaServerPort = 0
 
 // ─── Task Queue ─────────────────────────────────────────────────
 
@@ -177,6 +180,8 @@ function createWindow(): void {
 }
 
 function registerIpcHandlers(): void {
+  ipcMain.handle('media:getServerPort', () => mediaServerPort)
+
   ipcMain.handle('pipeline:start', async (_event, url: string, outputDir: string, sourceType: VideoSourceType = 'youtube'): Promise<void> => {
     if (!mainWindow) {
       throw new Error('Main window is not available')
@@ -230,6 +235,22 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('pipeline:submit-speaker-labels', (_event, profiles: SpeakerProfile[]): void => {
     currentPipeline?.submitSpeakerLabels(profiles)
+  })
+
+  ipcMain.handle('pipeline:submit-manual-review', (_event, result: { segments: { start: number; end: number; sourceText: string; targetText: string; speaker: string }[] }): void => {
+    // Validate the result from renderer
+    if (!result || !Array.isArray(result.segments)) return
+    for (const seg of result.segments) {
+      if (typeof seg.start !== 'number' || typeof seg.end !== 'number' ||
+          !Number.isFinite(seg.start) || !Number.isFinite(seg.end) ||
+          seg.start < 0 || seg.end <= seg.start) return
+      if (typeof seg.sourceText !== 'string' || typeof seg.targetText !== 'string') return
+    }
+    currentPipeline?.submitManualReview(result)
+  })
+
+  ipcMain.handle('pipeline:cancel-manual-review', (): void => {
+    currentPipeline?.cancelManualReview()
   })
 
   ipcMain.handle('config:get', (): AppConfig => getConfig())
@@ -323,9 +344,151 @@ function registerIpcHandlers(): void {
       return null
     }
   })
+
+  // ─── Editor Helpers ──────────────────────────────────────────────
+  ipcMain.handle('audio:getWaveform', async (_event, audioPath: string, samples: number): Promise<number[]> => {
+   const { promises: fsPromises } = await import('node:fs')
+   try {
+     await fsPromises.access(audioPath)
+   } catch {
+     return []
+   }
+   const ffmpegModule = await import('fluent-ffmpeg')
+   const ffmpegFn = ffmpegModule.default
+   return new Promise((resolve) => {
+     const chunks: Buffer[] = []
+     ffmpegFn(audioPath)
+       .audioChannels(1)
+       .audioFrequency(8000)
+       .format('s16le')
+       .on('error', () => resolve([]))
+       .pipe()
+       .on('data', (chunk: Buffer) => chunks.push(chunk))
+       .on('end', () => {
+         const raw = Buffer.concat(chunks)
+         const totalSamples = raw.length / 2
+         const step = Math.max(1, Math.floor(totalSamples / samples))
+         const waveform: number[] = []
+         for (let i = 0; i < totalSamples && waveform.length < samples; i += step) {
+           const val = raw.readInt16LE(i * 2)
+           waveform.push(Math.abs(val) / 32768)
+         }
+         resolve(waveform)
+       })
+   })
+  })
+
+  ipcMain.handle('video:getFrames', async (_event, videoPath: string, timestamps: number[]): Promise<string[]> => {
+   const { promises: fsPromises } = await import('node:fs')
+   const pathModule = await import('node:path')
+   const osModule = await import('node:os')
+   const ffmpegModule = await import('fluent-ffmpeg')
+   const ffmpegFn = ffmpegModule.default
+
+   const tmpDir = await fsPromises.mkdtemp(pathModule.default.join(osModule.default.tmpdir(), 'vt-frames-'))
+   const frames: string[] = []
+
+   for (const ts of timestamps.slice(0, 50)) { // Cap at 50 frames
+     const outputFile = pathModule.default.join(tmpDir, `frame-${ts.toFixed(2)}.jpg`)
+     try {
+       await new Promise<void>((resolve, reject) => {
+         ffmpegFn(videoPath)
+           .seekInput(ts)
+           .frames(1)
+           .outputOptions(['-vf', 'scale=160:-1', '-q:v', '8'])
+           .output(outputFile)
+           .on('end', () => resolve())
+           .on('error', (e: Error) => reject(e))
+           .run()
+       })
+       const buf = await fsPromises.readFile(outputFile)
+       frames.push(`data:image/jpeg;base64,${buf.toString('base64')}`)
+     } catch {
+       frames.push('')
+     }
+   }
+
+   // Cleanup temp dir
+   fsPromises.rm(tmpDir, { recursive: true, force: true }).catch(() => {})
+   return frames
+  })
 }
 
-app.whenReady().then(() => {
+// Start a local HTTP server for serving media files with proper Range support
+function startMediaServer(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const mimeTypes: Record<string, string> = {
+      '.mp4': 'video/mp4', '.webm': 'video/webm', '.mkv': 'video/x-matroska',
+      '.avi': 'video/x-msvideo', '.mov': 'video/quicktime',
+      '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.aac': 'audio/aac',
+      '.ogg': 'audio/ogg', '.flac': 'audio/flac', '.m4a': 'audio/mp4',
+    }
+
+    mediaServer = createServer((req, res) => {
+      const filePath = decodeURIComponent(req.url?.slice(1) || '')
+      if (!filePath) {
+        res.writeHead(400)
+        res.end('Missing file path')
+        return
+      }
+
+      let fileSize: number
+      try {
+        fileSize = statSync(filePath).size
+      } catch {
+        res.writeHead(404)
+        res.end('File not found')
+        return
+      }
+
+      const ext = path.extname(filePath).toLowerCase()
+      const contentType = mimeTypes[ext] || 'application/octet-stream'
+      const range = req.headers.range
+
+      if (range) {
+        const match = range.match(/bytes=(\d+)-(\d*)/)
+        if (match) {
+          const start = parseInt(match[1], 10)
+          const end = match[2] ? parseInt(match[2], 10) : fileSize - 1
+          const chunkSize = end - start + 1
+
+          res.writeHead(206, {
+            'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+            'Accept-Ranges': 'bytes',
+            'Content-Length': chunkSize,
+            'Content-Type': contentType,
+          })
+          createReadStream(filePath, { start, end }).pipe(res)
+          return
+        }
+      }
+
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type': contentType,
+        'Accept-Ranges': 'bytes',
+      })
+      createReadStream(filePath).pipe(res)
+    })
+
+    mediaServer.listen(0, '127.0.0.1', () => {
+      const addr = mediaServer!.address()
+      if (addr && typeof addr === 'object') {
+        mediaServerPort = addr.port
+        console.log(`[MediaServer] Listening on http://127.0.0.1:${mediaServerPort}`)
+        resolve(mediaServerPort)
+      } else {
+        reject(new Error('Failed to get server address'))
+      }
+    })
+
+    mediaServer.on('error', reject)
+  })
+}
+
+app.whenReady().then(async () => {
+  await startMediaServer()
+
   registerIpcHandlers()
   createWindow()
 
@@ -338,6 +501,7 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
+    mediaServer?.close()
     app.quit()
   }
 })
