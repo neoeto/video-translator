@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { usePipelineStore } from './store/usePipelineStore'
+import { useUIStore } from './store/useUIStore'
 import { InputView } from './components/InputView'
 import { ProgressView } from './components/ProgressView'
 import { ResultView } from './components/ResultView'
 import { SettingsView } from './components/SettingsView'
+import { HelpView } from './components/HelpView'
 import { VideoDetailView } from './components/VideoDetailView'
 import { VideoEditorView } from './components/VideoEditorView'
 import { SideNavBar } from './components/SideNavBar'
@@ -18,9 +20,10 @@ function App() {
   const configLocale = usePipelineStore((s) => s.config.locale)
   const configThemeMode = usePipelineStore((s) => s.config.themeMode)
   const isLoadingConfig = usePipelineStore((s) => s.isLoadingConfig)
+  const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed)
   const initLocale = useI18n((s) => s.initLocale)
   const t = useI18n((s) => s.t)
-  const [activeView, setActiveView] = useState<'home' | 'processing' | 'library' | 'settings' | 'detail' | 'editor'>('home')
+  const [activeView, setActiveView] = useState<'home' | 'processing' | 'library' | 'settings' | 'help' | 'detail' | 'editor'>('home')
   const [detailEntryId, setDetailEntryId] = useState<string | null>(null)
   const prevStageRef = useRef(stage)
 
@@ -106,6 +109,7 @@ function App() {
       case 'detail': return t('result.detail.title')
       case 'editor': return t('editor.title')
       case 'settings': return t('app.views.settings')
+      case 'help': return t('app.views.help')
       default: return ''
     }
   }
@@ -114,7 +118,7 @@ function App() {
     if (view === 'detail' && params?.entryId) {
       setDetailEntryId(params.entryId)
       setActiveView('detail')
-    } else if (view === 'home' || view === 'processing' || view === 'library' || view === 'settings' || view === 'editor') {
+    } else if (view === 'home' || view === 'processing' || view === 'library' || view === 'settings' || view === 'help' || view === 'editor') {
       setActiveView(view)
     }
   }
@@ -123,7 +127,10 @@ function App() {
     <div className="min-h-screen bg-background text-on-background flex flex-row font-body">
       <SideNavBar activeView={activeView === 'detail' ? 'library' : activeView === 'editor' ? 'processing' : activeView} onNavigate={handleNavigate} />
       
-      <div className="flex-1 ml-sidebar-width flex flex-col min-w-0">
+      <div
+        className="flex-1 flex flex-col min-w-0 transition-[margin-left] duration-200"
+        style={{ marginLeft: sidebarCollapsed ? 68 : 260 }}
+      >
         {activeView !== 'editor' && <TopAppBar title={getViewTitle()} />}
         
         <main className="flex-1 overflow-auto bg-background">
@@ -133,6 +140,7 @@ function App() {
           {activeView === 'detail' && detailEntryId && <VideoDetailView entryId={detailEntryId} onNavigate={handleNavigate} />}
           {activeView === 'editor' && <VideoEditorView onNavigate={handleNavigate} />}
           {activeView === 'settings' && <SettingsView />}
+          {activeView === 'help' && <HelpView />}
         </main>
       </div>
     </div>

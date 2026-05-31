@@ -1,5 +1,6 @@
-import React, { useState, useCallback } from 'react'
+import React, { useCallback } from 'react'
 import { usePipelineStore } from '../store/usePipelineStore'
+import { useInputStore } from '../store/useInputStore'
 import { useI18n } from '../i18n'
 import { TRANSLATION_LANGUAGES, getLanguageDisplayName, type TranslationLanguage, type VideoSourceType } from '../types'
 
@@ -62,9 +63,12 @@ export interface InputViewProps {
 export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
   const { config, saveConfig, startPipeline, queueState, isLoadingConfig } = usePipelineStore()
   const t = useI18n((s) => s.t)
-  const [videoId, setVideoId] = useState('')
-  const [localFilePath, setLocalFilePath] = useState('')
-  const [sourceType, setSourceType] = useState<VideoSourceType>('youtube')
+  const videoId = useInputStore((s) => s.videoId)
+  const setVideoId = useInputStore((s) => s.setVideoId)
+  const localFilePath = useInputStore((s) => s.localFilePath)
+  const setLocalFilePath = useInputStore((s) => s.setLocalFilePath)
+  const sourceType = useInputStore((s) => s.sourceType)
+  const setSourceType = useInputStore((s) => s.setSourceType)
 
   const hasInput = sourceType === 'local-file' ? !!localFilePath : !!videoId
   const isQueueActive = !!queueState.active
