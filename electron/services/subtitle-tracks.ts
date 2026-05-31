@@ -16,6 +16,13 @@ export interface SubtitleTracks {
   target: TimedSubtitleText[]
 }
 
+export interface SubtitleSplitConfig {
+  minWidth: number  // minimum display-width for a chunk (avoid over-fragmentation)
+  maxWidth: number  // maximum display-width for a chunk (force split at word boundary)
+}
+
+const DEFAULT_SPLIT_CONFIG: SubtitleSplitConfig = { minWidth: 20, maxWidth: 60 }
+
 const SPLIT_PUNCTUATION = new Set([
   '。', '！', '？', '，', '、', '；', '：',
   '.', '!', '?', ',', ';', ':',
@@ -43,7 +50,7 @@ function displayWidth(text: string): number {
   return width
 }
 
-function splitAtPunctuation(text: string, minSplitWidth: number): string[] {
+function splitAtPunctuation(text: string, config: SubtitleSplitConfig): string[] {
   const parts: string[] = []
   let current = ''
 
@@ -54,7 +61,7 @@ function splitAtPunctuation(text: string, minSplitWidth: number): string[] {
       if (char === '.' && i + 1 < text.length && !/\s/.test(text[i + 1])) {
         continue
       }
-      if (current.trim() && displayWidth(current.trim()) >= minSplitWidth) {
+      if (current.trim() && displayWidth(current.trim()) >= config.minWidth) {
         parts.push(current)
         current = ''
       }
@@ -62,19 +69,54 @@ function splitAtPunctuation(text: string, minSplitWidth: number): string[] {
   }
 
   if (current.trim()) {
-    if (parts.length > 0 && displayWidth(current.trim()) < minSplitWidth) {
+    if (parts.length > 0 && displayWidth(current.trim()) < config.minWidth) {
       parts[parts.length - 1] += current
     } else {
       parts.push(current)
     }
   }
 
+  const result = parts.length > 0 ? parts : [text]
+
+  // If punctuation splitting produced chunks that are still too wide, split at word boundaries
+  const refined: string[] = []
+  for (const part of result) {
+    if (displayWidth(part.trim()) > config.maxWidth) {
+      refined.push(...splitAtWordBoundary(part, config.maxWidth))
+    } else {
+      refined.push(part)
+    }
+  }
+
+  return refined.length > 0 ? refined : [text]
+}
+
+// Fallback: split long text at word boundaries when no punctuation is available
+function splitAtWordBoundary(text: string, maxWidth: number): string[] {
+  const words = text.split(/(\s+)/)
+  const parts: string[] = []
+  let current = ''
+
+  for (const word of words) {
+    const candidate = current + word
+    if (displayWidth(candidate.trim()) > maxWidth && current.trim()) {
+      parts.push(current)
+      current = word
+    } else {
+      current = candidate
+    }
+  }
+
+  if (current.trim()) {
+    parts.push(current)
+  }
+
   return parts.length > 0 ? parts : [text]
 }
 
-function splitTextIntoTimedChunks(text: string, start: number, end: number, minSplitWidth: number): TimedSubtitleText[] {
+function splitTextIntoTimedChunks(text: string, start: number, end: number, config: SubtitleSplitConfig): TimedSubtitleText[] {
   const trimmedText = text.trim()
-  const parts = splitAtPunctuation(trimmedText, minSplitWidth)
+  const parts = splitAtPunctuation(trimmedText, config)
 
   if (parts.length <= 1) {
     return [{ text: trimmedText, start, end }]
@@ -107,13 +149,14 @@ function splitTextIntoTimedChunks(text: string, start: number, end: number, minS
 
 export function splitSegmentIntoSubtitleTracks(
   segment: SubtitleTrackSegmentInput,
-  minSplitWidth: number,
+  sourceConfig: SubtitleSplitConfig = DEFAULT_SPLIT_CONFIG,
+  targetConfig: SubtitleSplitConfig = DEFAULT_SPLIT_CONFIG,
 ): SubtitleTracks {
   const sourceText = segment.sourceText.trim() || segment.targetText.trim()
   const targetText = segment.targetText.trim() || segment.sourceText.trim()
 
   return {
-    source: splitTextIntoTimedChunks(sourceText, segment.start, segment.end, minSplitWidth),
-    target: splitTextIntoTimedChunks(targetText, segment.start, segment.end, minSplitWidth),
+    source: splitTextIntoTimedChunks(sourceText, segment.start, segment.end, sourceConfig),
+    target: splitTextIntoTimedChunks(targetText, segment.start, segment.end, targetConfig),
   }
 }

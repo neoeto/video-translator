@@ -283,6 +283,9 @@ export interface AppConfig {
   outputDir: string
   subtitleStyle: SubtitleStyle
   subtitleMinSplitWidth: number
+  subtitleMaxSplitWidth: number
+  subtitleSourceMinSplitWidth: number
+  subtitleSourceMaxSplitWidth: number
   proxyEnabled: boolean
   proxyUrl: string
   proxyBypass: string

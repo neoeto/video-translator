@@ -86,6 +86,9 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
       fontFamily: 'Arial',
     },
     subtitleMinSplitWidth: 20,
+    subtitleMaxSplitWidth: 60,
+    subtitleSourceMinSplitWidth: 20,
+    subtitleSourceMaxSplitWidth: 60,
   },
   isLoadingConfig: true,
 

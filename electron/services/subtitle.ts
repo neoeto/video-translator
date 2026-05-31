@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 
 import type { SubtitleStyle, SubtitleTrack, TranslatedSegment } from './types.js'
-import { splitSegmentIntoSubtitleTracks } from './subtitle-tracks.js'
+import { splitSegmentIntoSubtitleTracks, type SubtitleSplitConfig } from './subtitle-tracks.js'
 
 const DEFAULT_VIDEO_WIDTH = 1920
 const DEFAULT_VIDEO_HEIGHT = 1080
@@ -81,14 +81,18 @@ function buildDialogueLine(
 export function generateAss(
   translatedSegments: TranslatedSegment[],
   style: SubtitleStyle,
-  videoWidth: number,
-  videoHeight: number,
-  minSplitWidth = 20,
+  _videoWidth: number,
+  _videoHeight: number,
+  sourceSplitConfig?: SubtitleSplitConfig,
+  targetSplitConfig?: SubtitleSplitConfig,
   track1: SubtitleTrack = 'target',
   track2: SubtitleTrack = 'source',
 ): string {
-  const width = videoWidth || DEFAULT_VIDEO_WIDTH
-  const height = videoHeight || DEFAULT_VIDEO_HEIGHT
+  // Always use 1080p as the PlayRes coordinate space.
+  // ASS renderers scale from PlayRes to actual video resolution automatically,
+  // so font sizes configured at 1080p baseline look the same on 720p, 4K, etc.
+  const width = DEFAULT_VIDEO_WIDTH
+  const height = DEFAULT_VIDEO_HEIGHT
   const bgAlpha = opacityToAssAlpha(style.bgOpacity)
   const bgColorASS = toAssColor(style.bgColor, bgAlpha)
   const enColorASS = toAssColor(style.enColor)
@@ -136,7 +140,7 @@ export function generateAss(
     '[Events]',
     'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
     ...translatedSegments.flatMap((segment) => {
-      const tracks = splitSegmentIntoSubtitleTracks(segment, minSplitWidth)
+      const tracks = splitSegmentIntoSubtitleTracks(segment, sourceSplitConfig, targetSplitConfig)
       return activeTracks.flatMap(({ role, styleName, y }) => {
         const chunks = role === 'source' ? tracks.source : tracks.target
         return chunks.map((chunk) =>
@@ -155,14 +159,16 @@ export function writeAssFile(
   outputPath: string,
   videoWidth?: number,
   videoHeight?: number,
-  minSplitWidth = 20
+  sourceSplitConfig?: SubtitleSplitConfig,
+  targetSplitConfig?: SubtitleSplitConfig,
 ): void {
   const ass = generateAss(
     translatedSegments,
     style,
     videoWidth ?? DEFAULT_VIDEO_WIDTH,
     videoHeight ?? DEFAULT_VIDEO_HEIGHT,
-    minSplitWidth
+    sourceSplitConfig,
+    targetSplitConfig,
   )
   fs.writeFileSync(outputPath, ass, 'utf8')
 }

@@ -2,8 +2,9 @@ import React, { useState } from 'react'
 import { usePipelineStore } from '../store/usePipelineStore'
 import { useI18n } from '../i18n'
 import {
-  commitSubtitleMinSplitWidthInput,
-  getSubtitleMinSplitWidthInputValue,
+  commitSplitWidthInput,
+  getSplitWidthInputValue,
+  DEFAULT_SPLIT_WIDTH,
 } from './subtitle-min-split-width'
 
 type SettingsTab = 'ai-services' | 'translation' | 'tts' | 'subtitles' | 'system'
@@ -17,16 +18,21 @@ export const SettingsView: React.FC = () => {
   const [showOpenAiKey, setShowOpenAiKey] = useState(false)
   const [showDeepseekKey, setShowDeepseekKey] = useState(false)
   const [showGlmKey, setShowGlmKey] = useState(false)
-  const [subtitleMinSplitWidthDraft, setSubtitleMinSplitWidthDraft] = useState<string | null>(null)
+  const [splitWidthDrafts, setSplitWidthDrafts] = useState<Record<string, string | null>>({})
 
-  const commitSubtitleMinSplitWidthDraftValue = async () => {
-    if (subtitleMinSplitWidthDraft === null) return
-
-    const nextValue = commitSubtitleMinSplitWidthInput(subtitleMinSplitWidthDraft, config.subtitleMinSplitWidth)
-    setSubtitleMinSplitWidthDraft(null)
-
-    if (nextValue !== config.subtitleMinSplitWidth) {
-      await saveConfig({ subtitleMinSplitWidth: nextValue })
+  const setSplitDraft = (key: string, value: string) => {
+    setSplitWidthDrafts((prev) => ({ ...prev, [key]: value }))
+  }
+  const clearSplitDraft = (key: string) => {
+    setSplitWidthDrafts((prev) => ({ ...prev, [key]: null }))
+  }
+  const commitSplitDraft = async (key: 'subtitleMinSplitWidth' | 'subtitleMaxSplitWidth' | 'subtitleSourceMinSplitWidth' | 'subtitleSourceMaxSplitWidth', fallback: number) => {
+    const draft = splitWidthDrafts[key] ?? null
+    if (draft === null) return
+    const nextValue = commitSplitWidthInput(draft, config[key], fallback)
+    clearSplitDraft(key)
+    if (nextValue !== config[key]) {
+      await saveConfig({ [key]: nextValue })
     }
   }
 
@@ -620,31 +626,76 @@ export const SettingsView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-on-surface-variant mb-2 uppercase tracking-wider">
-                    {t('settings.subtitles.minSplitWidth')}
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={getSubtitleMinSplitWidthInputValue(config.subtitleMinSplitWidth, subtitleMinSplitWidthDraft)}
-                    onChange={(e) => setSubtitleMinSplitWidthDraft(e.target.value)}
-                    onBlur={() => {
-                      void commitSubtitleMinSplitWidthDraftValue()
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.currentTarget.blur()
-                      }
-                      if (e.key === 'Escape') {
-                        setSubtitleMinSplitWidthDraft(null)
-                        e.currentTarget.blur()
-                      }
-                    }}
-                    className="w-32 bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono text-xs focus:border-primary focus:outline-none transition-colors"
-                  />
+                  <h4 className="text-[13px] font-semibold text-on-surface mb-3 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-sm text-primary">translate</span>
+                    {t('settings.subtitles.targetSplitHeading')}
+                  </h4>
+                  <div className="flex gap-4">
+                    {(['subtitleMinSplitWidth', 'subtitleMaxSplitWidth'] as const).map((key) => {
+                      const isMin = key === 'subtitleMinSplitWidth'
+                      const label = isMin ? t('settings.subtitles.minSplitWidth') : t('settings.subtitles.maxSplitWidth')
+                      const fallback = isMin ? DEFAULT_SPLIT_WIDTH.min : DEFAULT_SPLIT_WIDTH.max
+                      return (
+                        <div key={key}>
+                          <label className="block text-[11px] font-semibold text-on-surface-variant mb-2 uppercase tracking-wider">
+                            {label}
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            step={1}
+                            value={getSplitWidthInputValue(config[key], splitWidthDrafts[key] ?? null)}
+                            onChange={(e) => setSplitDraft(key, e.target.value)}
+                            onBlur={() => { void commitSplitDraft(key, fallback) }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') e.currentTarget.blur()
+                              if (e.key === 'Escape') { clearSplitDraft(key); e.currentTarget.blur() }
+                            }}
+                            className="w-28 bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono text-xs focus:border-primary focus:outline-none transition-colors"
+                          />
+                        </div>
+                      )
+                    })}
+                  </div>
                   <p className="text-[12px] text-on-surface-variant mt-1">
-                    {t('settings.subtitles.minSplitWidthHelp')}
+                    {t('settings.subtitles.targetSplitHelp')}
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="text-[13px] font-semibold text-on-surface mb-3 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-sm text-primary">language</span>
+                    {t('settings.subtitles.sourceSplitHeading')}
+                  </h4>
+                  <div className="flex gap-4">
+                    {(['subtitleSourceMinSplitWidth', 'subtitleSourceMaxSplitWidth'] as const).map((key) => {
+                      const isMin = key === 'subtitleSourceMinSplitWidth'
+                      const label = isMin ? t('settings.subtitles.minSplitWidth') : t('settings.subtitles.maxSplitWidth')
+                      const fallback = isMin ? DEFAULT_SPLIT_WIDTH.min : DEFAULT_SPLIT_WIDTH.max
+                      return (
+                        <div key={key}>
+                          <label className="block text-[11px] font-semibold text-on-surface-variant mb-2 uppercase tracking-wider">
+                            {label}
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            step={1}
+                            value={getSplitWidthInputValue(config[key], splitWidthDrafts[key] ?? null)}
+                            onChange={(e) => setSplitDraft(key, e.target.value)}
+                            onBlur={() => { void commitSplitDraft(key, fallback) }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') e.currentTarget.blur()
+                              if (e.key === 'Escape') { clearSplitDraft(key); e.currentTarget.blur() }
+                            }}
+                            className="w-28 bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono text-xs focus:border-primary focus:outline-none transition-colors"
+                          />
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <p className="text-[12px] text-on-surface-variant mt-1">
+                    {t('settings.subtitles.sourceSplitHelp')}
                   </p>
                 </div>
               </div>

@@ -37,15 +37,11 @@ export const VideoEditorView: React.FC<VideoEditorViewProps> = ({ onNavigate }) 
       // Load waveform data async
       const waveformAudioPath = pipelineState.manualReview.synthesizedAudioPath || pipelineState.manualReview.originalAudioPath
       if (waveformAudioPath) {
-        console.log('[Editor] Loading waveform for:', waveformAudioPath)
         window.electronAPI.getAudioWaveform(waveformAudioPath, 2000)
           .then(data => {
-            console.log('[Editor] Waveform loaded:', data.length, 'samples')
             setWaveformData(data)
           })
           .catch((err) => console.warn('[Editor] Waveform load failed:', err))
-      } else {
-        console.log('[Editor] No audio path available for waveform')
       }
     }
   }, [pipelineState.manualReview, initialized, init, setWaveformData])

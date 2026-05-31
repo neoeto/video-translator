@@ -71,15 +71,12 @@ function App() {
     const prevStage = prevStageRef.current
     prevStageRef.current = stage
 
-    console.log('[App] stage changed:', prevStage, '→', stage)
-
     // Auto-navigate to processing only on first task start (idle/completed → downloading)
     if ((prevStage === 'idle' || prevStage === 'completed') && stage === 'downloading') {
       setActiveView('processing')
     }
     // Auto-navigate to editor when pipeline enters manual review
     if (stage === 'awaiting-manual-review' && prevStage !== 'awaiting-manual-review') {
-      console.log('[App] navigating to editor')
       setActiveView('editor')
     }
     // Return to processing when leaving manual review

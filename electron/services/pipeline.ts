@@ -538,18 +538,17 @@ export class PipelineOrchestrator {
         synthesizedAudioPath = synthesisResult.audioPath
 
         // In natural mode, adjust subtitle timestamps to match actual TTS audio timing
-        subtitleSegments = config.syncMode === 'natural' && synthesisResult.segmentTimings.length === translationResult.length
+        subtitleSegments = config.syncMode === 'natural' && synthesisResult!.segmentTimings.length === translationResult.length
           ? translationResult.map((seg, i) => ({
               ...seg,
-              start: synthesisResult.segmentTimings[i].start,
-              end: synthesisResult.segmentTimings[i].end,
+              start: synthesisResult!.segmentTimings[i].start,
+              end: synthesisResult!.segmentTimings[i].end,
             }))
           : translationResult
 
       }
 
       // Manual review pause: let user adjust subtitles/timing before final merge
-      console.log('[Pipeline] manualReviewEnabled:', config.manualReviewEnabled, 'isSubtitleOnly:', isSubtitleOnly)
       if (config.manualReviewEnabled) {
         this.assertNotCancelled()
         const duration = this.state.duration ?? 0
@@ -602,9 +601,11 @@ export class PipelineOrchestrator {
         this.assertNotCancelled()
 
         const noSubtitles = config.subtitleTrack1 === 'none' && config.subtitleTrack2 === 'none'
+        const sourceSplitConfig = { minWidth: config.subtitleSourceMinSplitWidth, maxWidth: config.subtitleSourceMaxSplitWidth }
+        const targetSplitConfig = { minWidth: config.subtitleMinSplitWidth, maxWidth: config.subtitleMaxSplitWidth }
         const assContent = noSubtitles
           ? null
-          : generateAss(subtitleSegments, config.subtitleStyle, width, height, config.subtitleMinSplitWidth, config.subtitleTrack1, config.subtitleTrack2)
+          : generateAss(subtitleSegments, config.subtitleStyle, width, height, sourceSplitConfig, targetSplitConfig, config.subtitleTrack1, config.subtitleTrack2)
         const subtitlePath = noSubtitles ? undefined : path.join(this.workDir, 'subtitles.ass')
         if (assContent && subtitlePath) {
           await fs.writeFile(subtitlePath, assContent, 'utf8')
