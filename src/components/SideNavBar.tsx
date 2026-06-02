@@ -20,14 +20,29 @@ export function SideNavBar({ activeView, onNavigate }: { activeView: string, onN
         collapsed ? 'w-[68px]' : 'w-sidebar-width'
       }`}
     >
-      <div className={`flex items-center ${collapsed ? 'px-3 py-5 justify-center' : 'p-6'}`}>
+      <div className={`flex items-center ${collapsed ? 'px-3 py-5 justify-center' : 'p-6 justify-between'}`}>
         {collapsed ? (
-          <span className="text-xl font-bold text-primary">VT</span>
+          <button
+            onClick={toggleSidebar}
+            title="Expand sidebar"
+            className="text-xl font-bold text-primary hover:opacity-80 transition-opacity"
+          >
+            VT
+          </button>
         ) : (
-          <div>
-            <h1 className="text-xl font-bold text-primary tracking-tight">{t('nav.appName')}</h1>
-            <p className="text-xs text-outline uppercase tracking-wider mt-1 font-semibold">{t('nav.subtitle')}</p>
-          </div>
+          <>
+            <div>
+              <h1 className="text-xl font-bold text-primary tracking-tight">{t('nav.appName')}</h1>
+              <p className="text-xs text-outline uppercase tracking-wider mt-1 font-semibold">{t('nav.subtitle')}</p>
+            </div>
+            <button
+              onClick={toggleSidebar}
+              title={t('nav.collapse')}
+              className="p-1 rounded-md text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors"
+            >
+              <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+            </button>
+          </>
         )}
       </div>
 
@@ -58,8 +73,12 @@ export function SideNavBar({ activeView, onNavigate }: { activeView: string, onN
       </nav>
 
       <div className={`border-t border-surface-variant mt-auto ${collapsed ? 'p-2' : 'p-4'}`}>
-        {!collapsed && (
-          <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-surface-variant cursor-pointer transition-colors mb-2">
+        {collapsed ? (
+          <div className="flex justify-center py-2">
+            <span className="material-symbols-outlined text-outline text-[24px]">account_circle</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-surface-variant cursor-pointer transition-colors">
             <span className="material-symbols-outlined text-outline text-[24px]">account_circle</span>
             <div className="flex flex-col text-left">
               <span className="text-sm font-medium text-on-surface">{t('nav.userProfile')}</span>
@@ -67,16 +86,6 @@ export function SideNavBar({ activeView, onNavigate }: { activeView: string, onN
             </div>
           </div>
         )}
-        <button
-          onClick={toggleSidebar}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3 px-2'} py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors`}
-        >
-          <span className="material-symbols-outlined text-[20px]">
-            {collapsed ? 'chevron_right' : 'chevron_left'}
-          </span>
-          {!collapsed && <span className="text-xs">{t('nav.collapse')}</span>}
-        </button>
       </div>
     </div>
   )
