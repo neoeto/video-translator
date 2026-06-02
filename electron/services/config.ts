@@ -9,7 +9,9 @@ import type { AppConfig } from './types.js'
 function detectWhisperPath(): string {
   const moduleDir = path.dirname(fileURLToPath(import.meta.url))
   const projectRoot = path.resolve(moduleDir, '..', '..', '..')
-  const venvWhisper = path.join(projectRoot, '.venv', 'bin', 'whisper')
+  const binName = process.platform === 'win32' ? 'whisper.exe' : 'whisper'
+  const venvDir = process.platform === 'win32' ? 'Scripts' : 'bin'
+  const venvWhisper = path.join(projectRoot, '.venv', venvDir, binName)
   // 开发环境优先使用项目虚拟环境，避免误用系统 PATH 中版本不一致的 whisper。
   if (fs.existsSync(venvWhisper)) {
     return venvWhisper
@@ -17,9 +19,11 @@ function detectWhisperPath(): string {
 
   try {
     // 打包或用户自定义安装时再查 PATH，最后保留命令名让调用阶段给出明确错误。
-    const whichResult = execSync('which whisper', { encoding: 'utf8', timeout: 3000 }).trim()
-    if (whichResult && fs.existsSync(whichResult)) {
-      return whichResult
+    const whichCmd = process.platform === 'win32' ? 'where whisper' : 'which whisper'
+    const whichResult = execSync(whichCmd, { encoding: 'utf8', timeout: 3000 }).trim()
+    const firstLine = whichResult.split(/\r?\n/)[0]
+    if (firstLine && fs.existsSync(firstLine)) {
+      return firstLine
     }
   } catch {
     // not found on PATH
@@ -31,15 +35,19 @@ function detectWhisperPath(): string {
 function detectWhisperxPath(): string {
   const moduleDir = path.dirname(fileURLToPath(import.meta.url))
   const projectRoot = path.resolve(moduleDir, '..', '..', '..')
-  const venvWhisperx = path.join(projectRoot, '.venv', 'bin', 'whisperx')
+  const binName = process.platform === 'win32' ? 'whisperx.exe' : 'whisperx'
+  const venvDir = process.platform === 'win32' ? 'Scripts' : 'bin'
+  const venvWhisperx = path.join(projectRoot, '.venv', venvDir, binName)
   if (fs.existsSync(venvWhisperx)) {
     return venvWhisperx
   }
 
   try {
-    const whichResult = execSync('which whisperx', { encoding: 'utf8', timeout: 3000 }).trim()
-    if (whichResult && fs.existsSync(whichResult)) {
-      return whichResult
+    const whichCmd = process.platform === 'win32' ? 'where whisperx' : 'which whisperx'
+    const whichResult = execSync(whichCmd, { encoding: 'utf8', timeout: 3000 }).trim()
+    const firstLine = whichResult.split(/\r?\n/)[0]
+    if (firstLine && fs.existsSync(firstLine)) {
+      return firstLine
     }
   } catch {
     // not found on PATH
@@ -88,7 +96,7 @@ const defaultConfig: AppConfig = {
   sourceLanguage: 'auto',
   targetLanguage: 'zh',
   openaiApiKey: '',
-  outputDir: path.join(os.homedir(), 'Movies', 'video-translator'),
+  outputDir: path.join(os.homedir(), process.platform === 'darwin' ? 'Movies' : 'Videos', 'video-translator'),
   proxyEnabled: false,
   proxyUrl: '',
   proxyBypass: 'localhost, 127.0.0.1',

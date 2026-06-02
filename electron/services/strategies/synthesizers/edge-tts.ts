@@ -142,7 +142,8 @@ function isRetryableEdgeTtsError(error: unknown): boolean {
 function detectEdgeTtsPath(config: AppConfig): string {
   if (config.localWhisperCliPath) {
     const whisperDir = path.dirname(config.localWhisperCliPath)
-    const candidate = path.join(whisperDir, 'edge-tts')
+    const binName = process.platform === 'win32' ? 'edge-tts.exe' : 'edge-tts'
+    const candidate = path.join(whisperDir, binName)
     try {
       accessSync(candidate, fsConstants.X_OK)
       console.log('[edge-tts] detected at', candidate)

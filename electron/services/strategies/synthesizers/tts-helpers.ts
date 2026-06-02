@@ -133,7 +133,10 @@ export async function padAudioToDuration(inputFile: string, outputFile: string, 
 }
 
 function escapeConcatPath(filePath: string): string {
-  return filePath.replace(/'/g, "'\\''")
+  // ffmpeg concat demuxer 期望正斜杠路径；Windows 上 path.join 生成反斜杠，
+  // 部分版本无法正确解析，统一转为正斜杠确保跨平台兼容。
+  const normalized = filePath.replace(/\\/g, '/')
+  return normalized.replace(/'/g, "'\\''")
 }
 
 export async function concatAudioFiles(filePaths: string[], outputFile: string, workDir: string): Promise<void> {
