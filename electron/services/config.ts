@@ -105,6 +105,8 @@ const defaultConfig: AppConfig = {
   localWhisperCliPath: detectWhisperPath(),
   whisperxPath: detectWhisperxPath(),
   whisperxHfToken: '',
+  hfMirrorEnabled: false,
+  hfMirrorUrl: '',
   translateMode: 'openai',
   openaiModel: 'gpt-4o',
   deepseekApiKey: '',
@@ -203,6 +205,14 @@ const store = new Store<AppConfig>({
     whisperxHfToken: {
       type: 'string',
       default: defaultConfig.whisperxHfToken,
+    },
+    hfMirrorEnabled: {
+      type: 'boolean',
+      default: defaultConfig.hfMirrorEnabled,
+    },
+    hfMirrorUrl: {
+      type: 'string',
+      default: defaultConfig.hfMirrorUrl,
     },
     translateMode: {
       type: 'string',
@@ -378,6 +388,8 @@ export function setConfig(partial: Partial<AppConfig>): void {
     'localWhisperCliPath',
     'whisperxPath',
     'whisperxHfToken',
+    'hfMirrorEnabled',
+    'hfMirrorUrl',
     'translateMode',
     'openaiModel',
     'deepseekApiKey',

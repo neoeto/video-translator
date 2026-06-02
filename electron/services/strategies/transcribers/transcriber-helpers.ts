@@ -240,10 +240,14 @@ function splitByPunctuation(segment: TranscriptSegment): TranscriptSegment[] {
   return results.length > 0 ? results : [{ ...segment, words: undefined }]
 }
 
-export function buildWhisperEnv(): NodeJS.ProcessEnv {
+export function buildWhisperEnv(hfMirrorUrl?: string): NodeJS.ProcessEnv {
   const env = { ...process.env }
   // Force Python to flush stdout/stderr immediately so tqdm progress is readable in real-time
   env.PYTHONUNBUFFERED = '1'
+  // Set HuggingFace mirror endpoint for model downloads (e.g. https://hf-mirror.com)
+  if (hfMirrorUrl) {
+    env.HF_ENDPOINT = hfMirrorUrl
+  }
   if (ffmpegStatic) {
     const ffmpegDir = path.dirname(ffmpegStatic)
     env.PATH = env.PATH ? `${ffmpegDir}${path.delimiter}${env.PATH}` : ffmpegDir
@@ -257,6 +261,7 @@ export function runWhisperCli(
   cwd: string,
   onProgress?: (pct: number) => void,
   signal?: AbortSignal,
+  hfMirrorUrl?: string,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
@@ -267,7 +272,7 @@ export function runWhisperCli(
     const captureStdout = !!onProgress
     const child = spawn(command, args, {
       cwd,
-      env: buildWhisperEnv(),
+      env: buildWhisperEnv(hfMirrorUrl),
       stdio: ['ignore', captureStdout ? 'pipe' : 'ignore', 'pipe'],
     })
     const stderrChunks: Buffer[] = []

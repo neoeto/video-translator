@@ -587,6 +587,7 @@ export class PipelineOrchestrator {
             audioPath,
             workDir: this.workDir,
             audioSeparatorPath: config.audioSeparatorPath,
+            hfMirrorUrl: config.hfMirrorEnabled ? config.hfMirrorUrl : undefined,
             onProgress,
             signal,
           })

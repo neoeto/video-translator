@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
+import { buildWhisperEnv } from './transcribers/transcriber-helpers.js'
 
 const DEFAULT_MODEL = 'model_mel_band_roformer_ep_3005_sdr_11.4360.ckpt'
 
@@ -8,10 +9,11 @@ export async function separateVocals(input: {
   audioPath: string
   workDir: string
   audioSeparatorPath: string
+  hfMirrorUrl?: string
   onProgress?: (pct: number) => void
   signal?: AbortSignal
 }): Promise<{ instrumentalPath: string }> {
-  const { audioPath, workDir, audioSeparatorPath, onProgress, signal } = input
+  const { audioPath, workDir, audioSeparatorPath, hfMirrorUrl, onProgress, signal } = input
   const resolvedPath = path.resolve(audioSeparatorPath)
 
   await fs.mkdir(workDir, { recursive: true })
@@ -30,6 +32,7 @@ export async function separateVocals(input: {
 
     const proc = spawn(resolvedPath, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
+      env: buildWhisperEnv(hfMirrorUrl),
     })
 
     let stderr = ''

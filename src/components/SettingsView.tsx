@@ -368,9 +368,9 @@ export const SettingsView: React.FC = () => {
                         onChange={(e) => saveConfig({ glmModel: e.target.value })}
                         placeholder="glm-4-flash"
                         className="w-full bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono text-xs focus:border-primary focus:outline-none transition-colors"
-                      />
-                    </div>
-                  </div>
+                       />
+                     </div>
+                   </div>
                 )}
               </div>
             </section>
@@ -848,6 +848,54 @@ export const SettingsView: React.FC = () => {
                       <p className="text-xs text-on-surface-variant mt-1">
                         {t('settings.system.proxyBypassHelp')}
                       </p>
+                    </>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-on-surface-variant mb-2 uppercase tracking-wider">
+                    {t('settings.system.hfMirror')}
+                  </label>
+                  <p className="text-[12px] text-on-surface-variant mb-3">
+                    {t('settings.system.hfMirrorDescription')}
+                  </p>
+                  <div className="flex items-center gap-3 mb-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const enabled = !config.hfMirrorEnabled
+                        const updates: Partial<typeof config> = { hfMirrorEnabled: enabled }
+                        if (enabled && !config.hfMirrorUrl) {
+                          updates.hfMirrorUrl = 'https://hf-mirror.com'
+                        }
+                        saveConfig(updates)
+                      }}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        config.hfMirrorEnabled ? 'bg-primary-container' : 'bg-surface-variant'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-on-surface transition-transform ${
+                          config.hfMirrorEnabled ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                    <span className="text-sm text-on-surface-variant">
+                      {config.hfMirrorEnabled ? t('settings.system.enabled') : t('settings.system.disabled')}
+                    </span>
+                  </div>
+                  {config.hfMirrorEnabled && (
+                    <>
+                      <label className="text-xs font-medium text-on-surface-variant block">
+                        {t('settings.system.hfMirrorUrl')}
+                      </label>
+                      <input
+                        type="text"
+                        value={config.hfMirrorUrl || ''}
+                        onChange={(e) => saveConfig({ hfMirrorUrl: e.target.value })}
+                        placeholder="https://hf-mirror.com"
+                        className="w-full max-w-2xl bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono text-xs focus:border-primary focus:outline-none transition-colors mt-1"
+                      />
                     </>
                   )}
                 </div>

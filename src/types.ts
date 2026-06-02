@@ -146,6 +146,8 @@ export interface AppConfig {
   localWhisperCliPath: string
   whisperxPath: string
   whisperxHfToken: string
+  hfMirrorEnabled: boolean
+  hfMirrorUrl: string
   translateMode: TranslateMode
   openaiModel: string
   deepseekApiKey: string
