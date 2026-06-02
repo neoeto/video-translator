@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { PipelineState, AppConfig, SpeakerProfile, VideoSourceType } from './services/types.js'
+import type { PipelineState, AppConfig, DepInstallProgress, MissingDep, SpeakerProfile, VideoSourceType } from './services/types.js'
 import type { HistoryEntry } from './services/history.js'
 
 const electronAPI = {
@@ -33,6 +33,15 @@ const electronAPI = {
     ipcRenderer.invoke('config:get'),
   setConfig: (config: Partial<AppConfig>): Promise<void> =>
     ipcRenderer.invoke('config:set', config),
+  depsCheck: (sourceType: VideoSourceType): Promise<MissingDep[]> =>
+    ipcRenderer.invoke('deps:check', sourceType),
+  depsInstall: (missingDeps: MissingDep[]): Promise<MissingDep[]> =>
+    ipcRenderer.invoke('deps:install', missingDeps),
+  onDepsProgress: (callback: (progress: DepInstallProgress) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, progress: DepInstallProgress) => callback(progress)
+    ipcRenderer.on('deps:progress', handler)
+    return () => ipcRenderer.removeListener('deps:progress', handler)
+  },
   getHistory: (): Promise<HistoryEntry[]> =>
     ipcRenderer.invoke('history:get'),
   deleteHistory: (id: string): Promise<void> =>

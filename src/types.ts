@@ -126,6 +126,21 @@ export function getLanguageDisplayName(code: TranslationLanguage, uiLocale: Loca
   return TRANSLATION_LANGUAGES[code]?.[uiLocale] ?? code
 }
 
+export interface MissingDep {
+  id: string
+  name: string
+  descriptionEn: string
+  descriptionZh: string
+  estimatedSize: string
+}
+
+export interface DepInstallProgress {
+  depId: string
+  stage: 'detecting-python' | 'creating-venv' | 'installing' | 'configuring' | 'done' | 'error'
+  message: string
+  percent: number
+}
+
 export interface AppConfig {
   locale: Locale
   themeMode: ThemeMode
@@ -148,6 +163,7 @@ export interface AppConfig {
   whisperxHfToken: string
   hfMirrorEnabled: boolean
   hfMirrorUrl: string
+  ytDlpPath: string
   translateMode: TranslateMode
   openaiModel: string
   deepseekApiKey: string

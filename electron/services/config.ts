@@ -80,6 +80,29 @@ function detectAudioSeparatorPath(): string {
   return 'audio-separator'
 }
 
+function detectYtDlpPath(): string {
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url))
+  const projectRoot = path.resolve(moduleDir, '..', '..', '..')
+  const binName = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp'
+  const venvDir = process.platform === 'win32' ? 'Scripts' : 'bin'
+  const venvPath = path.join(projectRoot, '.venv', venvDir, binName)
+  if (fs.existsSync(venvPath)) {
+    return venvPath
+  }
+
+  try {
+    const whichCmd = process.platform === 'win32' ? 'where yt-dlp' : 'which yt-dlp'
+    const result = execSync(whichCmd, { encoding: 'utf8', timeout: 3000 }).trim()
+    const firstLine = result.split(/\r?\n/)[0]
+    if (firstLine && fs.existsSync(firstLine)) {
+      return firstLine
+    }
+  } catch {
+  }
+
+  return 'yt-dlp'
+}
+
 const DEFAULT_SUBTITLE_MIN_SPLIT_WIDTH = 20
 const DEFAULT_SUBTITLE_MAX_SPLIT_WIDTH = 60
 
@@ -107,6 +130,7 @@ const defaultConfig: AppConfig = {
   whisperxHfToken: '',
   hfMirrorEnabled: false,
   hfMirrorUrl: '',
+  ytDlpPath: detectYtDlpPath(),
   translateMode: 'openai',
   openaiModel: 'gpt-4o',
   deepseekApiKey: '',
@@ -213,6 +237,10 @@ const store = new Store<AppConfig>({
     hfMirrorUrl: {
       type: 'string',
       default: defaultConfig.hfMirrorUrl,
+    },
+    ytDlpPath: {
+      type: 'string',
+      default: defaultConfig.ytDlpPath,
     },
     translateMode: {
       type: 'string',
@@ -390,6 +418,7 @@ export function setConfig(partial: Partial<AppConfig>): void {
     'whisperxHfToken',
     'hfMirrorEnabled',
     'hfMirrorUrl',
+    'ytDlpPath',
     'translateMode',
     'openaiModel',
     'deepseekApiKey',

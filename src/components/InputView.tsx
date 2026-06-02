@@ -3,6 +3,7 @@ import { usePipelineStore } from '../store/usePipelineStore'
 import { useInputStore } from '../store/useInputStore'
 import { useI18n } from '../i18n'
 import { TRANSLATION_LANGUAGES, getLanguageDisplayName, type TranslationLanguage, type VideoSourceType } from '../types'
+import { DependencyDialog } from './DependencyDialog'
 
 const URL_PREFIXES: Record<string, string> = {
   youtube: 'https://www.youtube.com/watch?v=',
@@ -61,7 +62,18 @@ export interface InputViewProps {
 }
 
 export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
-  const { config, saveConfig, startPipeline, queueState, isLoadingConfig } = usePipelineStore()
+  const {
+    config,
+    saveConfig,
+    startPipeline,
+    queueState,
+    isLoadingConfig,
+    missingDeps,
+    installingDeps,
+    depInstallProgress,
+    installDeps,
+    dismissDepsDialog,
+  } = usePipelineStore()
   const t = useI18n((s) => s.t)
   const videoId = useInputStore((s) => s.videoId)
   const setVideoId = useInputStore((s) => s.setVideoId)
@@ -126,15 +138,14 @@ export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
 
   const { valid: isFormValid, error: validationError, isConfigError } = checkValidation()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (isFormValid) {
-      if (sourceType === 'local-file') {
-        startPipeline(localFilePath, sourceType)
-      } else {
-        startPipeline(buildFullUrl(videoId, sourceType), sourceType)
+      const url = sourceType === 'local-file' ? localFilePath : buildFullUrl(videoId, sourceType)
+      const started = await startPipeline(url, sourceType)
+      if (started) {
+        onNavigate('processing')
       }
-      onNavigate('processing')
     }
   }
 
@@ -166,6 +177,16 @@ export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
 
   return (
     <div className="w-full max-w-3xl mx-auto px-6 h-full flex flex-col justify-center">
+      {missingDeps && missingDeps.length > 0 && (
+        <DependencyDialog
+          missingDeps={missingDeps}
+          onInstall={installDeps}
+          onCancel={dismissDepsDialog}
+          isInstalling={installingDeps}
+          progress={depInstallProgress}
+        />
+      )}
+
       <div className="text-center mb-8">
         <h1 className="text-[32px] font-bold text-on-surface leading-[40px] tracking-tight mb-2">
           {t('input.heading')}

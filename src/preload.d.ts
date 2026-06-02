@@ -1,4 +1,4 @@
-import type { PipelineState, AppConfig, SpeakerProfile, VideoSourceType, TranslationLanguage, PipelineMode, ManualReviewResult } from './types'
+import type { PipelineState, AppConfig, DepInstallProgress, MissingDep, SpeakerProfile, VideoSourceType, TranslationLanguage, PipelineMode, ManualReviewResult } from './types'
 
 export interface QueueTask {
   id: string
@@ -48,6 +48,9 @@ export interface ElectronAPI {
   onQueueState: (callback: (state: QueueState) => void) => () => void
   getConfig: () => Promise<AppConfig>
   setConfig: (config: Partial<AppConfig>) => Promise<void>
+  depsCheck: (sourceType: VideoSourceType) => Promise<MissingDep[]>
+  depsInstall: (missingDeps: MissingDep[]) => Promise<MissingDep[]>
+  onDepsProgress: (callback: (progress: DepInstallProgress) => void) => () => void
   getHistory: () => Promise<HistoryEntry[]>
   deleteHistory: (id: string) => Promise<void>
   selectDirectory: () => Promise<string | null>

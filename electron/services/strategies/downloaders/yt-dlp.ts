@@ -21,7 +21,7 @@ function getCacheDir(outputDir: string, url: string): string {
 
 function isYtDlpMissingError(error: unknown): boolean {
   if (!(error instanceof Error)) return false
-  return error.message.includes('ENOENT') || error.message.includes('spawn yt-dlp')
+  return error.message.includes('ENOENT') || error.message.includes('yt-dlp')
 }
 
 function normalizeTitle(raw: string): string {
@@ -123,6 +123,7 @@ function toDescriptiveError(message: string, stderr = ''): Error {
 }
 
 function runYtDlp(
+  command: string,
   args: string[],
   onStdoutLine?: (line: string) => void,
   proxyUrl?: string,
@@ -147,7 +148,7 @@ function runYtDlp(
       ytDlpArgs.push('--proxy', proxyUrl)
     }
     ytDlpArgs.push(...args)
-    const child = spawn('yt-dlp', ytDlpArgs, { stdio: ['ignore', 'pipe', 'pipe'] })
+    const child = spawn(path.resolve(command || 'yt-dlp'), ytDlpArgs, { stdio: ['ignore', 'pipe', 'pipe'] })
 
     const onAbort = () => {
       child.kill('SIGTERM')
@@ -206,9 +207,9 @@ function runYtDlp(
   })
 }
 
-async function getVideoTitle(url: string, proxyUrl?: string, signal?: AbortSignal): Promise<string> {
+async function getVideoTitle(command: string, url: string, proxyUrl?: string, signal?: AbortSignal): Promise<string> {
   try {
-    const { stdout } = await runYtDlp(['--print', 'title', url], undefined, proxyUrl, signal)
+    const { stdout } = await runYtDlp(command, ['--print', 'title', url], undefined, proxyUrl, signal)
     const title = normalizeTitle(stdout.split(/\r?\n/).find(Boolean) ?? stdout)
     if (!title) {
       throw new Error('Failed to determine video title.')
@@ -266,12 +267,14 @@ export default class YtDlpDownloader implements DownloaderStrategy {
       }
 
       await fs.mkdir(cacheDir, { recursive: true })
-      const title = await getVideoTitle(url, this.config.proxyUrl, signal)
+      const ytDlpPath = this.config.ytDlpPath || 'yt-dlp'
+      const title = await getVideoTitle(ytDlpPath, url, this.config.proxyUrl, signal)
 
       let actualFilePath = path.join(cacheDir, 'video.mp4')
       let mergedFilePath: string | null = null
 
       const { stdout, stderr } = await runYtDlp(
+        ytDlpPath,
         ['-f', DOWNLOAD_FORMAT, '--merge-output-format', 'mp4', '-o', path.join(cacheDir, 'video.%(ext)s'), '--newline', '--no-warnings', url],
         (line) => {
           const progress = parseProgress(line)

@@ -5,12 +5,13 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { is } from '@electron-toolkit/utils'
 import { getConfig, setConfig } from './services/config.js'
+import { checkMissingDeps, installMissingDeps } from './services/dependency-manager.js'
 import { createPipelineStrategies } from './services/factories.js'
 import { buildHistorySourceUrl } from './services/history-source-link.js'
 import { addHistoryEntry, deleteHistoryEntry, getHistory, type HistoryEntry } from './services/history.js'
 import { cancelExport, exportVideo, type ExportResolution } from './services/export-video.js'
 import { PipelineOrchestrator } from './services/pipeline.js'
-import type { AppConfig, PipelineMode, PipelineState, SpeakerProfile, TranslationLanguage, VideoSourceType } from './services/types.js'
+import type { AppConfig, MissingDep, PipelineMode, PipelineState, SpeakerProfile, TranslationLanguage, VideoSourceType } from './services/types.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 let mainWindow: BrowserWindow | null = null
@@ -46,6 +47,7 @@ interface BroadcastQueueState {
 let currentPipeline: PipelineOrchestrator | null = null
 const taskQueue: QueueTask[] = []
 let activeTask: QueueTask | null = null
+let lastDependencySourceType: VideoSourceType = 'youtube'
 
 function toBroadcastTask(task: QueueTask): BroadcastQueueTask {
   return {
@@ -260,6 +262,20 @@ function registerIpcHandlers(): void {
     if (config.themeMode) {
       nativeTheme.themeSource = config.themeMode
     }
+  })
+
+  ipcMain.handle('deps:check', async (_event, sourceType: VideoSourceType): Promise<MissingDep[]> => {
+    lastDependencySourceType = sourceType
+    return checkMissingDeps(getConfig(), sourceType)
+  })
+
+  ipcMain.handle('deps:install', async (_event, missingDeps: MissingDep[]): Promise<MissingDep[]> => {
+    const config = getConfig()
+    const updatedPaths = await installMissingDeps(missingDeps, config, (progress) => {
+      mainWindow?.webContents.send('deps:progress', progress)
+    })
+    setConfig(updatedPaths)
+    return checkMissingDeps(getConfig(), lastDependencySourceType)
   })
 
   ipcMain.handle('history:get', (): HistoryEntry[] => getHistory())

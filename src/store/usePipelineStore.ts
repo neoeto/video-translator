@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { PipelineState, AppConfig, SpeakerProfile, VideoSourceType, ManualReviewResult } from '../types'
+import type { PipelineState, AppConfig, DepInstallProgress, MissingDep, SpeakerProfile, VideoSourceType, ManualReviewResult } from '../types'
 import type { QueueState } from '../preload'
 
 interface PipelineStore {
@@ -11,10 +11,15 @@ interface PipelineStore {
   config: AppConfig
   // Loading states
   isLoadingConfig: boolean
+  missingDeps: MissingDep[] | null
+  installingDeps: boolean
+  depInstallProgress: DepInstallProgress | null
   // Actions
   loadConfig: () => Promise<void>
   saveConfig: (partial: Partial<AppConfig>) => Promise<void>
-  startPipeline: (url: string, sourceType?: VideoSourceType) => Promise<void>
+  startPipeline: (url: string, sourceType?: VideoSourceType) => Promise<boolean>
+  installDeps: () => Promise<void>
+  dismissDepsDialog: () => void
   cancelPipeline: () => Promise<void>
   skipError: () => Promise<void>
   removeQueued: (taskId: string) => Promise<void>
@@ -59,6 +64,7 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
     whisperxHfToken: '',
     hfMirrorEnabled: false,
     hfMirrorUrl: '',
+    ytDlpPath: 'yt-dlp',
     translateMode: 'openai' as const,
     openaiModel: 'gpt-4o',
     deepseekApiKey: '',
@@ -93,6 +99,9 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
     subtitleSourceMaxSplitWidth: 60,
   },
   isLoadingConfig: true,
+  missingDeps: null,
+  installingDeps: false,
+  depInstallProgress: null,
 
   loadConfig: async () => {
     try {
@@ -118,13 +127,45 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
 
   startPipeline: async (url: string, sourceType: VideoSourceType = 'youtube') => {
     const { config } = get()
-    // Set up progress listener if not already active
+    const missing = await window.electronAPI.depsCheck(sourceType)
+    if (missing.length > 0) {
+      set({ missingDeps: missing })
+      return false
+    }
+
     if (!progressCleanup) {
       progressCleanup = window.electronAPI.onProgress((pipelineState) => {
         set({ state: pipelineState })
       })
     }
     await window.electronAPI.pipelineStart(url, config.outputDir, sourceType)
+    return true
+  },
+
+  installDeps: async () => {
+    const { missingDeps } = get()
+    if (!missingDeps?.length) return
+
+    set({ installingDeps: true, depInstallProgress: null })
+    const depsProgressCleanup = window.electronAPI.onDepsProgress((progress) => {
+      set({ depInstallProgress: progress })
+    })
+    try {
+      const remaining = await window.electronAPI.depsInstall(missingDeps)
+      set({
+        missingDeps: remaining.length > 0 ? remaining : null,
+        installingDeps: false,
+      })
+      await get().loadConfig()
+    } catch {
+      set({ installingDeps: false })
+    } finally {
+      depsProgressCleanup()
+    }
+  },
+
+  dismissDepsDialog: () => {
+    set({ missingDeps: null, installingDeps: false, depInstallProgress: null })
   },
 
   cancelPipeline: async () => {
@@ -152,7 +193,7 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
   },
 
   reset: () => {
-    set({ state: initialPipelineState })
+    set({ state: initialPipelineState, missingDeps: null, installingDeps: false, depInstallProgress: null })
   },
 
   updateState: (partial) => {
