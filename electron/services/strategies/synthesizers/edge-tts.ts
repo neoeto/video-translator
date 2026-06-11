@@ -140,6 +140,14 @@ function isRetryableEdgeTtsError(error: unknown): boolean {
 }
 
 function detectEdgeTtsPath(config: AppConfig): string {
+  if (config.edgeTtsPath && config.edgeTtsPath !== 'edge-tts') {
+    try {
+      accessSync(config.edgeTtsPath, fsConstants.X_OK)
+      return config.edgeTtsPath
+    } catch {
+      // configured path not accessible, fall through
+    }
+  }
   if (config.localWhisperCliPath) {
     const whisperDir = path.dirname(config.localWhisperCliPath)
     const binName = process.platform === 'win32' ? 'edge-tts.exe' : 'edge-tts'

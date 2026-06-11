@@ -103,6 +103,30 @@ function detectYtDlpPath(): string {
   return 'yt-dlp'
 }
 
+function detectEdgeTtsPath(): string {
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url))
+  const projectRoot = path.resolve(moduleDir, '..', '..', '..')
+  const binName = process.platform === 'win32' ? 'edge-tts.exe' : 'edge-tts'
+  const venvDir = process.platform === 'win32' ? 'Scripts' : 'bin'
+  const venvPath = path.join(projectRoot, '.venv', venvDir, binName)
+  if (fs.existsSync(venvPath)) {
+    return venvPath
+  }
+
+  try {
+    const whichCmd = process.platform === 'win32' ? 'where edge-tts' : 'which edge-tts'
+    const result = execSync(whichCmd, { encoding: 'utf8', timeout: 3000 }).trim()
+    const firstLine = result.split(/\r?\n/)[0]
+    if (firstLine && fs.existsSync(firstLine)) {
+      return firstLine
+    }
+  } catch {
+    // not found on PATH
+  }
+
+  return 'edge-tts'
+}
+
 const DEFAULT_SUBTITLE_MIN_SPLIT_WIDTH = 20
 const DEFAULT_SUBTITLE_MAX_SPLIT_WIDTH = 60
 
@@ -144,6 +168,7 @@ const defaultConfig: AppConfig = {
   indexttsApiUrl: 'http://localhost:8080',
   indexttsReferenceAudio: '',
   indexttsReferenceMode: 'speaker-sample',
+  edgeTtsPath: detectEdgeTtsPath(),
   audioSeparatorPath: detectAudioSeparatorPath(),
   subtitleTrack1: 'target',
   subtitleTrack2: 'source',
@@ -300,6 +325,10 @@ const store = new Store<AppConfig>({
       enum: ['speaker-sample', 'segment-original'],
       default: defaultConfig.indexttsReferenceMode,
     },
+    edgeTtsPath: {
+      type: 'string',
+      default: defaultConfig.edgeTtsPath,
+    },
     audioSeparatorPath: {
       type: 'string',
       default: defaultConfig.audioSeparatorPath,
@@ -432,6 +461,7 @@ export function setConfig(partial: Partial<AppConfig>): void {
     'indexttsApiUrl',
     'indexttsReferenceAudio',
     'indexttsReferenceMode',
+    'edgeTtsPath',
     'audioSeparatorPath',
     'subtitleTrack1',
     'subtitleTrack2',

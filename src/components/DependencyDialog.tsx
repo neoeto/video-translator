@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useI18n } from '../i18n'
-import type { DepInstallProgress, MissingDep } from '../types'
+import type { DepItemStatus, DepInstallProgress, MissingDep } from '../types'
 
 interface DependencyDialogProps {
   missingDeps: MissingDep[]
@@ -13,10 +13,28 @@ interface DependencyDialogProps {
 const stageLabelKeys: Record<DepInstallProgress['stage'], string> = {
   'detecting-python': 'deps.progress.detectingPython',
   'creating-venv': 'deps.progress.creatingVenv',
+  'upgrading-pip': 'deps.progress.upgradingPip',
   installing: 'deps.progress.installing',
+  downloading: 'deps.progress.downloading',
   configuring: 'deps.progress.configuring',
   done: 'deps.dialog.complete',
   error: 'deps.dialog.error',
+}
+
+function DepStatusIcon({ status }: { status: DepItemStatus }) {
+  if (status === 'done') {
+    return (
+      <span className="material-symbols-outlined text-green-500 text-[20px]">check_circle</span>
+    )
+  }
+  if (status === 'installing') {
+    return (
+      <span className="material-symbols-outlined text-primary text-[20px] animate-pulse">downloading</span>
+    )
+  }
+  return (
+    <span className="material-symbols-outlined text-on-surface-variant/40 text-[20px]">hourglass_empty</span>
+  )
 }
 
 export const DependencyDialog: React.FC<DependencyDialogProps> = ({
@@ -29,22 +47,27 @@ export const DependencyDialog: React.FC<DependencyDialogProps> = ({
   const t = useI18n((s) => s.t)
   const locale = useI18n((s) => s.locale)
   const [installCompleted, setInstallCompleted] = useState(false)
+  const [depStatuses, setDepStatuses] = useState<Record<string, DepItemStatus>>({})
 
   useEffect(() => {
-    if (progress?.stage !== 'done') return
-    setInstallCompleted(true)
-    const timer = window.setTimeout(onCancel, 1000)
-    return () => window.clearTimeout(timer)
-  }, [onCancel, progress?.stage])
-
-  const currentDepName = useMemo(() => {
-    if (!progress) return ''
-    return missingDeps.find((dep) => dep.id === progress.depId)?.name ?? progress.depId
-  }, [missingDeps, progress])
+    if (progress?.stage === 'done') {
+      setInstallCompleted(true)
+      const allDone: Record<string, DepItemStatus> = {}
+      for (const dep of missingDeps) allDone[dep.id] = 'done'
+      setDepStatuses(allDone)
+      const timer = window.setTimeout(onCancel, 1000)
+      return () => window.clearTimeout(timer)
+    }
+    if (progress?.depStatuses) {
+      setDepStatuses(progress.depStatuses)
+    }
+  }, [missingDeps, onCancel, progress?.stage, progress?.depStatuses])
 
   const progressMessage = progress
-    ? t(stageLabelKeys[progress.stage]).replace('{name}', currentDepName)
+    ? t(stageLabelKeys[progress.stage])
     : ''
+
+  const overallPercent = progress?.percent ?? 0
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4" role="dialog" aria-modal="true">
@@ -61,12 +84,15 @@ export const DependencyDialog: React.FC<DependencyDialogProps> = ({
           </div>
         </div>
 
-        <div className="p-6 space-y-4">
-          {!installCompleted && (
-            <div className="space-y-3">
-              {missingDeps.map((dep) => (
-                <div key={dep.id} className="flex items-start gap-3 bg-surface-container-lowest rounded-xl border border-outline-variant/30 p-4">
-                  <span className="material-symbols-outlined text-primary text-[20px] mt-0.5">terminal</span>
+        <div className="p-6 space-y-3">
+          {missingDeps.map((dep) => {
+            const status: DepItemStatus = depStatuses[dep.id] ?? 'pending'
+            return (
+              <div key={dep.id} className="relative overflow-hidden rounded-xl border border-outline-variant/30 bg-surface-container-lowest">
+                <div className="flex items-start gap-3 p-4">
+                  <div className="mt-0.5">
+                    <DepStatusIcon status={status} />
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-3">
                       <h3 className="text-sm font-semibold text-on-surface">{dep.name}</h3>
@@ -79,25 +105,35 @@ export const DependencyDialog: React.FC<DependencyDialogProps> = ({
                     </p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+                {status === 'installing' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-surface-container-lowest">
+                    <div
+                      className="h-full bg-primary transition-all duration-500 ease-out"
+                      style={{ width: `${Math.max(0, Math.min(100, overallPercent))}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
 
-          {isInstalling && (
+        {isInstalling && (
+          <div className="px-6 pb-2">
             <div className="bg-surface-container-low rounded-xl border border-outline-variant/30 p-4">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <span className="text-sm font-semibold text-on-surface">{progressMessage || t('deps.dialog.installing')}</span>
-                <span className="text-xs text-on-surface-variant">{progress?.percent ?? 0}%</span>
+                <span className="text-xs text-on-surface-variant">{overallPercent}%</span>
               </div>
               <div className="h-2 bg-surface-container-lowest rounded-full overflow-hidden border border-outline-variant/30">
                 <div
                   className="h-full bg-primary transition-all duration-300"
-                  style={{ width: `${Math.max(0, Math.min(100, progress?.percent ?? 0))}%` }}
+                  style={{ width: `${Math.max(0, Math.min(100, overallPercent))}%` }}
                 />
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="flex justify-end gap-3 px-6 py-4 bg-surface-container-low border-t border-outline-variant/30">
           <button

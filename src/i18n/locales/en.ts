@@ -3,6 +3,7 @@ export const en = {
   'app.views.processing': 'Active Task',
   'app.views.library': 'Video Library',
   'app.views.settings': 'Workspace Settings',
+  'app.loading': 'Loading...',
 
   'nav.home': 'Home',
   'nav.processing': 'Processing',
@@ -66,7 +67,9 @@ export const en = {
   'deps.dialog.error': 'Installation failed. Please install manually.',
   'deps.progress.detectingPython': 'Detecting Python...',
   'deps.progress.creatingVenv': 'Creating virtual environment...',
-  'deps.progress.installing': 'Installing {name}...',
+  'deps.progress.upgradingPip': 'Upgrading pip...',
+  'deps.progress.installing': 'Installing dependencies...',
+  'deps.progress.downloading': 'Downloading packages...',
   'deps.progress.configuring': 'Configuring paths...',
 
   'progress.stages.downloading': 'Download',

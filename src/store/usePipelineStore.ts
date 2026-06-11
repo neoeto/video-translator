@@ -78,6 +78,7 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
     indexttsApiUrl: 'http://localhost:8080',
     indexttsReferenceAudio: '',
     indexttsReferenceMode: 'speaker-sample' as const,
+    edgeTtsPath: '',
     audioSeparatorPath: '',
     subtitleTrack1: 'target' as const,
     subtitleTrack2: 'source' as const,
@@ -106,16 +107,15 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
   loadConfig: async () => {
     try {
       const config = await window.electronAPI.getConfig()
-      set({ config, isLoadingConfig: false })
+      set({ config: (config && typeof config === 'object') ? config : get().config, isLoadingConfig: false })
+
+      if (!queueCleanup) {
+        queueCleanup = window.electronAPI.onQueueState((qs) => {
+          set({ queueState: qs })
+        })
+      }
     } catch {
       set({ isLoadingConfig: false })
-    }
-
-    // Set up queue state listener
-    if (!queueCleanup) {
-      queueCleanup = window.electronAPI.onQueueState((qs) => {
-        set({ queueState: qs })
-      })
     }
   },
 

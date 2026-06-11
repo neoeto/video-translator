@@ -15,7 +15,8 @@
     "dist": "npm run build && electron-builder",
     "dist:mac": "npm run build && electron-builder --mac",
     "dist:win": "npm run build && electron-builder --win",
-    "dist:linux": "npm run build && electron-builder --linux"
+    "dist:linux": "npm run build && electron-builder --linux",
+    "setup-python": "npx tsx scripts/setup-python.ts"
   },
   "build": {
     "appId": "com.viditranslate.app",
@@ -31,6 +32,17 @@
       {
         "from": "resources/icon.png",
         "to": "icon.png"
+      },
+      {
+        "from": "resources/python",
+        "to": "python",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "requirements.lock",
+        "to": "requirements.lock"
       }
     ],
     "mac": {

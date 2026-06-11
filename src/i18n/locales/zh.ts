@@ -5,6 +5,7 @@ export const zh: Record<TranslationKey, string> = {
   'app.views.processing': '当前任务',
   'app.views.library': '视频库',
   'app.views.settings': '工作区设置',
+  'app.loading': '加载中…',
 
   'nav.home': '首页',
   'nav.processing': '处理中',
@@ -68,7 +69,9 @@ export const zh: Record<TranslationKey, string> = {
   'deps.dialog.error': '安装失败，请手动安装。',
   'deps.progress.detectingPython': '检测 Python 环境...',
   'deps.progress.creatingVenv': '创建虚拟环境...',
-  'deps.progress.installing': '正在安装 {name}...',
+  'deps.progress.upgradingPip': '升级 pip...',
+  'deps.progress.installing': '正在安装依赖...',
+  'deps.progress.downloading': '正在下载安装包...',
   'deps.progress.configuring': '配置路径...',
 
   'progress.stages.downloading': '下载',

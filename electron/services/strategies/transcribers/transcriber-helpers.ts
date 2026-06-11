@@ -244,6 +244,11 @@ export function buildWhisperEnv(hfMirrorUrl?: string): NodeJS.ProcessEnv {
   const env = { ...process.env }
   // Force Python to flush stdout/stderr immediately so tqdm progress is readable in real-time
   env.PYTHONUNBUFFERED = '1'
+  // Force Python to use UTF-8 for stdout/stderr to avoid UnicodeEncodeError on Windows
+  // when transcript text contains characters outside the system locale (e.g. Hindi, CJK)
+  if (process.platform === 'win32') {
+    env.PYTHONIOENCODING = 'utf-8'
+  }
   // Set HuggingFace mirror endpoint for model downloads (e.g. https://hf-mirror.com)
   if (hfMirrorUrl) {
     env.HF_ENDPOINT = hfMirrorUrl

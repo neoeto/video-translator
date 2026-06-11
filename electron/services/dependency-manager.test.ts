@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import path from 'node:path'
 import test from 'node:test'
 
 // @ts-expect-error TS5097: Node's strip-types test runner requires the .ts specifier.
@@ -52,6 +53,7 @@ function config(overrides: Partial<AppConfig> = {}): AppConfig {
     indexttsApiUrl: '',
     indexttsReferenceAudio: '',
     indexttsReferenceMode: 'speaker-sample',
+    edgeTtsPath: 'edge-tts',
     audioSeparatorPath: 'audio-separator',
     subtitleTrack1: 'target',
     subtitleTrack2: 'source',
@@ -61,14 +63,15 @@ function config(overrides: Partial<AppConfig> = {}): AppConfig {
 }
 
 test('requires yt-dlp for remote sources but not local files', () => {
-  assert.deepEqual(getRequiredDeps(config(), 'youtube').map((dep) => dep.id), ['yt-dlp'])
-  assert.deepEqual(getRequiredDeps(config(), 'local-file').map((dep) => dep.id), [])
+  assert.deepEqual(getRequiredDeps(config({ ttsMode: 'openai' }), 'youtube').map((dep) => dep.id), ['yt-dlp'])
+  assert.deepEqual(getRequiredDeps(config({ ttsMode: 'openai' }), 'local-file').map((dep) => dep.id), [])
 })
 
 test('requires transcription and vocal-removal packages only when matching config modes are enabled', () => {
   const required = getRequiredDeps(config({
     transcribeMode: 'whisperx',
     audioMixMode: 'mix-vocal-removal',
+    ttsMode: 'openai',
   }), 'bilibili').map((dep) => dep.id)
 
   assert.deepEqual(required, ['yt-dlp', 'whisperx', 'audio-separator'])
@@ -77,10 +80,50 @@ test('requires transcription and vocal-removal packages only when matching confi
 test('builds the virtualenv bin path under Electron userData', () => {
   const binDir = getVenvBinDirForUserData('/tmp/video-translator-user-data')
 
-  assert.equal(
-    binDir,
-    process.platform === 'win32'
-      ? '/tmp/video-translator-user-data/.venv/Scripts'
-      : '/tmp/video-translator-user-data/.venv/bin',
-  )
+  const expected = process.platform === 'win32'
+    ? path.join('\\tmp\\video-translator-user-data', '.venv', 'Scripts')
+    : '/tmp/video-translator-user-data/.venv/bin'
+
+  assert.equal(binDir, expected)
+})
+
+test('marks whisper and whisperx as requiring PyTorch', () => {
+  const deps = getRequiredDeps(config({ transcribeMode: 'local-cli' }), 'youtube')
+  const whisper = deps.find((d) => d.id === 'whisper')
+  assert.ok(whisper, 'whisper should be a required dep')
+  assert.equal(whisper.requiresPyTorch, true)
+})
+
+test('yt-dlp does not require PyTorch', () => {
+  const deps = getRequiredDeps(config({ ttsMode: 'openai' }), 'youtube')
+  const ytdlp = deps.find((d) => d.id === 'yt-dlp')
+  assert.ok(ytdlp, 'yt-dlp should be a required dep')
+  assert.equal(ytdlp.requiresPyTorch, undefined)
+})
+
+test('whisperx is marked as requiring PyTorch', () => {
+  const deps = getRequiredDeps(config({ transcribeMode: 'whisperx' }), 'youtube')
+  const whisperx = deps.find((d) => d.id === 'whisperx')
+  assert.ok(whisperx, 'whisperx should be a required dep')
+  assert.equal(whisperx.requiresPyTorch, true)
+})
+
+test('audio-separator does not require PyTorch', () => {
+  const deps = getRequiredDeps(config({ audioMixMode: 'mix-vocal-removal' }), 'youtube')
+  const separator = deps.find((d) => d.id === 'audio-separator')
+  assert.ok(separator, 'audio-separator should be a required dep')
+  assert.equal(separator.requiresPyTorch, undefined)
+})
+
+test('edge-tts is required when ttsMode is edge', () => {
+  const deps = getRequiredDeps(config({ ttsMode: 'edge' }), 'youtube')
+  const edgeTts = deps.find((d) => d.id === 'edge-tts')
+  assert.ok(edgeTts, 'edge-tts should be a required dep')
+  assert.equal(edgeTts.requiresPyTorch, undefined)
+})
+
+test('edge-tts is not required when ttsMode is not edge', () => {
+  const deps = getRequiredDeps(config({ ttsMode: 'openai' }), 'youtube')
+  const edgeTts = deps.find((d) => d.id === 'edge-tts')
+  assert.equal(edgeTts, undefined)
 })

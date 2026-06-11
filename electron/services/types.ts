@@ -282,11 +282,16 @@ export interface MissingDep {
   estimatedSize: string
 }
 
+export type DepInstallStage = 'detecting-python' | 'creating-venv' | 'upgrading-pip' | 'installing' | 'downloading' | 'configuring' | 'done' | 'error'
+
+export type DepItemStatus = 'pending' | 'installing' | 'done'
+
 export interface DepInstallProgress {
   depId: string
-  stage: 'detecting-python' | 'creating-venv' | 'installing' | 'configuring' | 'done' | 'error'
+  stage: DepInstallStage
   message: string
   percent: number
+  depStatuses?: Record<string, DepItemStatus>
 }
 
 export interface AppConfig {
@@ -325,6 +330,7 @@ export interface AppConfig {
   indexttsApiUrl: string
   indexttsReferenceAudio: string
   indexttsReferenceMode: IndexTtsReferenceMode
+  edgeTtsPath: string
   audioSeparatorPath: string
   subtitleTrack1: SubtitleTrack
   subtitleTrack2: SubtitleTrack
