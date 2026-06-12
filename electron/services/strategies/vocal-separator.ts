@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { buildWhisperEnv } from './transcribers/transcriber-helpers.js'
+import { ensureAudioSeparatorModel } from '../model-downloader.js'
 
 const DEFAULT_MODEL = 'model_mel_band_roformer_ep_3005_sdr_11.4360.ckpt'
 
@@ -9,14 +10,25 @@ export async function separateVocals(input: {
   audioPath: string
   workDir: string
   audioSeparatorPath: string
+  modelDir: string
   hfMirrorUrl?: string
+  proxyUrl?: string
+  hfHome?: string
   onProgress?: (pct: number) => void
   signal?: AbortSignal
 }): Promise<{ instrumentalPath: string }> {
-  const { audioPath, workDir, audioSeparatorPath, hfMirrorUrl, onProgress, signal } = input
+  const { audioPath, workDir, audioSeparatorPath, modelDir, hfMirrorUrl, proxyUrl, hfHome, onProgress, signal } = input
   const resolvedPath = path.resolve(audioSeparatorPath)
 
   await fs.mkdir(workDir, { recursive: true })
+  await fs.mkdir(modelDir, { recursive: true })
+
+  // Pre-download model with CDN fallback (maps 0-8% to download, 8-100% to audio-separator)
+  await ensureAudioSeparatorModel(modelDir, proxyUrl, (downloadPct) => {
+    if (!signal?.aborted) onProgress?.(Math.round(downloadPct * 0.08))
+  })
+
+  if (signal?.aborted) throw new Error('Pipeline cancelled')
 
   await new Promise<void>((resolve, reject) => {
     if (signal?.aborted) {
@@ -30,9 +42,12 @@ export async function separateVocals(input: {
       '--output_dir', workDir,
     ]
 
+    const env = buildWhisperEnv(hfMirrorUrl, proxyUrl, hfHome)
+    env.AUDIO_SEPARATOR_MODEL_DIR = modelDir
+
     const proc = spawn(resolvedPath, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
-      env: buildWhisperEnv(hfMirrorUrl),
+      env,
     })
 
     let stderr = ''

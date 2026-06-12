@@ -32,6 +32,8 @@ export default class LocalCliTranscriber implements TranscriberStrategy {
         onProgress,
         signal,
         this.config.hfMirrorEnabled ? this.config.hfMirrorUrl : undefined,
+        this.config.proxyEnabled ? this.config.proxyUrl : undefined,
+        this.config.huggingfaceModelDir || undefined,
       )
 
       const expectedName = `${path.parse(audioPath).name}.json`

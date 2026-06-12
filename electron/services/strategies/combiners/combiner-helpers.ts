@@ -22,6 +22,7 @@ function toErrorMessage(error: unknown): string {
 
 export function normalizeCombineError(error: unknown): Error {
   const message = toErrorMessage(error)
+  console.error(`[ffmpeg-combiner] Raw error: ${message}`)
   const lower = message.toLowerCase()
 
   if (
@@ -80,6 +81,25 @@ export function getDuration(videoPath: string): Promise<number> {
   })
 }
 
+export function getDimensions(videoPath: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    ffmpeg.ffprobe(videoPath, (error, data) => {
+      if (error) {
+        reject(normalizeCombineError(error))
+        return
+      }
+      const videoStream = data.streams.find((s) => s.codec_type === 'video')
+      const width = videoStream?.width
+      const height = videoStream?.height
+      if (typeof width !== 'number' || typeof height !== 'number' || width <= 0 || height <= 0) {
+        reject(new Error('Unable to determine video dimensions'))
+        return
+      }
+      resolve({ width, height })
+    })
+  })
+}
+
 export function timeMarkToSeconds(timemark: string): number {
   const parts = timemark.split(':')
   if (parts.length !== 3) return 0
@@ -90,9 +110,14 @@ export function timeMarkToSeconds(timemark: string): number {
   return hours * 3600 + minutes * 60 + seconds
 }
 
+/**
+ * ffmpeg MSYS2 版本不识别 filter 中的 \: 转义。
+ * 将 Windows 路径转为 POSIX 格式：D:\foo\bar → /d/foo/bar
+ * macOS / Linux 路径不变。
+ */
 function escapeSubtitleFilterPath(filePath: string): string {
   return filePath
-    .replace(/\\/g, '\\\\')
+    .replace(/\\/g, '\\')
     .replace(/:/g, '\\:')
     .replace(/,/g, '\\,')
     .replace(/'/g, "\\'")
@@ -113,12 +138,10 @@ function getFontsDir(): string | null {
   return null
 }
 
-export function buildSubtitleFilter(subtitlePath: string): string {
-  // subtitles 滤镜参数用冒号分隔，路径中的特殊字符必须先转义，否则会被 ffmpeg 当作选项边界。
+export function buildSubtitleFilter(subtitlePath: string, _width?: number, _height?: number, sizePreset?: string): string {
   const filterParts = [`subtitles=${escapeSubtitleFilterPath(subtitlePath)}`]
-  const fontsDir = getFontsDir()
-  if (fontsDir) filterParts.push(`fontsdir=${escapeSubtitleFilterPath(fontsDir)}`)
-  filterParts.push("force_style='Alignment=2,MarginV=60'")
+  if (sizePreset) filterParts.push(`original_size=${sizePreset}`)
+  filterParts.push('force_style=Alignment\\=2\\,MarginV\\=60')
   return `[0:v]${filterParts.join(':')}[v]`
 }
 
@@ -160,7 +183,7 @@ const FADE_DURATION = 0.03 // 30ms fade at segment boundaries
  *
  * @returns The full volume filter string, e.g. `volume='<expr>':eval=frame`
  */
-function buildVolumeExpression(segments: { start: number; end: number }[]): string {
+export function buildVolumeExpression(segments: { start: number; end: number }[]): string {
   if (segments.length === 0) return "volume=1"
 
   // Build per-segment trapezoidal gate expressions

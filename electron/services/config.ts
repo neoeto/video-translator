@@ -8,7 +8,7 @@ import type { AppConfig } from './types.js'
 
 function detectWhisperPath(): string {
   const moduleDir = path.dirname(fileURLToPath(import.meta.url))
-  const projectRoot = path.resolve(moduleDir, '..', '..', '..')
+  const projectRoot = path.resolve(moduleDir, '..', '..')
   const binName = process.platform === 'win32' ? 'whisper.exe' : 'whisper'
   const venvDir = process.platform === 'win32' ? 'Scripts' : 'bin'
   const venvWhisper = path.join(projectRoot, '.venv', venvDir, binName)
@@ -34,7 +34,7 @@ function detectWhisperPath(): string {
 
 function detectWhisperxPath(): string {
   const moduleDir = path.dirname(fileURLToPath(import.meta.url))
-  const projectRoot = path.resolve(moduleDir, '..', '..', '..')
+  const projectRoot = path.resolve(moduleDir, '..', '..')
   const binName = process.platform === 'win32' ? 'whisperx.exe' : 'whisperx'
   const venvDir = process.platform === 'win32' ? 'Scripts' : 'bin'
   const venvWhisperx = path.join(projectRoot, '.venv', venvDir, binName)
@@ -58,7 +58,7 @@ function detectWhisperxPath(): string {
 
 function detectAudioSeparatorPath(): string {
   const moduleDir = path.dirname(fileURLToPath(import.meta.url))
-  const projectRoot = path.resolve(moduleDir, '..', '..', '..')
+  const projectRoot = path.resolve(moduleDir, '..', '..')
   const binName = process.platform === 'win32' ? 'audio-separator.exe' : 'audio-separator'
   const venvDir = process.platform === 'win32' ? 'Scripts' : 'bin'
   const venvPath = path.join(projectRoot, '.venv', venvDir, binName)
@@ -80,9 +80,21 @@ function detectAudioSeparatorPath(): string {
   return 'audio-separator'
 }
 
+function detectAudioSeparatorModelDir(): string {
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url))
+  const projectRoot = path.resolve(moduleDir, '..', '..')
+  return path.join(projectRoot, 'resources', 'audio-separator-models')
+}
+
+function detectHuggingfaceModelDir(): string {
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url))
+  const projectRoot = path.resolve(moduleDir, '..', '..')
+  return path.join(projectRoot, 'resources', 'huggingface-cache')
+}
+
 function detectYtDlpPath(): string {
   const moduleDir = path.dirname(fileURLToPath(import.meta.url))
-  const projectRoot = path.resolve(moduleDir, '..', '..', '..')
+  const projectRoot = path.resolve(moduleDir, '..', '..')
   const binName = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp'
   const venvDir = process.platform === 'win32' ? 'Scripts' : 'bin'
   const venvPath = path.join(projectRoot, '.venv', venvDir, binName)
@@ -105,7 +117,7 @@ function detectYtDlpPath(): string {
 
 function detectEdgeTtsPath(): string {
   const moduleDir = path.dirname(fileURLToPath(import.meta.url))
-  const projectRoot = path.resolve(moduleDir, '..', '..', '..')
+  const projectRoot = path.resolve(moduleDir, '..', '..')
   const binName = process.platform === 'win32' ? 'edge-tts.exe' : 'edge-tts'
   const venvDir = process.platform === 'win32' ? 'Scripts' : 'bin'
   const venvPath = path.join(projectRoot, '.venv', venvDir, binName)
@@ -170,6 +182,8 @@ const defaultConfig: AppConfig = {
   indexttsReferenceMode: 'speaker-sample',
   edgeTtsPath: detectEdgeTtsPath(),
   audioSeparatorPath: detectAudioSeparatorPath(),
+  audioSeparatorModelDir: detectAudioSeparatorModelDir(),
+  huggingfaceModelDir: detectHuggingfaceModelDir(),
   subtitleTrack1: 'target',
   subtitleTrack2: 'source',
   manualReviewEnabled: false,
@@ -332,6 +346,14 @@ const store = new Store<AppConfig>({
     audioSeparatorPath: {
       type: 'string',
       default: defaultConfig.audioSeparatorPath,
+    },
+    audioSeparatorModelDir: {
+      type: 'string',
+      default: defaultConfig.audioSeparatorModelDir,
+    },
+    huggingfaceModelDir: {
+      type: 'string',
+      default: defaultConfig.huggingfaceModelDir,
     },
     subtitleTrack1: {
       type: 'string',

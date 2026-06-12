@@ -240,7 +240,7 @@ function splitByPunctuation(segment: TranscriptSegment): TranscriptSegment[] {
   return results.length > 0 ? results : [{ ...segment, words: undefined }]
 }
 
-export function buildWhisperEnv(hfMirrorUrl?: string): NodeJS.ProcessEnv {
+export function buildWhisperEnv(hfMirrorUrl?: string, proxyUrl?: string, hfHome?: string): NodeJS.ProcessEnv {
   const env = { ...process.env }
   // Force Python to flush stdout/stderr immediately so tqdm progress is readable in real-time
   env.PYTHONUNBUFFERED = '1'
@@ -249,9 +249,21 @@ export function buildWhisperEnv(hfMirrorUrl?: string): NodeJS.ProcessEnv {
   if (process.platform === 'win32') {
     env.PYTHONIOENCODING = 'utf-8'
   }
+  // Set HuggingFace model cache directory so all HF downloads go to a unified location
+  if (hfHome) {
+    env.HF_HOME = hfHome
+  }
   // Set HuggingFace mirror endpoint for model downloads (e.g. https://hf-mirror.com)
   if (hfMirrorUrl) {
     env.HF_ENDPOINT = hfMirrorUrl
+  }
+  // Forward proxy settings so Python tools (whisper, audio-separator, etc.)
+  // can download models through the configured proxy
+  if (proxyUrl) {
+    env.HTTP_PROXY = proxyUrl
+    env.HTTPS_PROXY = proxyUrl
+    env.http_proxy = proxyUrl
+    env.https_proxy = proxyUrl
   }
   if (ffmpegStatic) {
     const ffmpegDir = path.dirname(ffmpegStatic)
@@ -267,6 +279,8 @@ export function runWhisperCli(
   onProgress?: (pct: number) => void,
   signal?: AbortSignal,
   hfMirrorUrl?: string,
+  proxyUrl?: string,
+  hfHome?: string,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
@@ -277,7 +291,7 @@ export function runWhisperCli(
     const captureStdout = !!onProgress
     const child = spawn(command, args, {
       cwd,
-      env: buildWhisperEnv(hfMirrorUrl),
+      env: buildWhisperEnv(hfMirrorUrl, proxyUrl, hfHome),
       stdio: ['ignore', captureStdout ? 'pipe' : 'ignore', 'pipe'],
     })
     const stderrChunks: Buffer[] = []

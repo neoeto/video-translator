@@ -583,11 +583,22 @@ export class PipelineOrchestrator {
       if (!isSubtitleOnly && config.audioMixMode === 'mix-vocal-removal') {
         this.assertNotCancelled()
         instrumentalPath = await this.runStep('separating-vocals', 5, async (onProgress, signal) => {
+          // Check cache: if instrumental file already exists from a previous run, reuse it
+          const existingInstrumental = (await fs.readdir(this.workDir).catch(() => [] as string[]))
+            .find(f => f.includes('(Instrumental)'))
+          if (existingInstrumental) {
+            onProgress(100)
+            return path.join(this.workDir, existingInstrumental)
+          }
+
           const result = await separateVocals({
             audioPath,
             workDir: this.workDir,
             audioSeparatorPath: config.audioSeparatorPath,
+            modelDir: config.audioSeparatorModelDir,
             hfMirrorUrl: config.hfMirrorEnabled ? config.hfMirrorUrl : undefined,
+            proxyUrl: config.proxyEnabled ? config.proxyUrl : undefined,
+            hfHome: config.huggingfaceModelDir || undefined,
             onProgress,
             signal,
           })

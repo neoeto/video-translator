@@ -36,7 +36,9 @@ export default class WhisperXTranscriber implements TranscriberStrategy {
 
       onProgress?.(10)
       await runWhisperCli(whisperxPath, args, outputDir, onProgress, signal,
-        this.config.hfMirrorEnabled ? this.config.hfMirrorUrl : undefined)
+        this.config.hfMirrorEnabled ? this.config.hfMirrorUrl : undefined,
+        this.config.proxyEnabled ? this.config.proxyUrl : undefined,
+        this.config.huggingfaceModelDir || undefined)
 
       const expectedName = `${path.parse(audioPath).name}.json`
       const parsedPath = path.join(outputDir, expectedName)

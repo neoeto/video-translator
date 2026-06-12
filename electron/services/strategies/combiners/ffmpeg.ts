@@ -1,13 +1,47 @@
 import ffmpeg from 'fluent-ffmpeg'
-import { promises as fs } from 'node:fs'
+import { existsSync, promises as fs, statSync } from 'node:fs'
 import path from 'node:path'
 import type { AppConfig, CombinerStrategy, CombineResult } from '../../types.js'
 import {
   ffmpegPath, ffprobePath,
-  normalizeCombineError, getDuration, timeMarkToSeconds, buildSubtitleFilter,
+  normalizeCombineError, getDuration, getDimensions, timeMarkToSeconds, buildSubtitleFilter,
   buildMixGateFilterComplex,
   buildVocalRemovalFilterComplex,
 } from './combiner-helpers.js'
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function checkInputFile(label: string, filePath: string | undefined): string | null {
+  if (!filePath) return `${label} is not provided`
+  if (!existsSync(filePath)) return `${label} not found: ${filePath}`
+  try {
+    const size = statSync(filePath).size
+    if (size === 0) return `${label} is empty: ${filePath}`
+    console.log(`[ffmpeg-combiner] ${label}: ${formatBytes(size)} (${filePath})`)
+  } catch (err) {
+    return `${label} cannot be read: ${err instanceof Error ? err.message : err}`
+  }
+  return null
+}
+
+/**
+ * 视频尺寸 → ffmpeg 命名预设。
+ * subtitles/ass 滤镜的 original_size 在 filter_complex 中用数字尺寸偶发 Invalid argument，
+ * 改用标准命名预设回避。
+ */
+function toVideoSizePreset(width: number, height: number): string | null {
+  const presets: Record<string, string> = {
+    '1280x720': 'hd720',
+    '1920x1080': 'hd1080',
+    '720x480': 'ntsc',
+    '720x576': 'pal',
+  }
+  return presets[`${width}x${height}`] ?? null
+}
 
 export default class FfmpegCombiner implements CombinerStrategy {
   readonly name = 'ffmpeg'
@@ -29,21 +63,45 @@ export default class FfmpegCombiner implements CombinerStrategy {
     if (!ffmpegPath || !ffprobePath) throw new Error('ffmpeg binary not found')
 
     const duration = await getDuration(videoPath)
+    const dimensions = await getDimensions(videoPath)
     await fs.mkdir(path.dirname(outputPath), { recursive: true })
-    const subtitleFilter = subtitlePath ? buildSubtitleFilter(subtitlePath) : null
+
+    const errors = [
+      checkInputFile('Video input', videoPath),
+      checkInputFile('Audio input', audioPath),
+      checkInputFile('Subtitle input', subtitlePath),
+      checkInputFile('Instrumental input', instrumentalPath),
+    ].filter(Boolean)
+
+    if (errors.length > 0) {
+      throw new Error(`Combiner input validation failed:\n${errors.map((e) => `  - ${e}`).join('\n')}`)
+    }
 
     const useMixGate = this.config.audioMixMode === 'mix-gate' && speechSegments && speechSegments.length > 0
     const useVocalRemoval = this.config.audioMixMode === 'mix-vocal-removal' && !!instrumentalPath
 
     let filterComplex: string
-    if (subtitleFilter) {
+    let tempSubPath: string | undefined
+
+    if (subtitlePath) {
+      // ffmpeg MSYS2 的滤镜解析不认 \: 转义。把 ASS 复写到 ffmpeg CWD 下，
+      // 用纯文件名引用，彻底避开路径中的 : 和 \。
+      const sizePreset = toVideoSizePreset(dimensions.width, dimensions.height)
+      const tempSubName = `_vt_sub_${Date.now()}.ass`
+      tempSubPath = path.join(process.cwd(), tempSubName)
+      await fs.copyFile(subtitlePath, tempSubPath)
+
+      const subFilterParts = [`subtitles=${tempSubName}`]
+      if (sizePreset) subFilterParts.push(`original_size=${sizePreset}`)
+      subFilterParts.push('force_style=Alignment\\=2\\,MarginV\\=60')
+      const subFilterStr = `[0:v]${subFilterParts.join(':')}[v]`
+
       filterComplex = useMixGate
-        ? buildMixGateFilterComplex(subtitleFilter, speechSegments, duration)
+        ? buildMixGateFilterComplex(subFilterStr, speechSegments, duration)
         : useVocalRemoval
-          ? buildVocalRemovalFilterComplex(subtitleFilter, duration)
-          : `${subtitleFilter};[1:a]apad=whole_dur=${duration}[a]`
+          ? buildVocalRemovalFilterComplex(subFilterStr, duration)
+          : `${subFilterStr};[1:a]apad=whole_dur=${duration}[a]`
     } else {
-      // No subtitles — just handle audio
       filterComplex = useMixGate
         ? buildMixGateFilterComplex('[0:v]copy[v]', speechSegments, duration)
         : useVocalRemoval
@@ -65,6 +123,8 @@ export default class FfmpegCombiner implements CombinerStrategy {
         command.input(instrumentalPath)
       }
 
+      let stderr = ''
+
       command
         .outputOptions([
           '-filter_complex', filterComplex,
@@ -77,6 +137,12 @@ export default class FfmpegCombiner implements CombinerStrategy {
           '-t', String(duration),
           '-movflags', '+faststart',
         ])
+        .on('start', (cmd: string) => {
+          console.log(`[ffmpeg-combiner] Command: ${cmd}`)
+        })
+        .on('stderr', (line: string) => {
+          stderr += line + '\n'
+        })
         .on('progress', (info) => {
           const currentTime = info.timemark ? timeMarkToSeconds(info.timemark) : 0
           const pct = Math.max(0, Math.min(100, (currentTime / duration) * 100))
@@ -84,11 +150,16 @@ export default class FfmpegCombiner implements CombinerStrategy {
         })
         .on('end', () => {
           signal?.removeEventListener('abort', onAbort)
+          if (tempSubPath) fs.unlink(tempSubPath).catch(() => {})
           onProgress(100)
           resolve()
         })
         .on('error', (error) => {
           signal?.removeEventListener('abort', onAbort)
+          if (tempSubPath) fs.unlink(tempSubPath).catch(() => {})
+          if (stderr) {
+            console.error(`[ffmpeg-combiner] Stderr:\n${stderr}`)
+          }
           reject(normalizeCombineError(error))
         })
         .save(outputPath)

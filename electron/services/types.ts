@@ -332,6 +332,8 @@ export interface AppConfig {
   indexttsReferenceMode: IndexTtsReferenceMode
   edgeTtsPath: string
   audioSeparatorPath: string
+  audioSeparatorModelDir: string
+  huggingfaceModelDir: string
   subtitleTrack1: SubtitleTrack
   subtitleTrack2: SubtitleTrack
   manualReviewEnabled: boolean

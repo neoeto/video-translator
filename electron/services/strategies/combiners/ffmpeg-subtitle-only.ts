@@ -4,7 +4,7 @@ import path from 'node:path'
 import type { AppConfig, CombinerStrategy, CombineResult } from '../../types.js'
 import {
   ffmpegPath, ffprobePath,
-  normalizeCombineError, getDuration, timeMarkToSeconds, buildSubtitleFilter,
+  normalizeCombineError, getDuration, getDimensions, timeMarkToSeconds, buildSubtitleFilter,
 } from './combiner-helpers.js'
 
 export default class FfmpegSubtitleOnlyCombiner implements CombinerStrategy {
@@ -24,8 +24,9 @@ export default class FfmpegSubtitleOnlyCombiner implements CombinerStrategy {
     if (!ffmpegPath || !ffprobePath) throw new Error('ffmpeg binary not found')
 
     const duration = await getDuration(videoPath)
+    const dimensions = await getDimensions(videoPath)
     await fs.mkdir(path.dirname(outputPath), { recursive: true })
-    const subtitleFilter = subtitlePath ? buildSubtitleFilter(subtitlePath) : null
+    const subtitleFilter = subtitlePath ? buildSubtitleFilter(subtitlePath, dimensions.width, dimensions.height) : null
 
     const outputOptions: string[] = subtitleFilter
       ? [
