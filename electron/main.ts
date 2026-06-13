@@ -152,11 +152,15 @@ function createWindow(): void {
     app.dock.setIcon(nativeImage.createFromPath(iconPath))
   }
 
+  const initialTheme = getConfig().themeMode ?? 'dark'
+  nativeTheme.themeSource = initialTheme
+
   const window = new BrowserWindow({
     width: screenWidth,
     height: screenHeight,
     icon: nativeImage.createFromPath(iconPath),
     show: false,
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#131313' : '#f9f9ff',
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.mjs'),
       sandbox: false,
@@ -166,9 +170,6 @@ function createWindow(): void {
   })
 
   mainWindow = window
-
-  const initialTheme = getConfig().themeMode ?? 'dark'
-  nativeTheme.themeSource = initialTheme
 
   window.on('ready-to-show', () => {
     window.show()
@@ -261,6 +262,7 @@ function registerIpcHandlers(): void {
     setConfig(config)
     if (config.themeMode) {
       nativeTheme.themeSource = config.themeMode
+      mainWindow?.setBackgroundColor(nativeTheme.shouldUseDarkColors ? '#131313' : '#f9f9ff')
     }
   })
 
