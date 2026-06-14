@@ -6,8 +6,8 @@ export interface EditableSegment extends TranslatedSegment {
   deleted: boolean
 }
 
-export type EditorTool = 'select' | 'cut' | 'delete'
-export type SidePanel = 'subtitles' | 'audio'
+type EditorTool = 'select' | 'cut' | 'delete'
+type SidePanel = 'subtitles' | 'audio'
 
 interface EditorState {
   // Source data
@@ -32,9 +32,8 @@ interface EditorState {
   undoStack: EditableSegment[][]
   redoStack: EditableSegment[][]
 
-  // Waveform / frames (loaded async)
+  // Waveform (loaded async)
   waveformData: number[]
-  videoFrames: string[]
 
   // Initialized
   initialized: boolean
@@ -52,7 +51,6 @@ interface EditorActions {
   setTool: (tool: EditorTool) => void
   setSelectedSegment: (id: string | null) => void
   setSidePanel: (panel: SidePanel) => void
-  setZoom: (level: number) => void
   zoomIn: () => void
   zoomOut: () => void
 
@@ -68,7 +66,6 @@ interface EditorActions {
 
   // Async data
   setWaveformData: (data: number[]) => void
-  setVideoFrames: (frames: string[]) => void
 
   // Get result for submission
   getResult: () => { segments: TranslatedSegment[] }
@@ -108,7 +105,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   undoStack: [],
   redoStack: [],
   waveformData: [],
-  videoFrames: [],
   initialized: false,
 
   init: (data) => {
@@ -133,7 +129,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       undoStack: [],
       redoStack: [],
       waveformData: [],
-      videoFrames: [],
       initialized: true,
     })
   },
@@ -151,7 +146,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       undoStack: [],
       redoStack: [],
       waveformData: [],
-      videoFrames: [],
       initialized: false,
     })
   },
@@ -162,7 +156,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   setSelectedSegment: (id) => set({ selectedSegmentId: id }),
   setSidePanel: (panel) => set({ sidePanel: panel }),
 
-  setZoom: (level) => set({ zoomLevel: Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, level)) }),
   zoomIn: () => {
     const { zoomLevel } = get()
     set({ zoomLevel: Math.min(MAX_ZOOM, zoomLevel * 1.5) })
@@ -253,7 +246,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   },
 
   setWaveformData: (data) => set({ waveformData: data }),
-  setVideoFrames: (frames) => set({ videoFrames: frames }),
 
   getResult: () => {
     const { segments } = get()

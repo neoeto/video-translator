@@ -27,11 +27,6 @@ const TOTAL_STEPS_FULL = 6
 const TOTAL_STEPS_SUBTITLE_ONLY = 5
 const TOTAL_STEPS_VOCAL_REMOVAL = 7
 
-interface VideoDimensions {
-  width: number
-  height: number
-}
-
 interface CachedSegmentsFile<T> {
   fingerprint: string
   segments: T[]
@@ -250,32 +245,6 @@ async function pickReferenceSourceAudio(workDir: string, audioPath: string): Pro
     // ignore
   }
   return audioPath
-}
-
-function getVideoDimensions(videoPath: string): Promise<VideoDimensions> {
-  if (!ffprobePath) {
-    return Promise.reject(new Error('ffprobe binary not found'))
-  }
-
-  return new Promise((resolve, reject) => {
-    ffmpeg.ffprobe(videoPath, (error, data) => {
-      if (error) {
-        reject(error instanceof Error ? error : new Error(String(error)))
-        return
-      }
-
-      const videoStream = data.streams.find((stream) => stream.codec_type === 'video')
-      const width = videoStream?.width
-      const height = videoStream?.height
-
-      if (typeof width !== 'number' || typeof height !== 'number' || width <= 0 || height <= 0) {
-        reject(new Error('Unable to determine video dimensions'))
-        return
-      }
-
-      resolve({ width, height })
-    })
-  })
 }
 
 function getVideoDuration(videoPath: string): Promise<number> {
@@ -617,15 +586,13 @@ export class PipelineOrchestrator {
       const recombineStep = isSubtitleOnly ? 4 : (config.audioMixMode === 'mix-vocal-removal' ? 6 : 5)
       this.assertNotCancelled()
       const outputPath = await this.runStep('recombining', recombineStep, async (onProgress, signal) => {
-        const { width, height } = await getVideoDimensions(download.videoPath)
         this.assertNotCancelled()
-
         const noSubtitles = config.subtitleTrack1 === 'none' && config.subtitleTrack2 === 'none'
         const sourceSplitConfig = { minWidth: config.subtitleSourceMinSplitWidth, maxWidth: config.subtitleSourceMaxSplitWidth }
         const targetSplitConfig = { minWidth: config.subtitleMinSplitWidth, maxWidth: config.subtitleMaxSplitWidth }
         const assContent = noSubtitles
           ? null
-          : generateAss(subtitleSegments, config.subtitleStyle, width, height, sourceSplitConfig, targetSplitConfig, config.subtitleTrack1, config.subtitleTrack2)
+          : generateAss(subtitleSegments, config.subtitleStyle, sourceSplitConfig, targetSplitConfig, config.subtitleTrack1, config.subtitleTrack2)
         const subtitlePath = noSubtitles ? undefined : path.join(this.workDir, 'subtitles.ass')
         if (assContent && subtitlePath) {
           await fs.writeFile(subtitlePath, assContent, 'utf8')

@@ -117,7 +117,7 @@ export function timeMarkToSeconds(timemark: string): number {
  */
 function escapeSubtitleFilterPath(filePath: string): string {
   return filePath
-    .replace(/\\/g, '\\')
+    .replace(/\\/g, '/')
     .replace(/:/g, '\\:')
     .replace(/,/g, '\\,')
     .replace(/'/g, "\\'")
@@ -138,7 +138,7 @@ function getFontsDir(): string | null {
   return null
 }
 
-export function buildSubtitleFilter(subtitlePath: string, _width?: number, _height?: number, sizePreset?: string): string {
+export function buildSubtitleFilter(subtitlePath: string, sizePreset?: string): string {
   const filterParts = [`subtitles=${escapeSubtitleFilterPath(subtitlePath)}`]
   if (sizePreset) filterParts.push(`original_size=${sizePreset}`)
   filterParts.push('force_style=Alignment\\=2\\,MarginV\\=60')

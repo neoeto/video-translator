@@ -23,13 +23,6 @@ export interface SpeakerProfile {
   sampleDataUrl?: string
 }
 
-export interface Segment {
-  start: number
-  end: number
-  text: string
-  speaker: string
-}
-
 export interface TranslatedSegment {
   start: number
   end: number

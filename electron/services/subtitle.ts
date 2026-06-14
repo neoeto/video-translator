@@ -1,5 +1,3 @@
-import fs from 'node:fs'
-
 import type { SubtitleStyle, SubtitleTrack, TranslatedSegment } from './types.js'
 import { splitSegmentIntoSubtitleTracks, type SubtitleSplitConfig } from './subtitle-tracks.js'
 
@@ -81,8 +79,6 @@ function buildDialogueLine(
 export function generateAss(
   translatedSegments: TranslatedSegment[],
   style: SubtitleStyle,
-  _videoWidth: number,
-  _videoHeight: number,
   sourceSplitConfig?: SubtitleSplitConfig,
   targetSplitConfig?: SubtitleSplitConfig,
   track1: SubtitleTrack = 'target',
@@ -151,24 +147,4 @@ export function generateAss(
   ]
 
   return lines.join('\n')
-}
-
-export function writeAssFile(
-  translatedSegments: TranslatedSegment[],
-  style: SubtitleStyle,
-  outputPath: string,
-  videoWidth?: number,
-  videoHeight?: number,
-  sourceSplitConfig?: SubtitleSplitConfig,
-  targetSplitConfig?: SubtitleSplitConfig,
-): void {
-  const ass = generateAss(
-    translatedSegments,
-    style,
-    videoWidth ?? DEFAULT_VIDEO_WIDTH,
-    videoHeight ?? DEFAULT_VIDEO_HEIGHT,
-    sourceSplitConfig,
-    targetSplitConfig,
-  )
-  fs.writeFileSync(outputPath, ass, 'utf8')
 }

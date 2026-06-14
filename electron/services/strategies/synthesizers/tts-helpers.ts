@@ -16,7 +16,7 @@ const resolvedFfprobePath = resolvePackagedPath(ffprobeStatic.path)
 if (resolvedFfmpegPath) ffmpeg.setFfmpegPath(resolvedFfmpegPath)
 if (resolvedFfprobePath) ffmpeg.setFfprobePath(resolvedFfprobePath)
 
-export const DURATION_TOLERANCE = 0.3
+const DURATION_TOLERANCE = 0.3
 export const MAX_TTS_RETRIES = 3
 export const INITIAL_TTS_BACKOFF_MS = 1000
 export const TTS_SAMPLE_RATE = 24000
@@ -63,7 +63,7 @@ export function runFfmpeg(configure: (command: FfmpegCommand) => void): Promise<
   })
 }
 
-export function probeDuration(filePath: string): Promise<number> {
+function probeDuration(filePath: string): Promise<number> {
   return new Promise((resolve, reject) => {
     ffmpeg.ffprobe(filePath, (error, data) => {
       if (error) {
@@ -100,7 +100,7 @@ export async function createSilenceFile(duration: number, outputFile: string): P
  * (pcm_s16le, mono, TTS_SAMPLE_RATE). All subsequent timeline operations work
  * on wav so MP3 encoder pre-delay does not accumulate across steps.
  */
-export async function normalizeToWav(inputFile: string, outputFile: string): Promise<void> {
+async function normalizeToWav(inputFile: string, outputFile: string): Promise<void> {
   await runFfmpeg((command) => {
     command
       .input(inputFile)
@@ -112,7 +112,7 @@ export async function normalizeToWav(inputFile: string, outputFile: string): Pro
   })
 }
 
-export async function padAudioToDuration(inputFile: string, outputFile: string, targetDuration: number): Promise<void> {
+async function padAudioToDuration(inputFile: string, outputFile: string, targetDuration: number): Promise<void> {
   const currentDuration = await probeDuration(inputFile)
   const missingDuration = targetDuration - currentDuration
 
@@ -139,7 +139,7 @@ function escapeConcatPath(filePath: string): string {
   return normalized.replace(/'/g, "'\\''")
 }
 
-export async function concatAudioFiles(filePaths: string[], outputFile: string, workDir: string): Promise<void> {
+async function concatAudioFiles(filePaths: string[], outputFile: string, workDir: string): Promise<void> {
   const listFile = path.join(workDir, 'concat.txt')
   const listContent = filePaths.map((fp) => `file '${escapeConcatPath(fp)}'`).join('\n') + '\n'
   await fs.writeFile(listFile, listContent)
@@ -165,7 +165,7 @@ export async function concatAudioFiles(filePaths: string[], outputFile: string, 
 const ATEMPO_MIN = 0.5
 const ATEMPO_MAX = 2.0
 
-export function buildAtempoFilter(playbackRate: number): string {
+function buildAtempoFilter(playbackRate: number): string {
   const filters: number[] = []
   let remainingRate = playbackRate
 
@@ -182,7 +182,7 @@ export function buildAtempoFilter(playbackRate: number): string {
   return filters.map((rate) => `atempo=${rate.toFixed(6)}`).join(',')
 }
 
-export async function adjustAudioTempo(
+async function adjustAudioTempo(
   inputFile: string,
   outputFile: string,
   actualDuration: number,

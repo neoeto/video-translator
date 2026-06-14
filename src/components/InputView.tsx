@@ -2,7 +2,7 @@ import React, { useCallback } from 'react'
 import { usePipelineStore } from '../store/usePipelineStore'
 import { useInputStore } from '../store/useInputStore'
 import { useI18n } from '../i18n'
-import { TRANSLATION_LANGUAGES, getLanguageDisplayName, type TranslationLanguage, type VideoSourceType } from '../types'
+import { getLanguageDisplayName, type TranslationLanguage, type VideoSourceType } from '../types'
 import { DependencyDialog } from './DependencyDialog'
 
 const URL_PREFIXES: Record<string, string> = {

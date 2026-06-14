@@ -20,17 +20,11 @@ export interface DepInfo {
   estimatedSize: string
   configCondition?: { field: keyof AppConfig; value: string }
   sourceTypeCondition?: { notEquals: string }
-  requiresPyTorch?: boolean
 }
 
 interface MirrorSource {
   name: string
   indexArgs: string[]
-}
-
-interface PyTorchIndexSource {
-  name: string
-  extraIndexUrl: string
 }
 
 const MIRROR_CHAIN: MirrorSource[] = [
@@ -45,17 +39,6 @@ const MIRROR_CHAIN: MirrorSource[] = [
   {
     name: 'Official PyPI',
     indexArgs: [],
-  },
-]
-
-const PYTORCH_INDEX_CHAIN: PyTorchIndexSource[] = [
-  {
-    name: 'NJU',
-    extraIndexUrl: 'https://mirror.nju.edu.cn/pypi/simple',
-  },
-  {
-    name: 'Tsinghua PyTorch',
-    extraIndexUrl: 'https://pypi.tuna.tsinghua.edu.cn/simple',
   },
 ]
 
@@ -81,7 +64,6 @@ const DEP_REGISTRY: DepInfo[] = [
     descriptionZh: '用于本地 Whisper 语音识别。',
     estimatedSize: '~140MB',
     configCondition: { field: 'transcribeMode', value: 'local-cli' },
-    requiresPyTorch: true,
   },
   {
     id: 'whisperx',
@@ -93,7 +75,6 @@ const DEP_REGISTRY: DepInfo[] = [
     descriptionZh: '用于本地 WhisperX 转录与对齐。',
     estimatedSize: '~3GB+',
     configCondition: { field: 'transcribeMode', value: 'whisperx' },
-    requiresPyTorch: true,
   },
   {
     id: 'audio-separator',
@@ -400,14 +381,9 @@ async function upgradePip(pip: string, env: Record<string, string>, signal?: Abo
   }
 }
 
-function requiresPyTorch(deps: DepInfo[]): boolean {
-  return deps.some((dep) => dep.requiresPyTorch)
-}
-
 async function installWithMirrorFallback(
   pip: string,
   depInfos: DepInfo[],
-  needsPyTorch: boolean,
   env: Record<string, string>,
   onProgress?: (progress: DepInstallProgress) => void,
   signal?: AbortSignal,
@@ -502,7 +478,6 @@ export async function installMissingDeps(
   const embeddedBin = getEmbeddedPythonBinDir()
   const proxyEnv = buildProxyEnv(config)
   const depInfos = missingDeps.map((d) => findDepInfo(d.id))
-  const needsPyTorch = requiresPyTorch(depInfos)
 
   let pip: string
   let binDir: string
@@ -526,7 +501,7 @@ export async function installMissingDeps(
   onProgress?.({ depId: 'venv', stage: 'upgrading-pip', message: 'Upgrading pip...', percent: 15 })
   await upgradePip(pip, proxyEnv, signal)
 
-  await installWithMirrorFallback(pip, depInfos, needsPyTorch, proxyEnv, onProgress, signal, venvDir)
+  await installWithMirrorFallback(pip, depInfos, proxyEnv, onProgress, signal, venvDir)
 
   const updatedConfig: Partial<AppConfig> = {}
   for (const missingDep of missingDeps) {

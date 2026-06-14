@@ -8,7 +8,6 @@ interface InputState {
   setVideoId: (v: string) => void
   setLocalFilePath: (v: string) => void
   setSourceType: (v: VideoSourceType) => void
-  reset: () => void
 }
 
 export const useInputStore = create<InputState>((set) => ({
@@ -18,5 +17,4 @@ export const useInputStore = create<InputState>((set) => ({
   setVideoId: (videoId) => set({ videoId }),
   setLocalFilePath: (localFilePath) => set({ localFilePath }),
   setSourceType: (sourceType) => set({ sourceType }),
-  reset: () => set({ videoId: '', localFilePath: '' }),
 }))

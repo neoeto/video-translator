@@ -4,7 +4,7 @@ import path from 'node:path'
 import type { AppConfig, CombinerStrategy, CombineResult } from '../../types.js'
 import {
   ffmpegPath, ffprobePath,
-  normalizeCombineError, getDuration, getDimensions, timeMarkToSeconds, buildSubtitleFilter,
+  normalizeCombineError, getDuration, getDimensions, timeMarkToSeconds,
   buildMixGateFilterComplex,
   buildVocalRemovalFilterComplex,
 } from './combiner-helpers.js'

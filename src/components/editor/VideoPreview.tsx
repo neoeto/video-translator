@@ -121,9 +121,7 @@ export const VideoPreview: React.FC = () => {
     if (isPlaying) {
       // Always sync video position to store's currentTime before playing
       const storeTime = useEditorStore.getState().currentTime
-      console.log('[PLAY] storeTime:', storeTime, 'video.currentTime before:', video.currentTime)
       video.currentTime = storeTime
-      console.log('[PLAY] video.currentTime after set:', video.currentTime)
       if (hasSynthesizedAudio) {
         const audio = audioRef.current
         if (audio) {

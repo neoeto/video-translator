@@ -1,7 +1,7 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { createHash } from 'node:crypto'
-import type { AppConfig, DownloaderStrategy, DownloadResult } from '../../types.js'
+import type { DownloaderStrategy, DownloadResult } from '../../types.js'
 
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.mkv', '.webm', '.mov', '.m4v', '.avi', '.flv', '.wmv', '.ts', '.mts'])
 
@@ -18,8 +18,6 @@ function extractTitleFromPath(filePath: string): string {
 
 export default class LocalFileDownloader implements DownloaderStrategy {
   readonly name = 'local-file'
-
-  constructor(private readonly _config: AppConfig) {}
 
   async download(input: {
     url: string

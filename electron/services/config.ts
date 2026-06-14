@@ -501,11 +501,3 @@ export function setConfig(partial: Partial<AppConfig>): void {
     }
   }
 }
-
-export function getApiKey(): string {
-  return store.get('openaiApiKey')
-}
-
-export function setApiKey(key: string): void {
-  store.set('openaiApiKey', key)
-}

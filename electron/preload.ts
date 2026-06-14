@@ -11,8 +11,6 @@ const electronAPI = {
     ipcRenderer.invoke('pipeline:skip-error'),
   pipelineRemoveQueued: (taskId: string): Promise<void> =>
     ipcRenderer.invoke('pipeline:remove-queued', taskId),
-  pipelineGetQueue: (): Promise<{ active: unknown; pending: unknown[] }> =>
-    ipcRenderer.invoke('pipeline:get-queue'),
   submitSpeakerLabels: (profiles: SpeakerProfile[]): Promise<void> =>
     ipcRenderer.invoke('pipeline:submit-speaker-labels', profiles),
   submitManualReview: (result: { segments: { start: number; end: number; sourceText: string; targetText: string; speaker: string }[] }): Promise<void> =>
@@ -71,8 +69,6 @@ const electronAPI = {
     ipcRenderer.invoke('video:getDimensions', videoPath),
   getAudioWaveform: (audioPath: string, samples: number): Promise<number[]> =>
     ipcRenderer.invoke('audio:getWaveform', audioPath, samples),
-  getVideoFrames: (videoPath: string, timestamps: number[]): Promise<string[]> =>
-    ipcRenderer.invoke('video:getFrames', videoPath, timestamps),
   getMediaServerPort: (): Promise<number> =>
     ipcRenderer.invoke('media:getServerPort'),
 }

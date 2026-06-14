@@ -25,7 +25,7 @@ import FfmpegSubtitleOnlyCombiner from './strategies/combiners/ffmpeg-subtitle-o
 
 export function createDownloader(config: AppConfig, sourceType: VideoSourceType = 'youtube'): DownloaderStrategy {
   if (sourceType === 'local-file') {
-    return new LocalFileDownloader(config)
+    return new LocalFileDownloader()
   }
   // YouTube 和 Bilibili 均通过 yt-dlp 下载
   return new YtDlpDownloader(config)
@@ -64,7 +64,7 @@ export function createSynthesizer(config: AppConfig): SynthesizerStrategy {
 
 export function createCombiner(config: AppConfig): CombinerStrategy {
   if (config.pipelineMode === 'subtitleOnly') {
-    return new FfmpegSubtitleOnlyCombiner(config)
+    return new FfmpegSubtitleOnlyCombiner()
   }
   return new FfmpegCombiner(config)
 }

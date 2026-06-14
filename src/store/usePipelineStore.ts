@@ -27,7 +27,6 @@ interface PipelineStore {
   submitManualReview: (result: ManualReviewResult) => Promise<void>
   cancelManualReview: () => Promise<void>
   reset: () => void
-  updateState: (state: Partial<PipelineState>) => void
 }
 
 const initialPipelineState: PipelineState = {
@@ -196,9 +195,5 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
 
   reset: () => {
     set({ state: initialPipelineState, missingDeps: null, installingDeps: false, depInstallProgress: null })
-  },
-
-  updateState: (partial) => {
-    set((s) => ({ state: { ...s.state, ...partial } }))
   },
 }))

@@ -229,13 +229,6 @@ function registerIpcHandlers(): void {
     }
   })
 
-  ipcMain.handle('pipeline:get-queue', (): BroadcastQueueState => {
-    return {
-      active: activeTask ? toBroadcastTask(activeTask) : null,
-      pending: taskQueue.map(toBroadcastTask),
-    }
-  })
-
   ipcMain.handle('pipeline:submit-speaker-labels', (_event, profiles: SpeakerProfile[]): void => {
     currentPipeline?.submitSpeakerLabels(profiles)
   })
@@ -394,41 +387,6 @@ function registerIpcHandlers(): void {
          resolve(waveform)
        })
    })
-  })
-
-  ipcMain.handle('video:getFrames', async (_event, videoPath: string, timestamps: number[]): Promise<string[]> => {
-   const { promises: fsPromises } = await import('node:fs')
-   const pathModule = await import('node:path')
-   const osModule = await import('node:os')
-   const ffmpegModule = await import('fluent-ffmpeg')
-   const ffmpegFn = ffmpegModule.default
-
-   const tmpDir = await fsPromises.mkdtemp(pathModule.default.join(osModule.default.tmpdir(), 'vt-frames-'))
-   const frames: string[] = []
-
-   for (const ts of timestamps.slice(0, 50)) { // Cap at 50 frames
-     const outputFile = pathModule.default.join(tmpDir, `frame-${ts.toFixed(2)}.jpg`)
-     try {
-       await new Promise<void>((resolve, reject) => {
-         ffmpegFn(videoPath)
-           .seekInput(ts)
-           .frames(1)
-           .outputOptions(['-vf', 'scale=160:-1', '-q:v', '8'])
-           .output(outputFile)
-           .on('end', () => resolve())
-           .on('error', (e: Error) => reject(e))
-           .run()
-       })
-       const buf = await fsPromises.readFile(outputFile)
-       frames.push(`data:image/jpeg;base64,${buf.toString('base64')}`)
-     } catch {
-       frames.push('')
-     }
-   }
-
-   // Cleanup temp dir
-   fsPromises.rm(tmpDir, { recursive: true, force: true }).catch(() => {})
-   return frames
   })
 }
 

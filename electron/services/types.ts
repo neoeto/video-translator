@@ -274,11 +274,6 @@ export function getLanguageDisplayName(code: TranslationLanguage): string {
   return TRANSLATION_LANGUAGES[code]?.en ?? code
 }
 
-export interface ProxyConfig {
-  enabled: boolean
-  url: string
-}
-
 export interface MissingDep {
   id: string
   name: string

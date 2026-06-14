@@ -40,7 +40,6 @@ export interface ElectronAPI {
   pipelineCancel: () => Promise<void>
   pipelineSkipError: () => Promise<void>
   pipelineRemoveQueued: (taskId: string) => Promise<void>
-  pipelineGetQueue: () => Promise<QueueState>
   submitSpeakerLabels: (profiles: SpeakerProfile[]) => Promise<void>
   submitManualReview: (result: ManualReviewResult) => Promise<void>
   cancelManualReview: () => Promise<void>
@@ -64,7 +63,6 @@ export interface ElectronAPI {
   saveFileDialog: (defaultName: string) => Promise<string | null>
   getVideoDimensions: (videoPath: string) => Promise<{ width: number; height: number } | null>
   getAudioWaveform: (audioPath: string, samples: number) => Promise<number[]>
-  getVideoFrames: (videoPath: string, timestamps: number[]) => Promise<string[]>
   getMediaServerPort: () => Promise<number>
 }
 
