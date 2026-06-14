@@ -51,7 +51,7 @@ export default class IndexTtsSynthesizer implements SynthesizerStrategy {
     this.resolver = new ReferenceAudioResolver({
       mode: this.config.indexttsReferenceMode ?? 'speaker-sample',
       speakerProfiles,
-      globalReference: this.config.indexttsReferenceAudio,
+      globalReference: '',
       sourceAudioPath,
       originalSegments,
       cacheDir: path.join(ttsWorkDir, 'reference-clips'),
@@ -92,9 +92,8 @@ export default class IndexTtsSynthesizer implements SynthesizerStrategy {
     const decision = this.resolver
       ? await this.resolver.resolve(segment, index)
       : undefined
-    const referenceAudio = decision?.referenceAudio
+      const referenceAudio = decision?.referenceAudio
       ?? this.speakerProfiles?.find(p => p.id === segment.speaker)?.samplePath
-      ?? this.config.indexttsReferenceAudio.trim()
       ?? ''
     await this.synthesizeToFile(text, rawFile, referenceAudio)
     return rawFile

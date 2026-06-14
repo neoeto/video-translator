@@ -172,8 +172,10 @@ const defaultConfig: AppConfig = {
   syncMode: 'natural',
   pipelineMode: 'full',
   audioMixMode: 'replace',
+  mimoApiKey: '',
+  mimoVoiceMode: 'preset',
+  mimoReferenceMode: 'speaker-sample',
   indexttsApiUrl: 'http://localhost:8080',
-  indexttsReferenceAudio: '',
   indexttsReferenceMode: 'speaker-sample',
   edgeTtsPath: detectEdgeTtsPath(),
   audioSeparatorPath: detectAudioSeparatorPath(),
@@ -301,7 +303,7 @@ const store = new Store<AppConfig>({
     },
     ttsMode: {
       type: 'string',
-      enum: ['edge', 'openai', 'indextts'],
+      enum: ['edge', 'mimo', 'indextts', 'openai'],
       default: defaultConfig.ttsMode,
     },
     syncMode: {
@@ -319,13 +321,23 @@ const store = new Store<AppConfig>({
       enum: ['replace', 'mix-gate', 'mix-vocal-removal'],
       default: defaultConfig.audioMixMode,
     },
+    mimoApiKey: {
+      type: 'string',
+      default: defaultConfig.mimoApiKey,
+    },
+    mimoVoiceMode: {
+      type: 'string',
+      enum: ['preset', 'voiceclone'],
+      default: defaultConfig.mimoVoiceMode,
+    },
+    mimoReferenceMode: {
+      type: 'string',
+      enum: ['speaker-sample', 'segment-original'],
+      default: defaultConfig.mimoReferenceMode,
+    },
     indexttsApiUrl: {
       type: 'string',
       default: defaultConfig.indexttsApiUrl,
-    },
-    indexttsReferenceAudio: {
-      type: 'string',
-      default: defaultConfig.indexttsReferenceAudio,
     },
     indexttsReferenceMode: {
       type: 'string',
@@ -393,6 +405,12 @@ const store = new Store<AppConfig>({
 })
 
 function normalizeStoredConfig(): void {
+  const storedTtsMode = store.get('ttsMode') as unknown
+  if (storedTtsMode === 'openai') {
+    console.warn('[config] Migrating ttsMode from removed "openai" to "edge"')
+    store.set('ttsMode', 'edge')
+  }
+
   const splitWidthKeys = [
     'subtitleMinSplitWidth',
     'subtitleMaxSplitWidth',
@@ -465,8 +483,10 @@ export function setConfig(partial: Partial<AppConfig>): void {
     'syncMode',
     'pipelineMode',
     'audioMixMode',
+    'mimoApiKey',
+    'mimoVoiceMode',
+    'mimoReferenceMode',
     'indexttsApiUrl',
-    'indexttsReferenceAudio',
     'indexttsReferenceMode',
     'edgeTtsPath',
     'audioSeparatorPath',

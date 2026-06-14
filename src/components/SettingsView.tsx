@@ -405,14 +405,14 @@ export const SettingsView: React.FC = () => {
                       {t('settings.tts.edge')}
                     </button>
                     <button
-                      onClick={() => saveConfig({ ttsMode: 'openai' })}
+                      onClick={() => saveConfig({ ttsMode: 'mimo' })}
                       className={`flex-1 py-2 px-4 rounded-md text-[13px] font-semibold transition-all ${
-                        config.ttsMode === 'openai'
+                        config.ttsMode === 'mimo'
                           ? 'bg-surface-variant text-on-surface shadow-sm border border-outline-variant/50'
                           : 'text-on-surface-variant hover:text-on-surface'
                       }`}
                     >
-                      {t('settings.tts.openai')}
+                      {t('settings.tts.mimo')}
                     </button>
                     <button
                       onClick={() => saveConfig({ ttsMode: 'indextts' })}
@@ -427,10 +427,69 @@ export const SettingsView: React.FC = () => {
                   </div>
                 </div>
 
-                {config.ttsMode === 'openai' && (
-                  <p className="text-[12px] text-on-surface-variant">
-                    {t('settings.tts.openaiKeyHelp')}
-                  </p>
+                {config.ttsMode === 'mimo' && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-on-surface-variant mb-2 uppercase tracking-wider">
+                        {t('settings.tts.mimoApiKey')}
+                      </label>
+                      <input
+                        type="password"
+                        value={config.mimoApiKey || ''}
+                        onChange={(e) => saveConfig({ mimoApiKey: e.target.value })}
+                        placeholder="sk-..."
+                        className="w-full bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono text-xs focus:border-primary focus:outline-none transition-colors"
+                      />
+                      <p className="text-[12px] text-on-surface-variant mt-1">
+                        {t('settings.tts.mimoKeyHelp')}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-on-surface-variant mb-2 uppercase tracking-wider">
+                        {t('settings.tts.mimoVoiceMode')}
+                      </label>
+                      <div className="flex bg-surface-container-lowest rounded-lg p-1 border border-outline-variant/50">
+                        <button
+                          onClick={() => saveConfig({ mimoVoiceMode: 'preset' })}
+                          className={`flex-1 py-2 px-4 rounded-md text-[13px] font-semibold transition-all ${
+                            (config.mimoVoiceMode === 'preset' || !config.mimoVoiceMode)
+                              ? 'bg-surface-variant text-on-surface shadow-sm border border-outline-variant/50'
+                              : 'text-on-surface-variant hover:text-on-surface'
+                          }`}
+                        >
+                          {t('settings.tts.mimoVoiceMode.preset')}
+                        </button>
+                        <button
+                          onClick={() => saveConfig({ mimoVoiceMode: 'voiceclone' })}
+                          className={`flex-1 py-2 px-4 rounded-md text-[13px] font-semibold transition-all ${
+                            config.mimoVoiceMode === 'voiceclone'
+                              ? 'bg-surface-variant text-on-surface shadow-sm border border-outline-variant/50'
+                              : 'text-on-surface-variant hover:text-on-surface'
+                          }`}
+                        >
+                          {t('settings.tts.mimoVoiceMode.voiceclone')}
+                        </button>
+                      </div>
+                    </div>
+                    {config.mimoVoiceMode === 'voiceclone' && (
+                      <div>
+                        <label className="block text-[11px] font-semibold text-on-surface-variant mb-2 uppercase tracking-wider">
+                          {t('settings.tts.mimoReferenceMode')}
+                        </label>
+                        <select
+                          value={config.mimoReferenceMode || 'speaker-sample'}
+                          onChange={(e) => saveConfig({ mimoReferenceMode: e.target.value as 'speaker-sample' | 'segment-original' })}
+                          className="w-full bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface text-[13px] focus:border-primary focus:outline-none transition-colors"
+                        >
+                          <option value="speaker-sample">{t('settings.tts.indextts.referenceMode.speakerSample')}</option>
+                          <option value="segment-original">{t('settings.tts.indextts.referenceMode.segmentOriginal')}</option>
+                        </select>
+                        <p className="text-[12px] text-on-surface-variant mt-1">
+                          {t('settings.tts.indextts.referenceModeHelp')}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {config.ttsMode === 'indextts' && (
@@ -448,21 +507,6 @@ export const SettingsView: React.FC = () => {
                       />
                       <p className="text-[12px] text-on-surface-variant mt-1">
                         {t('settings.tts.indextts.apiUrlHelp')}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-on-surface-variant mb-2 uppercase tracking-wider">
-                        {t('settings.tts.indextts.referenceAudio')}
-                      </label>
-                      <input
-                        type="text"
-                        value={config.indexttsReferenceAudio || ''}
-                        onChange={(e) => saveConfig({ indexttsReferenceAudio: e.target.value })}
-                        placeholder={t('settings.tts.indextts.referenceAudioPlaceholder')}
-                        className="w-full bg-surface-container-lowest border border-outline-variant rounded-md px-3 py-2 text-on-surface font-mono text-xs focus:border-primary focus:outline-none transition-colors"
-                      />
-                      <p className="text-[12px] text-on-surface-variant mt-1">
-                        {t('settings.tts.indextts.referenceAudioHelp')}
                       </p>
                     </div>
                     <div>

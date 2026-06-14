@@ -50,8 +50,10 @@ function config(overrides: Partial<AppConfig> = {}): AppConfig {
     syncMode: 'natural',
     pipelineMode: 'full',
     audioMixMode: 'replace',
+    mimoApiKey: '',
+    mimoVoiceMode: 'preset',
+    mimoReferenceMode: 'speaker-sample',
     indexttsApiUrl: '',
-    indexttsReferenceAudio: '',
     indexttsReferenceMode: 'speaker-sample',
     edgeTtsPath: 'edge-tts',
     audioSeparatorPath: 'audio-separator',
@@ -63,15 +65,15 @@ function config(overrides: Partial<AppConfig> = {}): AppConfig {
 }
 
 test('requires yt-dlp for remote sources but not local files', () => {
-  assert.deepEqual(getRequiredDeps(config({ ttsMode: 'openai' }), 'youtube').map((dep) => dep.id), ['yt-dlp'])
-  assert.deepEqual(getRequiredDeps(config({ ttsMode: 'openai' }), 'local-file').map((dep) => dep.id), [])
+  assert.deepEqual(getRequiredDeps(config({ ttsMode: 'mimo' }), 'youtube').map((dep) => dep.id), ['yt-dlp'])
+  assert.deepEqual(getRequiredDeps(config({ ttsMode: 'mimo' }), 'local-file').map((dep) => dep.id), [])
 })
 
 test('requires transcription and vocal-removal packages only when matching config modes are enabled', () => {
   const required = getRequiredDeps(config({
     transcribeMode: 'whisperx',
     audioMixMode: 'mix-vocal-removal',
-    ttsMode: 'openai',
+    ttsMode: 'mimo',
   }), 'bilibili').map((dep) => dep.id)
 
   assert.deepEqual(required, ['yt-dlp', 'whisperx', 'audio-separator'])
@@ -95,7 +97,7 @@ test('marks whisper and whisperx as requiring PyTorch', () => {
 })
 
 test('yt-dlp does not require PyTorch', () => {
-  const deps = getRequiredDeps(config({ ttsMode: 'openai' }), 'youtube')
+  const deps = getRequiredDeps(config({ ttsMode: 'mimo' }), 'youtube')
   const ytdlp = deps.find((d) => d.id === 'yt-dlp')
   assert.ok(ytdlp, 'yt-dlp should be a required dep')
   assert.equal(ytdlp.requiresPyTorch, undefined)
@@ -123,7 +125,7 @@ test('edge-tts is required when ttsMode is edge', () => {
 })
 
 test('edge-tts is not required when ttsMode is not edge', () => {
-  const deps = getRequiredDeps(config({ ttsMode: 'openai' }), 'youtube')
+  const deps = getRequiredDeps(config({ ttsMode: 'mimo' }), 'youtube')
   const edgeTts = deps.find((d) => d.id === 'edge-tts')
   assert.equal(edgeTts, undefined)
 })

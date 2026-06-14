@@ -18,7 +18,7 @@ import LocalCliTranscriber from './strategies/transcribers/local-cli.js'
 import WhisperXTranscriber from './strategies/transcribers/whisperx.js'
 import OpenAICompatibleTranslator from './strategies/translators/openai-compatible.js'
 import EdgeTtsSynthesizer from './strategies/synthesizers/edge-tts.js'
-import OpenAITtsSynthesizer from './strategies/synthesizers/openai-tts.js'
+import MimoTtsSynthesizer from './strategies/synthesizers/mimo-tts.js'
 import IndexTtsSynthesizer from './strategies/synthesizers/indextts.js'
 import FfmpegCombiner from './strategies/combiners/ffmpeg.js'
 import FfmpegSubtitleOnlyCombiner from './strategies/combiners/ffmpeg-subtitle-only.js'
@@ -53,8 +53,8 @@ export function createTranslator(config: AppConfig): TranslatorStrategy {
 
 export function createSynthesizer(config: AppConfig): SynthesizerStrategy {
   switch (config.ttsMode) {
-    case 'openai':
-      return new OpenAITtsSynthesizer(config)
+    case 'mimo':
+      return new MimoTtsSynthesizer(config)
     case 'indextts':
       return new IndexTtsSynthesizer(config)
     case 'edge':

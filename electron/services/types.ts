@@ -131,7 +131,9 @@ export interface TranslatorStrategy {
   summarizeText?(text: string, targetLanguage: string): Promise<string>
 }
 
-export type IndexTtsReferenceMode = 'speaker-sample' | 'segment-original'
+export type ReferenceMode = 'speaker-sample' | 'segment-original'
+export type IndexTtsReferenceMode = ReferenceMode
+export type MimoVoiceMode = 'preset' | 'voiceclone'
 
 export interface SynthesizerStrategy {
   readonly name: string
@@ -228,7 +230,7 @@ export interface SubtitleStyle {
 
 export type TranscribeMode = 'openai' | 'local-api' | 'local-cli' | 'whisperx'
 export type TranslateMode = 'openai' | 'deepseek' | 'glm'
-export type TtsMode = 'edge' | 'openai' | 'indextts'
+export type TtsMode = 'edge' | 'mimo' | 'indextts'
 export type SyncMode = 'natural' | 'strict'
 export type PipelineMode = 'full' | 'subtitleOnly'
 export type AudioMixMode = 'replace' | 'mix-gate' | 'mix-vocal-removal'
@@ -330,8 +332,10 @@ export interface AppConfig {
   syncMode: SyncMode
   pipelineMode: PipelineMode
   audioMixMode: AudioMixMode
+  mimoApiKey: string
+  mimoVoiceMode: MimoVoiceMode
+  mimoReferenceMode: ReferenceMode
   indexttsApiUrl: string
-  indexttsReferenceAudio: string
   indexttsReferenceMode: IndexTtsReferenceMode
   edgeTtsPath: string
   audioSeparatorPath: string

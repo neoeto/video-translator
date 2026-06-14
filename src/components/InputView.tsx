@@ -118,8 +118,8 @@ export const InputView: React.FC<InputViewProps> = ({ onNavigate }) => {
     if (config.translateMode === 'glm' && !config.glmApiKey) {
       return { valid: false, error: t('input.validation.glmKeyRequired'), isConfigError: true }
     }
-    if (config.pipelineMode !== 'subtitleOnly' && config.ttsMode === 'openai' && !config.openaiApiKey) {
-      return { valid: false, error: t('input.validation.openaiTtsKeyRequired'), isConfigError: true }
+    if (config.pipelineMode !== 'subtitleOnly' && config.ttsMode === 'mimo' && !config.mimoApiKey) {
+      return { valid: false, error: t('input.validation.mimoApiKeyRequired'), isConfigError: true }
     }
     if (config.pipelineMode !== 'subtitleOnly' && config.ttsMode === 'indextts' && !config.indexttsApiUrl) {
       return { valid: false, error: t('input.validation.indexttsApiUrlRequired'), isConfigError: true }

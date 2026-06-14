@@ -227,11 +227,12 @@ function createTtsFingerprint(translatedSegments: TranslatedSegment[], config: A
     syncMode: config.syncMode,
     speakerProfiles: speakerProfiles?.map(p => ({ id: p.id, gender: p.gender })),
     indexttsReferenceMode: config.indexttsReferenceMode ?? 'speaker-sample',
-    indexttsReferenceAudio: config.indexttsReferenceAudio,
+    mimoVoiceMode: config.mimoVoiceMode,
+    mimoReferenceMode: config.mimoReferenceMode,
     referenceResolverVersion: 1,
     // Bump when changing the TTS timeline assembly (e.g. switching intermediate
     // format from mp3 to wav) so existing tts.json caches get invalidated.
-    ttsPipelineVersion: 2,
+    ttsPipelineVersion: 3,
   })
 }
 
