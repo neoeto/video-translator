@@ -55,8 +55,6 @@ function config(overrides: Partial<AppConfig> = {}): AppConfig {
     indexttsReferenceMode: 'speaker-sample',
     edgeTtsPath: 'edge-tts',
     audioSeparatorPath: 'audio-separator',
-    audioSeparatorModelDir: '',
-    huggingfaceModelDir: '',
     subtitleTrack1: 'target',
     subtitleTrack2: 'source',
     manualReviewEnabled: false,

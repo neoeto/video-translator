@@ -119,7 +119,8 @@ async function tryDownload(
 export async function ensureAudioSeparatorModel(
   modelDir: string,
   proxyUrl?: string,
-  onProgress?: (pct: number) => void
+  onProgress?: (pct: number) => void,
+  onDetail?: (message: string | undefined) => void
 ): Promise<void> {
   fs.mkdirSync(modelDir, { recursive: true })
 
@@ -132,17 +133,20 @@ export async function ensureAudioSeparatorModel(
   // 1. Checksum file (small, CDN available)
   if (!fs.existsSync(checksumPath) || fs.statSync(checksumPath).size < 100) {
     onProgress?.(1)
+    onDetail?.('Downloading audio-separator checksum...')
     await tryDownload(CHECKSUM_URLS, checksumPath, proxyUrl)
   }
 
   // 2. Model file (large)
   if (!fs.existsSync(modelPath)) {
     onProgress?.(2)
+    onDetail?.(`Downloading audio-separator model (${formatBytes(115 * 1024 * 1024)})...`)
     await tryDownload(MODEL_URLS, modelPath, proxyUrl, (pct) => {
       onProgress?.(2 + Math.round(pct * 0.88))
     })
   } else if (fs.statSync(modelPath).size < 100 * 1024 * 1024) {
     fs.unlinkSync(modelPath)
+    onDetail?.(`Downloading audio-separator model (${formatBytes(115 * 1024 * 1024)})...`)
     await tryDownload(MODEL_URLS, modelPath, proxyUrl, (pct) => {
       onProgress?.(2 + Math.round(pct * 0.88))
     })
@@ -150,6 +154,7 @@ export async function ensureAudioSeparatorModel(
 
   // 3. Verify
   onProgress?.(92)
+  onDetail?.(undefined)
   const modelSize = fs.statSync(modelPath).size
   const hash = createHash('sha256')
   hash.update(fs.readFileSync(modelPath))

@@ -80,8 +80,6 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
     indexttsReferenceMode: 'speaker-sample' as const,
     edgeTtsPath: '',
     audioSeparatorPath: '',
-    audioSeparatorModelDir: '',
-    huggingfaceModelDir: '',
     subtitleTrack1: 'target' as const,
     subtitleTrack2: 'source' as const,
     manualReviewEnabled: false,

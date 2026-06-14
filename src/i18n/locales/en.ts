@@ -87,6 +87,7 @@ export const en = {
   'progress.target': 'Target',
   'progress.processing': 'Processing...',
   'progress.processingError': 'Processing Error',
+  'progress.downloadingModel': 'Downloading model...',
   'progress.unknownError': 'Unknown error occurred during processing.',
   'progress.backToHome': 'Back to Home',
   'progress.cancelPipeline': 'Cancel Pipeline',

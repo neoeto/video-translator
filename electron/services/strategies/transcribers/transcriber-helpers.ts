@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import fs from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import type { TranscriptSegment, WordTimestamp } from '../../types.js'
@@ -272,6 +273,16 @@ export function buildWhisperEnv(hfMirrorUrl?: string, proxyUrl?: string, hfHome?
   return env
 }
 
+export function hasHuggingFaceModel(hfHome: string, modelPrefix: string): boolean {
+  const hubDir = path.join(hfHome, 'hub')
+  try {
+    const entries = fs.readdirSync(hubDir)
+    return entries.some(e => e.startsWith('models--') && e.includes(modelPrefix))
+  } catch {
+    return false
+  }
+}
+
 export function runWhisperCli(
   command: string,
   args: string[],
@@ -281,6 +292,7 @@ export function runWhisperCli(
   hfMirrorUrl?: string,
   proxyUrl?: string,
   hfHome?: string,
+  onDetail?: (message: string | undefined) => void,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
@@ -318,9 +330,16 @@ export function runWhisperCli(
     child.stderr?.on('data', (chunk: Buffer) => {
       stderrChunks.push(chunk)
 
+      const text = chunk.toString('utf8')
+
+      if (onDetail && /downloading/i.test(text)) {
+        const fileMatch = text.match(/(?:downloading|Download)\s+["']?([^"'\s]+)/i)
+        if (fileMatch) {
+          onDetail(`Downloading ${fileMatch[1]}...`)
+        }
+      }
+
       if (onProgress) {
-        const text = chunk.toString('utf8')
-        // tqdm-style progress (whisper CLI): " 50%|████..." or standalone " 50% "
         const matches = [...text.matchAll(/(\d{1,3})%(?:\||[\s\r\n])/g)]
         if (matches.length > 0) {
           const lastMatch = matches[matches.length - 1]
@@ -337,6 +356,7 @@ export function runWhisperCli(
 
     child.on('close', (code, signal: NodeJS.Signals | null) => {
       signal // unused in this scope
+      onDetail?.(undefined)
       if (code === 0) {
         resolve()
         return

@@ -4,7 +4,7 @@ import { createRequire } from 'node:module'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 
-import { getConfig } from './config.js'
+import { getConfig, getModelDirs } from './config.js'
 import { generateAss } from './subtitle.js'
 import { extractSpeakerSamples } from './speaker-sample.js'
 import { separateVocals } from './strategies/vocal-separator.js'
@@ -396,7 +396,12 @@ export class PipelineOrchestrator {
           return cachedSegments
         }
 
-        const result = await this.strategies.transcriber.transcribe({ audioPath, onProgress, signal })
+        const result = await this.strategies.transcriber.transcribe({
+          audioPath,
+          onProgress,
+          onDetail: (msg) => this.setDetail(msg ? 'downloading-model' : undefined, msg),
+          signal,
+        })
         await writeCachedSegments(transcriptPath, transcriptFingerprint, result.segments)
         this.updateProgress(2, 100)
         return result.segments
@@ -591,15 +596,17 @@ export class PipelineOrchestrator {
             return path.join(this.workDir, existingInstrumental)
           }
 
+          const modelDirs = getModelDirs(config.outputDir)
           const result = await separateVocals({
             audioPath,
             workDir: this.workDir,
             audioSeparatorPath: config.audioSeparatorPath,
-            modelDir: config.audioSeparatorModelDir,
+            modelDir: modelDirs.audioSeparatorModelDir,
             hfMirrorUrl: config.hfMirrorEnabled ? config.hfMirrorUrl : undefined,
             proxyUrl: config.proxyEnabled ? config.proxyUrl : undefined,
-            hfHome: config.huggingfaceModelDir || undefined,
+            hfHome: modelDirs.huggingfaceModelDir || undefined,
             onProgress,
+            onDetail: (msg) => this.setDetail(msg ? 'downloading-model' : undefined, msg),
             signal,
           })
           return result.instrumentalPath
@@ -775,6 +782,10 @@ export class PipelineOrchestrator {
     if (this.cancelled) {
       throw new Error('Pipeline cancelled')
     }
+  }
+
+  setDetail(detail?: 'downloading-model', detailMessage?: string): void {
+    this.updateState({ detail, detailMessage })
   }
 
   private updateState(partial: Partial<PipelineState>): void {

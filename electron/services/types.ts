@@ -112,6 +112,7 @@ export interface TranscriberStrategy {
   transcribe(input: {
     audioPath: string
     onProgress?: (pct: number) => void
+    onDetail?: (message: string | undefined) => void
     signal?: AbortSignal
   }): Promise<TranscriptionResult>
 }
@@ -180,6 +181,8 @@ export interface PipelineState {
   stage: PipelineStage
   progress: number
   overallProgress: number
+  detail?: 'downloading-model'
+  detailMessage?: string
   videoTitle?: string
   translatedTitle?: string
   error?: string
@@ -332,8 +335,6 @@ export interface AppConfig {
   indexttsReferenceMode: IndexTtsReferenceMode
   edgeTtsPath: string
   audioSeparatorPath: string
-  audioSeparatorModelDir: string
-  huggingfaceModelDir: string
   subtitleTrack1: SubtitleTrack
   subtitleTrack2: SubtitleTrack
   manualReviewEnabled: boolean

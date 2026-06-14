@@ -1,7 +1,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import type { AppConfig, TranscriberStrategy, TranscriptionResult } from '../../types.js'
-import { normalizeSegments, runWhisperCli } from './transcriber-helpers.js'
+import { getModelDirs } from '../../config.js'
+import { hasHuggingFaceModel, normalizeSegments, runWhisperCli } from './transcriber-helpers.js'
 
 interface WhisperXJsonResponse {
   segments?: unknown
@@ -12,12 +13,19 @@ export default class WhisperXTranscriber implements TranscriberStrategy {
 
   constructor(private readonly config: AppConfig) {}
 
-  async transcribe(input: { audioPath: string; onProgress?: (pct: number) => void; signal?: AbortSignal }): Promise<TranscriptionResult> {
-    const { audioPath, onProgress, signal } = input
+  async transcribe(input: { audioPath: string; onProgress?: (pct: number) => void; onDetail?: (message: string | undefined) => void; signal?: AbortSignal }): Promise<TranscriptionResult> {
+    const { audioPath, onProgress, onDetail, signal } = input
     const whisperxPath = path.resolve(this.config.whisperxPath)
     const outputDir = path.dirname(audioPath)
 
     try {
+      const modelDirs = getModelDirs(this.config.outputDir)
+      const hfHome = modelDirs.huggingfaceModelDir || undefined
+      const modelMissing = hfHome && !hasHuggingFaceModel(hfHome, 'whisper')
+      const detailCb = modelMissing
+        ? (msg: string | undefined) => onDetail?.(msg)
+        : undefined
+
       // Map config sourceLanguage to whisperx --language flag
       const whisperLang = this.config.sourceLanguage === 'auto' ? undefined : this.config.sourceLanguage
       const args = [
@@ -34,11 +42,17 @@ export default class WhisperXTranscriber implements TranscriberStrategy {
         args.push('--hf_token', this.config.whisperxHfToken.trim())
       }
 
+      if (modelMissing) {
+        onProgress?.(2)
+        onDetail?.('Downloading WhisperX large-v3 model...')
+      }
+
       onProgress?.(10)
       await runWhisperCli(whisperxPath, args, outputDir, onProgress, signal,
         this.config.hfMirrorEnabled ? this.config.hfMirrorUrl : undefined,
         this.config.proxyEnabled ? this.config.proxyUrl : undefined,
-        this.config.huggingfaceModelDir || undefined)
+        hfHome,
+        detailCb)
 
       const expectedName = `${path.parse(audioPath).name}.json`
       const parsedPath = path.join(outputDir, expectedName)

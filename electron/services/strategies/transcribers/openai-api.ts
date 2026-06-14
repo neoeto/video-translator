@@ -20,7 +20,7 @@ export default class OpenAIApiTranscriber implements TranscriberStrategy {
     this.name = config.transcribeMode === 'local-api' ? 'local-api' : 'openai'
   }
 
-  async transcribe(input: { audioPath: string; onProgress?: (pct: number) => void; signal?: AbortSignal }): Promise<TranscriptionResult> {
+  async transcribe(input: { audioPath: string; onProgress?: (pct: number) => void; onDetail?: (message: string | undefined) => void; signal?: AbortSignal }): Promise<TranscriptionResult> {
     const { audioPath, onProgress, signal } = input
     let lastError: unknown
 

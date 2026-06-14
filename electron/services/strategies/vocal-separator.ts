@@ -15,9 +15,10 @@ export async function separateVocals(input: {
   proxyUrl?: string
   hfHome?: string
   onProgress?: (pct: number) => void
+  onDetail?: (message: string | undefined) => void
   signal?: AbortSignal
 }): Promise<{ instrumentalPath: string }> {
-  const { audioPath, workDir, audioSeparatorPath, modelDir, hfMirrorUrl, proxyUrl, hfHome, onProgress, signal } = input
+  const { audioPath, workDir, audioSeparatorPath, modelDir, hfMirrorUrl, proxyUrl, hfHome, onProgress, onDetail, signal } = input
   const resolvedPath = path.resolve(audioSeparatorPath)
 
   await fs.mkdir(workDir, { recursive: true })
@@ -26,7 +27,7 @@ export async function separateVocals(input: {
   // Pre-download model with CDN fallback (maps 0-8% to download, 8-100% to audio-separator)
   await ensureAudioSeparatorModel(modelDir, proxyUrl, (downloadPct) => {
     if (!signal?.aborted) onProgress?.(Math.round(downloadPct * 0.08))
-  })
+  }, onDetail)
 
   if (signal?.aborted) throw new Error('Pipeline cancelled')
 

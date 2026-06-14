@@ -80,18 +80,6 @@ function detectAudioSeparatorPath(): string {
   return 'audio-separator'
 }
 
-function detectAudioSeparatorModelDir(): string {
-  const moduleDir = path.dirname(fileURLToPath(import.meta.url))
-  const projectRoot = path.resolve(moduleDir, '..', '..')
-  return path.join(projectRoot, 'resources', 'audio-separator-models')
-}
-
-function detectHuggingfaceModelDir(): string {
-  const moduleDir = path.dirname(fileURLToPath(import.meta.url))
-  const projectRoot = path.resolve(moduleDir, '..', '..')
-  return path.join(projectRoot, 'resources', 'huggingface-cache')
-}
-
 function detectYtDlpPath(): string {
   const moduleDir = path.dirname(fileURLToPath(import.meta.url))
   const projectRoot = path.resolve(moduleDir, '..', '..')
@@ -139,6 +127,13 @@ function detectEdgeTtsPath(): string {
   return 'edge-tts'
 }
 
+export function getModelDirs(outputDir: string): { audioSeparatorModelDir: string; huggingfaceModelDir: string } {
+  return {
+    audioSeparatorModelDir: path.join(outputDir, '.system', 'models', 'audio-separator'),
+    huggingfaceModelDir: path.join(outputDir, '.system', 'models', 'huggingface-cache'),
+  }
+}
+
 const DEFAULT_SUBTITLE_MIN_SPLIT_WIDTH = 20
 const DEFAULT_SUBTITLE_MAX_SPLIT_WIDTH = 60
 
@@ -182,8 +177,6 @@ const defaultConfig: AppConfig = {
   indexttsReferenceMode: 'speaker-sample',
   edgeTtsPath: detectEdgeTtsPath(),
   audioSeparatorPath: detectAudioSeparatorPath(),
-  audioSeparatorModelDir: detectAudioSeparatorModelDir(),
-  huggingfaceModelDir: detectHuggingfaceModelDir(),
   subtitleTrack1: 'target',
   subtitleTrack2: 'source',
   manualReviewEnabled: false,
@@ -346,14 +339,6 @@ const store = new Store<AppConfig>({
     audioSeparatorPath: {
       type: 'string',
       default: defaultConfig.audioSeparatorPath,
-    },
-    audioSeparatorModelDir: {
-      type: 'string',
-      default: defaultConfig.audioSeparatorModelDir,
-    },
-    huggingfaceModelDir: {
-      type: 'string',
-      default: defaultConfig.huggingfaceModelDir,
     },
     subtitleTrack1: {
       type: 'string',

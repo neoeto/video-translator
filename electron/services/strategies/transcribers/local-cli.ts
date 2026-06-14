@@ -1,7 +1,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import type { AppConfig, TranscriberStrategy, TranscriptionResult } from '../../types.js'
-import { normalizeSegments, runWhisperCli } from './transcriber-helpers.js'
+import { getModelDirs } from '../../config.js'
+import { hasHuggingFaceModel, normalizeSegments, runWhisperCli } from './transcriber-helpers.js'
 
 interface WhisperCliJsonResponse {
   segments?: unknown
@@ -12,12 +13,24 @@ export default class LocalCliTranscriber implements TranscriberStrategy {
 
   constructor(private readonly config: AppConfig) {}
 
-  async transcribe(input: { audioPath: string; onProgress?: (pct: number) => void; signal?: AbortSignal }): Promise<TranscriptionResult> {
-    const { audioPath, onProgress, signal } = input
+  async transcribe(input: { audioPath: string; onProgress?: (pct: number) => void; onDetail?: (message: string | undefined) => void; signal?: AbortSignal }): Promise<TranscriptionResult> {
+    const { audioPath, onProgress, onDetail, signal } = input
     const whisperPath = path.resolve(this.config.localWhisperCliPath)
     const outputDir = path.dirname(audioPath)
 
     try {
+      const modelDirs = getModelDirs(this.config.outputDir)
+      const hfHome = modelDirs.huggingfaceModelDir || undefined
+      const modelMissing = hfHome && !hasHuggingFaceModel(hfHome, 'whisper')
+      const detailCb = modelMissing
+        ? (msg: string | undefined) => onDetail?.(msg)
+        : undefined
+
+      if (modelMissing) {
+        onProgress?.(2)
+        onDetail?.('Downloading Whisper base model...')
+      }
+
       onProgress?.(10)
       await runWhisperCli(
         whisperPath,
@@ -33,7 +46,8 @@ export default class LocalCliTranscriber implements TranscriberStrategy {
         signal,
         this.config.hfMirrorEnabled ? this.config.hfMirrorUrl : undefined,
         this.config.proxyEnabled ? this.config.proxyUrl : undefined,
-        this.config.huggingfaceModelDir || undefined,
+        hfHome,
+        detailCb,
       )
 
       const expectedName = `${path.parse(audioPath).name}.json`

@@ -89,6 +89,7 @@ export const zh: Record<TranslationKey, string> = {
   'progress.target': '目标',
   'progress.processing': '处理中...',
   'progress.processingError': '处理错误',
+  'progress.downloadingModel': '正在下载模型...',
   'progress.unknownError': '处理过程中发生未知错误。',
   'progress.backToHome': '返回首页',
   'progress.cancelPipeline': '取消任务',
