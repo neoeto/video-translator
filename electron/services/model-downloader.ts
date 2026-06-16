@@ -32,14 +32,18 @@ function download(
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const tempDest = `${dest}.part`
-    const file = fs.createWriteStream(tempDest)
     const urlObj = new URL(url)
     const client = urlObj.protocol === 'https:' ? https : http
 
     const agent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : undefined
 
-    const doRequest = (targetUrl: string) => {
-      client.get(
+    const doRequest = (targetUrl: string, redirectCount = 0) => {
+      if (redirectCount > 5) {
+        reject(new Error('Too many redirects'))
+        return
+      }
+
+      const req = client.get(
         targetUrl,
         {
           timeout: 600_000,
@@ -49,20 +53,19 @@ function download(
         (res) => {
           if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) {
             const redirectUrl = res.headers.location
+            res.resume()
             if (redirectUrl) {
-              file.close()
-              try { fs.unlinkSync(tempDest) } catch { /* ignore */ }
-              doRequest(redirectUrl)
+              doRequest(redirectUrl, redirectCount + 1)
               return
             }
           }
           if (!res.statusCode || res.statusCode >= 400) {
-            file.close()
-            try { fs.unlinkSync(tempDest) } catch { /* ignore */ }
+            res.resume()
             reject(new Error(`HTTP ${res.statusCode} for ${targetUrl}`))
             return
           }
 
+          const file = fs.createWriteStream(tempDest)
           const total = parseInt(res.headers['content-length'] || '0', 10)
           let received = 0
 
@@ -73,7 +76,11 @@ function download(
             }
           })
 
-          res.pipe(file)
+          file.on('error', (err) => {
+            try { fs.unlinkSync(tempDest) } catch { /* ignore */ }
+            reject(err)
+          })
+
           file.on('finish', () => {
             file.close()
             if (total > 0 && received < total) {
@@ -84,11 +91,20 @@ function download(
             fs.renameSync(tempDest, dest)
             resolve()
           })
+
+          res.pipe(file)
         }
-      ).on('error', (err) => {
-        file.close()
+      )
+
+      req.on('error', (err) => {
         try { fs.unlinkSync(tempDest) } catch { /* ignore */ }
         reject(err)
+      })
+
+      req.on('timeout', () => {
+        req.destroy()
+        try { fs.unlinkSync(tempDest) } catch { /* ignore */ }
+        reject(new Error(`Request timeout for ${targetUrl}`))
       })
     }
     doRequest(url)

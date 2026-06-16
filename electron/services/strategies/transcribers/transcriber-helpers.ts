@@ -74,6 +74,8 @@ export function buildWhisperEnv(hfMirrorUrl?: string, proxyUrl?: string, hfHome?
   if (hfMirrorUrl) {
     env.HF_ENDPOINT = hfMirrorUrl
   }
+  // Xet CDN (cas-bridge.xethub.hf.co) ignores HF_ENDPOINT, breaking mirrors.
+  env.HF_HUB_DISABLE_XET = '1'
   // Forward proxy settings so Python tools (whisper, audio-separator, etc.)
   // can download models through the configured proxy
   if (proxyUrl) {
