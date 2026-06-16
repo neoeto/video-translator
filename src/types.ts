@@ -37,6 +37,7 @@ export interface PipelineState {
   overallProgress: number
   detail?: 'downloading-model'
   detailMessage?: string
+  detailParams?: Record<string, string>
   videoTitle?: string
   translatedTitle?: string
   error?: string

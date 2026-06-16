@@ -209,7 +209,7 @@ export const ProgressView: React.FC = () => {
                 {state.detail === 'downloading-model' && (
                   <div className="flex items-center gap-1.5 mt-2 text-xs text-on-surface-variant">
                     <span className="material-symbols-outlined text-[14px]">download</span>
-                    <span>{state.detailMessage || t('progress.downloadingModel')}</span>
+                    <span>{state.detailMessage ? t(state.detailMessage, state.detailParams) : t('progress.downloadingModel')}</span>
                   </div>
                 )}
               </div>
