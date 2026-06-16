@@ -15,7 +15,7 @@ export async function separateVocals(input: {
   proxyUrl?: string
   hfHome?: string
   onProgress?: (pct: number) => void
-  onDetail?: (message: string | undefined) => void
+  onDetail?: (key: string | undefined, params?: Record<string, string>) => void
   signal?: AbortSignal
 }): Promise<{ instrumentalPath: string }> {
   const { audioPath, workDir, audioSeparatorPath, modelDir, hfMirrorUrl, proxyUrl, hfHome, onProgress, onDetail, signal } = input

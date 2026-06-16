@@ -112,7 +112,7 @@ export interface TranscriberStrategy {
   transcribe(input: {
     audioPath: string
     onProgress?: (pct: number) => void
-    onDetail?: (message: string | undefined) => void
+    onDetail?: (key: string | undefined, params?: Record<string, string>) => void
     signal?: AbortSignal
   }): Promise<TranscriptionResult>
 }
@@ -185,6 +185,7 @@ export interface PipelineState {
   overallProgress: number
   detail?: 'downloading-model'
   detailMessage?: string
+  detailParams?: Record<string, string>
   videoTitle?: string
   translatedTitle?: string
   error?: string

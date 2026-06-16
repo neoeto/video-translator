@@ -369,7 +369,7 @@ export class PipelineOrchestrator {
         const result = await this.strategies.transcriber.transcribe({
           audioPath,
           onProgress,
-          onDetail: (msg) => this.setDetail(msg ? 'downloading-model' : undefined, msg),
+          onDetail: (key, params) => this.setDetail(key ? 'downloading-model' : undefined, key, params),
           signal,
         })
         await writeCachedSegments(transcriptPath, transcriptFingerprint, result.segments)
@@ -576,7 +576,7 @@ export class PipelineOrchestrator {
             proxyUrl: config.proxyEnabled ? config.proxyUrl : undefined,
             hfHome: modelDirs.huggingfaceModelDir || undefined,
             onProgress,
-            onDetail: (msg) => this.setDetail(msg ? 'downloading-model' : undefined, msg),
+            onDetail: (key, params) => this.setDetail(key ? 'downloading-model' : undefined, key, params),
             signal,
           })
           return result.instrumentalPath
@@ -752,8 +752,8 @@ export class PipelineOrchestrator {
     }
   }
 
-  setDetail(detail?: 'downloading-model', detailMessage?: string): void {
-    this.updateState({ detail, detailMessage })
+  setDetail(detail?: 'downloading-model', detailMessage?: string, detailParams?: Record<string, string>): void {
+    this.updateState({ detail, detailMessage, detailParams })
   }
 
   private updateState(partial: Partial<PipelineState>): void {

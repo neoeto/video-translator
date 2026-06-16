@@ -13,7 +13,7 @@ export default class LocalCliTranscriber implements TranscriberStrategy {
 
   constructor(private readonly config: AppConfig) {}
 
-  async transcribe(input: { audioPath: string; onProgress?: (pct: number) => void; onDetail?: (message: string | undefined) => void; signal?: AbortSignal }): Promise<TranscriptionResult> {
+  async transcribe(input: { audioPath: string; onProgress?: (pct: number) => void; onDetail?: (key: string | undefined, params?: Record<string, string>) => void; signal?: AbortSignal }): Promise<TranscriptionResult> {
     const { audioPath, onProgress, onDetail, signal } = input
     const whisperPath = path.resolve(this.config.localWhisperCliPath)
     const outputDir = path.dirname(audioPath)
@@ -23,12 +23,12 @@ export default class LocalCliTranscriber implements TranscriberStrategy {
       const hfHome = modelDirs.huggingfaceModelDir || undefined
       const modelMissing = hfHome && !hasHuggingFaceModel(hfHome, 'whisper')
       const detailCb = modelMissing
-        ? (msg: string | undefined) => onDetail?.(msg)
+        ? (key: string | undefined, params?: Record<string, string>) => onDetail?.(key, params)
         : undefined
 
       if (modelMissing) {
         onProgress?.(2)
-        onDetail?.('Downloading Whisper base model...')
+        onDetail?.('progress.download.whisperBase')
       }
 
       onProgress?.(10)

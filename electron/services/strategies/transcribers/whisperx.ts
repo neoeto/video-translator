@@ -13,7 +13,7 @@ export default class WhisperXTranscriber implements TranscriberStrategy {
 
   constructor(private readonly config: AppConfig) {}
 
-  async transcribe(input: { audioPath: string; onProgress?: (pct: number) => void; onDetail?: (message: string | undefined) => void; signal?: AbortSignal }): Promise<TranscriptionResult> {
+  async transcribe(input: { audioPath: string; onProgress?: (pct: number) => void; onDetail?: (key: string | undefined, params?: Record<string, string>) => void; signal?: AbortSignal }): Promise<TranscriptionResult> {
     const { audioPath, onProgress, onDetail, signal } = input
     const whisperxPath = path.resolve(this.config.whisperxPath)
     const outputDir = path.dirname(audioPath)
@@ -23,7 +23,7 @@ export default class WhisperXTranscriber implements TranscriberStrategy {
       const hfHome = modelDirs.huggingfaceModelDir || undefined
       const modelMissing = hfHome && !hasHuggingFaceModel(hfHome, 'whisper')
       const detailCb = modelMissing
-        ? (msg: string | undefined) => onDetail?.(msg)
+        ? (key: string | undefined, params?: Record<string, string>) => onDetail?.(key, params)
         : undefined
 
       // Map config sourceLanguage to whisperx --language flag
@@ -44,7 +44,7 @@ export default class WhisperXTranscriber implements TranscriberStrategy {
 
       if (modelMissing) {
         onProgress?.(2)
-        onDetail?.('Downloading WhisperX large-v3 model...')
+        onDetail?.('progress.download.whisperxLarge')
       }
 
       onProgress?.(10)
