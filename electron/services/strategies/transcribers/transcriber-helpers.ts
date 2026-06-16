@@ -110,7 +110,7 @@ export function runWhisperCli(
   hfMirrorUrl?: string,
   proxyUrl?: string,
   hfHome?: string,
-  onDetail?: (message: string | undefined) => void,
+  onDetail?: (key: string | undefined, params?: Record<string, string>) => void,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
