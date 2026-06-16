@@ -136,7 +136,7 @@ export async function ensureAudioSeparatorModel(
   modelDir: string,
   proxyUrl?: string,
   onProgress?: (pct: number) => void,
-  onDetail?: (message: string | undefined) => void
+  onDetail?: (key: string | undefined, params?: Record<string, string>) => void
 ): Promise<void> {
   fs.mkdirSync(modelDir, { recursive: true })
 
@@ -149,20 +149,20 @@ export async function ensureAudioSeparatorModel(
   // 1. Checksum file (small, CDN available)
   if (!fs.existsSync(checksumPath) || fs.statSync(checksumPath).size < 100) {
     onProgress?.(1)
-    onDetail?.('Downloading audio-separator checksum...')
+    onDetail?.('progress.download.audioSeparatorChecksum')
     await tryDownload(CHECKSUM_URLS, checksumPath, proxyUrl)
   }
 
   // 2. Model file (large)
   if (!fs.existsSync(modelPath)) {
     onProgress?.(2)
-    onDetail?.(`Downloading audio-separator model (${formatBytes(115 * 1024 * 1024)})...`)
+    onDetail?.('progress.download.audioSeparatorModel', { size: formatBytes(1007816988) })
     await tryDownload(MODEL_URLS, modelPath, proxyUrl, (pct) => {
       onProgress?.(2 + Math.round(pct * 0.88))
     })
-  } else if (fs.statSync(modelPath).size < 100 * 1024 * 1024) {
+  } else if (fs.statSync(modelPath).size < 1007816988 * 0.95) {
     fs.unlinkSync(modelPath)
-    onDetail?.(`Downloading audio-separator model (${formatBytes(115 * 1024 * 1024)})...`)
+    onDetail?.('progress.download.audioSeparatorModel', { size: formatBytes(1007816988) })
     await tryDownload(MODEL_URLS, modelPath, proxyUrl, (pct) => {
       onProgress?.(2 + Math.round(pct * 0.88))
     })
