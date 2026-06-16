@@ -1,5 +1,6 @@
 import ffmpeg from 'fluent-ffmpeg'
 import { existsSync, promises as fs, statSync } from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import type { AppConfig, CombinerStrategy, CombineResult } from '../../types.js'
 import {
@@ -84,14 +85,13 @@ export default class FfmpegCombiner implements CombinerStrategy {
     let tempSubPath: string | undefined
 
     if (subtitlePath) {
-      // ffmpeg MSYS2 的滤镜解析不认 \: 转义。把 ASS 复写到 ffmpeg CWD 下，
-      // 用纯文件名引用，彻底避开路径中的 : 和 \。
       const sizePreset = toVideoSizePreset(dimensions.width, dimensions.height)
       const tempSubName = `_vt_sub_${Date.now()}.ass`
-      tempSubPath = path.join(process.cwd(), tempSubName)
+      tempSubPath = path.join(os.tmpdir(), tempSubName)
       await fs.copyFile(subtitlePath, tempSubPath)
 
-      const subFilterParts = [`subtitles=${tempSubName}`]
+      const escapedSubPath = tempSubPath.replace(/\\/g, '/').replace(/:/g, '\\:')
+      const subFilterParts = [`subtitles=${escapedSubPath}`]
       if (sizePreset) subFilterParts.push(`original_size=${sizePreset}`)
       subFilterParts.push('force_style=Alignment\\=2\\,MarginV\\=60')
       const subFilterStr = `[0:v]${subFilterParts.join(':')}[v]`
