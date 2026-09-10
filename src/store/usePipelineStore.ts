@@ -158,14 +158,26 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
         installingDeps: false,
       })
       await get().loadConfig()
-    } catch {
-      set({ installingDeps: false })
+    } catch (error) {
+      const rawMessage = error instanceof Error ? error.message.toLowerCase() : ''
+      const message = rawMessage.includes('proxy')
+        ? '无法连接代理服务器。请检查代理地址、端口和客户端运行状态。'
+        : rawMessage.includes('timed out')
+          ? '连接软件源超时。请检查网络或代理后重试。'
+          : '安装失败。请检查网络或代理设置后重试。'
+      set({
+        installingDeps: false,
+        depInstallProgress: { depId: 'install', stage: 'error', message, percent: 0 },
+      })
     } finally {
       depsProgressCleanup()
     }
   },
 
-  dismissDepsDialog: () => {
+  dismissDepsDialog: async () => {
+    if (get().installingDeps) {
+      await window.electronAPI.depsCancelInstall()
+    }
     set({ missingDeps: null, installingDeps: false, depInstallProgress: null })
   },
 

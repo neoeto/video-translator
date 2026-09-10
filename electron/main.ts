@@ -45,6 +45,7 @@ interface BroadcastQueueState {
 }
 
 let currentPipeline: PipelineOrchestrator | null = null
+let dependencyInstallController: AbortController | null = null
 const taskQueue: QueueTask[] = []
 let activeTask: QueueTask | null = null
 let lastDependencySourceType: VideoSourceType = 'youtube'
@@ -265,12 +266,25 @@ function registerIpcHandlers(): void {
   })
 
   ipcMain.handle('deps:install', async (_event, missingDeps: MissingDep[]): Promise<MissingDep[]> => {
+    if (dependencyInstallController) {
+      throw new Error('Dependency installation is already in progress.')
+    }
+
     const config = getConfig()
-    const updatedPaths = await installMissingDeps(missingDeps, config, (progress) => {
-      mainWindow?.webContents.send('deps:progress', progress)
-    })
-    setConfig(updatedPaths)
-    return checkMissingDeps(getConfig(), lastDependencySourceType)
+    dependencyInstallController = new AbortController()
+    try {
+      const updatedPaths = await installMissingDeps(missingDeps, config, (progress) => {
+        mainWindow?.webContents.send('deps:progress', progress)
+      }, dependencyInstallController.signal)
+      setConfig(updatedPaths)
+      return checkMissingDeps(getConfig(), lastDependencySourceType)
+    } finally {
+      dependencyInstallController = null
+    }
+  })
+
+  ipcMain.handle('deps:cancel-install', (): void => {
+    dependencyInstallController?.abort()
   })
 
   ipcMain.handle('history:get', (): HistoryEntry[] => getHistory())

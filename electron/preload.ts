@@ -35,6 +35,8 @@ const electronAPI = {
     ipcRenderer.invoke('deps:check', sourceType),
   depsInstall: (missingDeps: MissingDep[]): Promise<MissingDep[]> =>
     ipcRenderer.invoke('deps:install', missingDeps),
+  depsCancelInstall: (): Promise<void> =>
+    ipcRenderer.invoke('deps:cancel-install'),
   onDepsProgress: (callback: (progress: DepInstallProgress) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, progress: DepInstallProgress) => callback(progress)
     ipcRenderer.on('deps:progress', handler)

@@ -3,7 +3,7 @@ import path from 'node:path'
 import test from 'node:test'
 
 // @ts-expect-error TS5097: Node's strip-types test runner requires the .ts specifier.
-import { getRequiredDeps, getVenvBinDirForUserData } from './dependency-manager.ts'
+import { getRequiredDeps, getVenvBinDirForUserData, isVersionAtLeast } from './dependency-manager.ts'
 import type { AppConfig } from './types.ts'
 
 function config(overrides: Partial<AppConfig> = {}): AppConfig {
@@ -99,4 +99,10 @@ test('edge-tts is not required when ttsMode is not edge', () => {
   const deps = getRequiredDeps(config({ ttsMode: 'mimo' }), 'youtube')
   const edgeTts = deps.find((d) => d.id === 'edge-tts')
   assert.equal(edgeTts, undefined)
+})
+
+test('recognizes stale yt-dlp versions as unsupported', () => {
+  assert.equal(isVersionAtLeast('2025.5.22', '2026.8.19'), false)
+  assert.equal(isVersionAtLeast('2026.08.19', '2026.8.19'), true)
+  assert.equal(isVersionAtLeast('2026.9.1', '2026.8.19'), true)
 })

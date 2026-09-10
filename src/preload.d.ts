@@ -49,6 +49,7 @@ export interface ElectronAPI {
   setConfig: (config: Partial<AppConfig>) => Promise<void>
   depsCheck: (sourceType: VideoSourceType) => Promise<MissingDep[]>
   depsInstall: (missingDeps: MissingDep[]) => Promise<MissingDep[]>
+  depsCancelInstall: () => Promise<void>
   onDepsProgress: (callback: (progress: DepInstallProgress) => void) => () => void
   getHistory: () => Promise<HistoryEntry[]>
   deleteHistory: (id: string) => Promise<void>

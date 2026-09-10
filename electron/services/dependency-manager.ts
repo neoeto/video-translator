@@ -3,8 +3,10 @@ import fs from 'node:fs'
 import { mkdir, rm } from 'node:fs/promises'
 import path from 'node:path'
 import electron from 'electron'
+import { fetch } from 'undici'
 import { getEmbeddedPythonBinDir, getEmbeddedPythonPath } from './embedded-python.js'
 import { parsePipJsonProgress, parsePipTextLine, splitStderrLines } from './pip-progress.js'
+import { getDispatcher } from './proxy.js'
 import type { AppConfig, DepInstallProgress, DepInstallStage, MissingDep } from './types.js'
 
 const { app } = electron
@@ -18,6 +20,8 @@ export interface DepInfo {
   descriptionEn: string
   descriptionZh: string
   estimatedSize: string
+  /** Minimum CLI version required by the app. Older installed versions are offered as updates. */
+  minimumVersion?: string
   configCondition?: { field: keyof AppConfig; value: string }
   sourceTypeCondition?: { notEquals: string }
 }
@@ -29,6 +33,10 @@ interface MirrorSource {
 
 const MIRROR_CHAIN: MirrorSource[] = [
   {
+    name: 'Official PyPI',
+    indexArgs: [],
+  },
+  {
     name: 'Tsinghua',
     indexArgs: ['-i', 'https://pypi.tuna.tsinghua.edu.cn/simple', '--trusted-host', 'pypi.tuna.tsinghua.edu.cn'],
   },
@@ -36,22 +44,27 @@ const MIRROR_CHAIN: MirrorSource[] = [
     name: 'Aliyun',
     indexArgs: ['-i', 'https://mirrors.aliyun.com/pypi/simple', '--trusted-host', 'mirrors.aliyun.com'],
   },
-  {
-    name: 'Official PyPI',
-    indexArgs: [],
-  },
 ]
+
+// Avoid leaving the UI blocked forever when a mirror accepts a connection but
+// never returns package data. Mirrors are retried below, so fail fast here.
+const PIP_NETWORK_ARGS = ['--disable-pip-version-check', '--timeout', '20', '--retries', '1']
+const YT_DLP_INSTALL_TIMEOUT_MS = 90_000
+const YT_DLP_RELEASE_TAG = '2026.08.19'
 
 const DEP_REGISTRY: DepInfo[] = [
   {
     id: 'yt-dlp',
     name: 'yt-dlp',
     type: 'python',
-    pipPackage: 'yt-dlp',
+    pipPackage: 'yt-dlp==2026.8.19',
     cliName: 'yt-dlp',
     descriptionEn: 'Downloads videos from YouTube and Bilibili.',
     descriptionZh: '用于下载 YouTube 和 Bilibili 视频。',
     estimatedSize: '~10MB',
+    // YouTube changes its player API regularly. Pinning and checking this prevents an
+    // already-installed, stale extractor from being silently reused.
+    minimumVersion: '2026.8.19',
     sourceTypeCondition: { notEquals: 'local-file' },
   },
   {
@@ -103,7 +116,7 @@ const DEP_REGISTRY: DepInfo[] = [
 function toMissingDep(dep: DepInfo): MissingDep {
   return {
     id: dep.id,
-    name: dep.name,
+    name: dep.minimumVersion ? `${dep.name} (${dep.minimumVersion})` : dep.name,
     descriptionEn: dep.descriptionEn,
     descriptionZh: dep.descriptionZh,
     estimatedSize: dep.estimatedSize,
@@ -144,6 +157,71 @@ function getInstalledPathConfig(depId: string, cliPath: string): Partial<AppConf
   }
 }
 
+function getYtDlpStandaloneAsset(): { fileName: string; url: string } {
+  if (process.platform === 'darwin') {
+    return { fileName: 'yt-dlp', url: `https://github.com/yt-dlp/yt-dlp/releases/download/${YT_DLP_RELEASE_TAG}/yt-dlp_macos` }
+  }
+  if (process.platform === 'win32') {
+    return { fileName: 'yt-dlp.exe', url: `https://github.com/yt-dlp/yt-dlp/releases/download/${YT_DLP_RELEASE_TAG}/yt-dlp.exe` }
+  }
+  if (process.arch === 'arm64') {
+    return { fileName: 'yt-dlp', url: `https://github.com/yt-dlp/yt-dlp/releases/download/${YT_DLP_RELEASE_TAG}/yt-dlp_linux_aarch64` }
+  }
+  return { fileName: 'yt-dlp', url: `https://github.com/yt-dlp/yt-dlp/releases/download/${YT_DLP_RELEASE_TAG}/yt-dlp_linux` }
+}
+
+async function installStandaloneYtDlp(
+  config: AppConfig,
+  onProgress?: (progress: DepInstallProgress) => void,
+  signal?: AbortSignal,
+): Promise<string> {
+  const { fileName, url } = getYtDlpStandaloneAsset()
+  const toolsDir = path.join(app.getPath('userData'), 'tools')
+  const targetPath = path.join(toolsDir, fileName)
+  const temporaryPath = `${targetPath}.download`
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), YT_DLP_INSTALL_TIMEOUT_MS)
+  const onAbort = () => controller.abort()
+  signal?.addEventListener('abort', onAbort, { once: true })
+
+  try {
+    await mkdir(toolsDir, { recursive: true })
+    onProgress?.({ depId: 'yt-dlp', stage: 'downloading', message: 'Downloading yt-dlp from the official release...', percent: 30 })
+
+    const response = await fetch(url, {
+      dispatcher: getDispatcher(config, url),
+      signal: controller.signal,
+    })
+    if (!response.ok) {
+      throw new Error(`Official yt-dlp download returned HTTP ${response.status}`)
+    }
+
+    const data = Buffer.from(await response.arrayBuffer())
+    onProgress?.({ depId: 'yt-dlp', stage: 'downloading', message: 'Saving the official yt-dlp release...', percent: 90 })
+    await fs.promises.writeFile(temporaryPath, data)
+
+    if (data.length === 0) {
+      throw new Error('Official yt-dlp download returned an empty file')
+    }
+    if (process.platform !== 'win32') {
+      await fs.promises.chmod(temporaryPath, 0o755)
+    }
+    await fs.promises.rename(temporaryPath, targetPath)
+
+    const version = await runCommandWithOutput(targetPath, ['--version'], { signal })
+    if (!isVersionAtLeast(version, DEP_REGISTRY.find((dep) => dep.id === 'yt-dlp')!.minimumVersion!)) {
+      throw new Error(`Downloaded yt-dlp version ${version} is too old`)
+    }
+    return targetPath
+  } catch (error) {
+    await rm(temporaryPath, { force: true }).catch(() => undefined)
+    throw error
+  } finally {
+    clearTimeout(timeout)
+    signal?.removeEventListener('abort', onAbort)
+  }
+}
+
 function getExecutableName(cliName: string): string {
   return process.platform === 'win32' ? `${cliName}.exe` : cliName
 }
@@ -160,10 +238,11 @@ interface RunCommandOptions {
   signal?: AbortSignal
   env?: Record<string, string>
   onStderr?: (line: string) => void
+  timeoutMs?: number
 }
 
 function runCommand(command: string, args: string[], options?: RunCommandOptions): Promise<void> {
-  const { signal, env, onStderr } = options ?? {}
+  const { signal, env, onStderr, timeoutMs } = options ?? {}
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
       reject(new Error('Dependency installation cancelled'))
@@ -175,11 +254,18 @@ function runCommand(command: string, args: string[], options?: RunCommandOptions
     let stderr = ''
     let settled = false
     let stderrBuffer = ''
+    let timeout: NodeJS.Timeout | undefined
+
+    const clearCommandTimeout = () => {
+      if (timeout) clearTimeout(timeout)
+    }
 
     const onAbort = () => {
       child.kill('SIGTERM')
       if (!settled) {
         settled = true
+        clearCommandTimeout()
+        signal?.removeEventListener('abort', onAbort)
         reject(new Error('Dependency installation cancelled'))
       }
     }
@@ -200,6 +286,7 @@ function runCommand(command: string, args: string[], options?: RunCommandOptions
     child.on('error', (error) => {
       if (settled) return
       settled = true
+      clearCommandTimeout()
       signal?.removeEventListener('abort', onAbort)
       reject(error)
     })
@@ -207,6 +294,7 @@ function runCommand(command: string, args: string[], options?: RunCommandOptions
     child.on('close', (code) => {
       if (settled) return
       settled = true
+      clearCommandTimeout()
       signal?.removeEventListener('abort', onAbort)
       if (onStderr && stderrBuffer.trim()) {
         onStderr(stderrBuffer)
@@ -217,6 +305,16 @@ function runCommand(command: string, args: string[], options?: RunCommandOptions
         reject(new Error(stderr.trim() || `${command} exited with code ${code ?? 'unknown'}`))
       }
     })
+
+    if (timeoutMs) {
+      timeout = setTimeout(() => {
+        if (settled) return
+        settled = true
+        signal?.removeEventListener('abort', onAbort)
+        child.kill('SIGTERM')
+        reject(new Error(`${command} timed out after ${Math.round(timeoutMs / 1000)} seconds`))
+      }, timeoutMs)
+    }
   })
 }
 
@@ -301,12 +399,56 @@ function findDepInfo(depId: string): DepInfo {
 
 async function isDepAvailable(dep: DepInfo, config: AppConfig): Promise<boolean> {
   const venvCliPath = path.join(getVenvBinDir(), getExecutableName(dep.cliName))
-  if (fs.existsSync(venvCliPath)) return true
-
+  let command: string | null = null
   const configuredPath = getCliPathConfig(config, dep.id)?.trim()
-  if (configuredPath && fs.existsSync(configuredPath)) return true
 
-  return isExecutableAvailable(dep.cliName)
+  // The pipeline uses an explicitly configured executable in preference to the
+  // venv. Verify that same executable, otherwise a stale custom path could pass
+  // this check and still fail during the actual download.
+  if (configuredPath && configuredPath !== dep.cliName) {
+    if (!fs.existsSync(configuredPath)) return false
+    command = configuredPath
+  } else if (fs.existsSync(venvCliPath)) {
+    command = venvCliPath
+  } else {
+    if (await isExecutableAvailable(dep.cliName)) {
+      command = dep.cliName
+    }
+  }
+
+  if (!command) return false
+  return isDepVersionSupported(dep, command)
+}
+
+function parseVersion(version: string): number[] | null {
+  const match = version.trim().match(/^v?(\d+(?:\.\d+)*)/)
+  if (!match) return null
+  return match[1].split('.').map(Number)
+}
+
+export function isVersionAtLeast(version: string, minimumVersion: string): boolean {
+  const actual = parseVersion(version)
+  const minimum = parseVersion(minimumVersion)
+  if (!actual || !minimum) return false
+
+  const componentCount = Math.max(actual.length, minimum.length)
+  for (let index = 0; index < componentCount; index += 1) {
+    const difference = (actual[index] ?? 0) - (minimum[index] ?? 0)
+    if (difference !== 0) return difference > 0
+  }
+  return true
+}
+
+async function isDepVersionSupported(dep: DepInfo, command: string): Promise<boolean> {
+  if (!dep.minimumVersion) return true
+
+  try {
+    const version = await runCommandWithOutput(command, ['--version'])
+    return isVersionAtLeast(version, dep.minimumVersion)
+  } catch {
+    // Treat an unreadable version as unsupported, so the installer can repair it.
+    return false
+  }
 }
 
 export function getRequiredDeps(config: AppConfig, sourceType: string): DepInfo[] {
@@ -387,9 +529,10 @@ async function installWithMirrorFallback(
   env: Record<string, string>,
   onProgress?: (progress: DepInstallProgress) => void,
   signal?: AbortSignal,
-  venvDir?: string,
 ): Promise<void> {
   let lastError: Error | undefined
+  const proxyUrl = env.HTTPS_PROXY || env.HTTP_PROXY
+  const pipProxyArgs = proxyUrl ? ['--proxy', proxyUrl] : []
   const depStatuses: Record<string, 'pending' | 'installing' | 'done'> = {}
   for (const dep of depInfos) {
     depStatuses[dep.id] = 'pending'
@@ -402,7 +545,7 @@ async function installWithMirrorFallback(
   for (const mirror of MIRROR_CHAIN) {
     try {
       emitProgress('installing', `Installing setuptools and wheel via ${mirror.name}...`, 22)
-      await runCommand(pip, ['install', 'setuptools==69.5.1', 'wheel', ...mirror.indexArgs], { signal, env })
+      await runCommand(pip, ['install', ...PIP_NETWORK_ARGS, ...pipProxyArgs, 'setuptools==69.5.1', 'wheel', ...mirror.indexArgs], { signal, env, timeoutMs: YT_DLP_INSTALL_TIMEOUT_MS })
       break
     } catch {
       const isLast = mirror === MIRROR_CHAIN[MIRROR_CHAIN.length - 1]
@@ -419,8 +562,12 @@ async function installWithMirrorFallback(
 
       for (const mirror of MIRROR_CHAIN) {
         if (depInstalled) break
+        emitProgress('installing', `Installing ${dep.name} via ${mirror.name}...`, 30, dep.id)
         const args = [
           'install',
+          '--upgrade',
+          ...PIP_NETWORK_ARGS,
+          ...pipProxyArgs,
           dep.pipPackage,
           ...mirror.indexArgs,
         ]
@@ -429,6 +576,7 @@ async function installWithMirrorFallback(
           await runCommand(pip, args, {
             signal,
             env,
+            timeoutMs: dep.id === 'yt-dlp' ? YT_DLP_INSTALL_TIMEOUT_MS : undefined,
             onStderr: (line) => {
               const parsed = parsePipTextLine(line)
               if (!parsed) return
@@ -442,20 +590,10 @@ async function installWithMirrorFallback(
           break
         } catch (err) {
           lastError = err instanceof Error ? err : new Error(String(err))
-          if (venvDir) {
-            try { await rm(venvDir, { recursive: true, force: true }) } catch { /* best effort */ }
-            try {
-              const python = await findPython()
-              await createVenv(python, venvDir, signal)
-              await upgradePip(pip, env, signal)
-              for (const m2 of MIRROR_CHAIN) {
-                try {
-                  await runCommand(pip, ['install', 'setuptools==69.5.1', 'wheel', ...m2.indexArgs], { signal, env })
-                  break
-                } catch { /* next mirror */ }
-              }
-            } catch { /* best effort, next iteration will retry */ }
-          }
+          // pip can safely retry another index in the same virtual environment.
+          // Recreating it here made every transient network failure look like a
+          // permanently stuck install while the progress stayed at 30%.
+          continue
         }
       }
 
@@ -475,9 +613,26 @@ export async function installMissingDeps(
 
   onProgress?.({ depId: 'python', stage: 'detecting-python', message: 'Detecting Python...', percent: 0 })
 
-  const embeddedBin = getEmbeddedPythonBinDir()
   const proxyEnv = buildProxyEnv(config)
   const depInfos = missingDeps.map((d) => findDepInfo(d.id))
+  const ytDlpDep = depInfos.find((dep) => dep.id === 'yt-dlp')
+  const pipDepInfos = depInfos.filter((dep) => dep.id !== 'yt-dlp')
+  const updatedConfig: Partial<AppConfig> = {}
+
+  // yt-dlp publishes a self-contained macOS executable. Installing it directly
+  // avoids a fragile Python/pip bootstrap for the only dependency needed by the
+  // usual YouTube workflow.
+  if (ytDlpDep) {
+    const ytDlpPath = await installStandaloneYtDlp(config, onProgress, signal)
+    Object.assign(updatedConfig, getInstalledPathConfig('yt-dlp', ytDlpPath))
+  }
+
+  if (pipDepInfos.length === 0) {
+    onProgress?.({ depId: 'done', stage: 'done', message: 'All dependencies installed.', percent: 100 })
+    return updatedConfig
+  }
+
+  const embeddedBin = getEmbeddedPythonBinDir()
 
   let pip: string
   let binDir: string
@@ -501,10 +656,9 @@ export async function installMissingDeps(
   onProgress?.({ depId: 'venv', stage: 'upgrading-pip', message: 'Upgrading pip...', percent: 15 })
   await upgradePip(pip, proxyEnv, signal)
 
-  await installWithMirrorFallback(pip, depInfos, proxyEnv, onProgress, signal, venvDir)
+  await installWithMirrorFallback(pip, depInfos, proxyEnv, onProgress, signal)
 
-  const updatedConfig: Partial<AppConfig> = {}
-  for (const missingDep of missingDeps) {
+  for (const missingDep of pipDepInfos) {
     Object.assign(updatedConfig, getInstalledPathConfig(missingDep.id, path.join(binDir, getExecutableName(findDepInfo(missingDep.id).cliName))))
   }
 

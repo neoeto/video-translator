@@ -64,7 +64,7 @@ export const DependencyDialog: React.FC<DependencyDialogProps> = ({
   }, [missingDeps, onCancel, progress?.stage, progress?.depStatuses])
 
   const progressMessage = progress
-    ? t(stageLabelKeys[progress.stage])
+    ? progress.message || t(stageLabelKeys[progress.stage])
     : ''
 
   const overallPercent = progress?.percent ?? 0
@@ -118,19 +118,21 @@ export const DependencyDialog: React.FC<DependencyDialogProps> = ({
           })}
         </div>
 
-        {isInstalling && (
+        {(isInstalling || progress?.stage === 'error') && (
           <div className="px-6 pb-2">
-            <div className="bg-surface-container-low rounded-xl border border-outline-variant/30 p-4">
+            <div className={`rounded-xl border p-4 ${progress?.stage === 'error' ? 'bg-error-container/20 border-error/30' : 'bg-surface-container-low border-outline-variant/30'}`}>
               <div className="flex items-center justify-between gap-3 mb-3">
                 <span className="text-sm font-semibold text-on-surface">{progressMessage || t('deps.dialog.installing')}</span>
-                <span className="text-xs text-on-surface-variant">{overallPercent}%</span>
+                {progress?.stage !== 'error' && <span className="text-xs text-on-surface-variant">{overallPercent}%</span>}
               </div>
-              <div className="h-2 bg-surface-container-lowest rounded-full overflow-hidden border border-outline-variant/30">
-                <div
-                  className="h-full bg-primary transition-all duration-300"
-                  style={{ width: `${Math.max(0, Math.min(100, overallPercent))}%` }}
-                />
-              </div>
+              {progress?.stage !== 'error' && (
+                <div className="h-2 bg-surface-container-lowest rounded-full overflow-hidden border border-outline-variant/30">
+                  <div
+                    className="h-full bg-primary transition-all duration-300"
+                    style={{ width: `${Math.max(0, Math.min(100, overallPercent))}%` }}
+                  />
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -139,8 +141,7 @@ export const DependencyDialog: React.FC<DependencyDialogProps> = ({
           <button
             type="button"
             onClick={onCancel}
-            disabled={isInstalling}
-            className="px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors"
           >
             {installCompleted ? t('deps.dialog.close') : t('deps.dialog.cancel')}
           </button>
