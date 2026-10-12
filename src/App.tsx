@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { usePipelineStore } from './store/usePipelineStore'
 import { useUIStore } from './store/useUIStore'
 import { InputView } from './components/InputView'
+import { VideoToolEntryView } from './components/video-tool/VideoToolEntryView'
+import { VideoToolEditorView } from './components/video-tool/VideoToolEditorView'
 import { ProgressView } from './components/ProgressView'
 import { ResultView } from './components/ResultView'
 import { SettingsView } from './components/SettingsView'
@@ -23,8 +25,9 @@ function App() {
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed)
   const initLocale = useI18n((s) => s.initLocale)
   const t = useI18n((s) => s.t)
-  const [activeView, setActiveView] = useState<'home' | 'processing' | 'library' | 'settings' | 'help' | 'detail' | 'editor'>('home')
+  const [activeView, setActiveView] = useState<'home' | 'video-tool' | 'video-tool-editor' | 'processing' | 'library' | 'settings' | 'help' | 'detail' | 'editor'>('home')
   const [detailEntryId, setDetailEntryId] = useState<string | null>(null)
+  const [videoToolProjectId, setVideoToolProjectId] = useState<string | null>(null)
   const prevStageRef = useRef(stage)
 
   useEffect(() => {
@@ -74,19 +77,17 @@ function App() {
     const prevStage = prevStageRef.current
     prevStageRef.current = stage
 
-    // Auto-navigate to processing only on first task start (idle/completed → downloading)
+    if (activeView === 'video-tool' || activeView === 'video-tool-editor') return
     if ((prevStage === 'idle' || prevStage === 'completed') && stage === 'downloading') {
       setActiveView('processing')
     }
-    // Auto-navigate to editor when pipeline enters manual review
     if (stage === 'awaiting-manual-review' && prevStage !== 'awaiting-manual-review') {
       setActiveView('editor')
     }
-    // Return to processing when leaving manual review
     if (prevStage === 'awaiting-manual-review' && stage !== 'awaiting-manual-review') {
       setActiveView('processing')
     }
-  }, [stage])
+  }, [stage, activeView])
 
   useEffect(() => {
     // Track when we have active tasks
@@ -94,16 +95,17 @@ function App() {
       wasProcessingRef.current = true
     }
 
-    // Auto-navigate to library when all tasks complete (not on error — let user see it)
+    if (activeView === 'video-tool' || activeView === 'video-tool-editor') return
     if (wasProcessingRef.current && !queueState.active && queueState.pending.length === 0 && stage !== 'error') {
       wasProcessingRef.current = false
       setActiveView('library')
     }
-  }, [queueState, stage])
+  }, [queueState, stage, activeView])
 
   const getViewTitle = () => {
     switch (activeView) {
       case 'home': return t('app.views.home')
+      case 'video-tool': return t('app.views.videoTool')
       case 'processing': return t('app.views.processing')
       case 'library': return t('app.views.library')
       case 'detail': return t('result.detail.title')
@@ -114,27 +116,32 @@ function App() {
     }
   }
 
-  const handleNavigate = (view: string, params?: { entryId?: string }) => {
+  const handleNavigate = (view: string, params?: { entryId?: string; projectId?: string }) => {
     if (view === 'detail' && params?.entryId) {
       setDetailEntryId(params.entryId)
       setActiveView('detail')
-    } else if (view === 'home' || view === 'processing' || view === 'library' || view === 'settings' || view === 'help' || view === 'editor') {
+    } else if (view === 'video-tool-editor' && params?.projectId) {
+      setVideoToolProjectId(params.projectId)
+      setActiveView('video-tool-editor')
+    } else if (view === 'video-tool' || view === 'home' || view === 'processing' || view === 'library' || view === 'settings' || view === 'help' || view === 'editor') {
       setActiveView(view)
     }
   }
 
   return (
     <div className="min-h-screen bg-background text-on-background flex flex-row font-body">
-      <SideNavBar activeView={activeView === 'detail' ? 'library' : activeView === 'editor' ? 'processing' : activeView} onNavigate={handleNavigate} />
+      <SideNavBar activeView={activeView === 'detail' ? 'library' : activeView === 'editor' ? 'processing' : activeView === 'video-tool-editor' ? 'video-tool' : activeView} onNavigate={handleNavigate} />
       
       <div
         className="flex-1 flex flex-col min-w-0 transition-[margin-left] duration-200"
         style={{ marginLeft: sidebarCollapsed ? 68 : 260 }}
       >
-        {activeView !== 'editor' && <TopAppBar title={getViewTitle()} />}
+        {activeView !== 'editor' && activeView !== 'video-tool-editor' && <TopAppBar title={getViewTitle()} />}
         
         <main className="flex-1 overflow-auto bg-background">
           {activeView === 'home' && <InputView onNavigate={handleNavigate} />}
+          {activeView === 'video-tool' && <VideoToolEntryView onNavigate={handleNavigate} />}
+          {activeView === 'video-tool-editor' && videoToolProjectId && <VideoToolEditorView projectId={videoToolProjectId} onNavigate={handleNavigate} />}
           {activeView === 'processing' && <ProgressView />}
           {activeView === 'library' && <ResultView onNavigate={handleNavigate} />}
           {activeView === 'detail' && detailEntryId && <VideoDetailView entryId={detailEntryId} onNavigate={handleNavigate} />}

@@ -1,4 +1,5 @@
 import type { PipelineState, AppConfig, DepInstallProgress, MissingDep, SpeakerProfile, VideoSourceType, TranslationLanguage, PipelineMode, ManualReviewResult } from './types'
+import type { ProjectAcquireRequest, ProjectAudioRequest, ProjectAudioResult, ProjectCreateRequest, ProjectFrameRequest, ProjectFrameResult, ProjectListItem, ProjectManifest, ProjectMediaMetadata, ProjectOperationProgress, ProjectRenderRequest, ProjectRenderResult, ProjectSpeakerAudioRequest, ProjectSpeakerAudioResult } from '../shared/project-types'
 
 export interface QueueTask {
   id: string
@@ -64,7 +65,22 @@ export interface ElectronAPI {
   saveFileDialog: (defaultName: string) => Promise<string | null>
   getVideoDimensions: (videoPath: string) => Promise<{ width: number; height: number } | null>
   getAudioWaveform: (audioPath: string, samples: number) => Promise<number[]>
-  getMediaServerPort: () => Promise<number>
+  getMediaFileUrl: (filePath: string) => Promise<string>
+  projectCreate: (request?: ProjectCreateRequest) => Promise<ProjectManifest>
+  projectList: () => Promise<ProjectListItem[]>
+  projectOpen: (projectId: string) => Promise<ProjectManifest>
+  projectSave: (projectId: string, manifest: ProjectManifest) => Promise<ProjectManifest>
+  projectDelete: (projectId: string) => Promise<void>
+  projectAcquire: (projectId: string, request: ProjectAcquireRequest, operationId: string) => Promise<ProjectManifest>
+  projectCancel: (projectId: string, operationId: string) => Promise<void>
+  projectAssetUrl: (projectId: string, assetPath: string) => Promise<string>
+  projectMetadata: (projectId: string, assetPath?: string) => Promise<ProjectMediaMetadata>
+  projectExtractFrame: (projectId: string, request: ProjectFrameRequest, operationId: string) => Promise<ProjectFrameResult>
+  projectExtractAudio: (projectId: string, request: ProjectAudioRequest, operationId: string) => Promise<ProjectAudioResult>
+  projectExtractSpeakerAudio: (projectId: string, request: ProjectSpeakerAudioRequest, operationId: string) => Promise<ProjectSpeakerAudioResult>
+  projectRender: (projectId: string, request: ProjectRenderRequest, operationId: string) => Promise<ProjectRenderResult>
+  onProjectProgress: (callback: (progress: ProjectOperationProgress) => void) => () => void
+
 }
 
 declare global {

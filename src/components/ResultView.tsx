@@ -3,8 +3,8 @@ import { usePipelineStore } from '../store/usePipelineStore'
 import { useI18n } from '../i18n'
 import { getLanguageDisplayName, type TranslationLanguage } from '../types'
 import type { HistoryEntry } from '../preload'
+import type { ProjectListItem } from '../../shared/project-types'
 import { ConfirmDialog } from './ConfirmDialog'
-
 function formatCompletedAt(timestamp: number | undefined): string {
   if (!timestamp) return ''
   const date = new Date(timestamp)
@@ -24,13 +24,13 @@ function formatDuration(seconds: number | undefined): string {
 }
 
 interface ResultViewProps {
-  onNavigate: (view: string, params?: { entryId?: string }) => void
+  onNavigate: (view: string, params?: { entryId?: string; projectId?: string }) => void
 }
-
 export const ResultView: React.FC<ResultViewProps> = ({ onNavigate }) => {
   const { state, config, reset } = usePipelineStore()
   const t = useI18n((s) => s.t)
   const [history, setHistory] = useState<HistoryEntry[]>([])
+  const [projects, setProjects] = useState<ProjectListItem[]>([])
   const [confirmAction, setConfirmAction] = useState<{ message: string; action: () => void } | null>(null)
 
   const requestConfirm = useCallback((message: string, action: () => void) => {
@@ -39,8 +39,8 @@ export const ResultView: React.FC<ResultViewProps> = ({ onNavigate }) => {
 
   useEffect(() => {
     window.electronAPI.getHistory().then(setHistory).catch(() => {})
+    window.electronAPI.projectList().then(setProjects).catch(() => {})
   }, [state.stage])
-
   const handleDeleteHistory = async (id: string) => {
     await window.electronAPI.deleteHistory(id)
     setHistory((prev) => prev.filter((e) => e.id !== id))
@@ -148,6 +148,20 @@ export const ResultView: React.FC<ResultViewProps> = ({ onNavigate }) => {
           </div>
         )}
       </div>
+
+      {projects.length > 0 && (
+        <section className="border-t border-surface-variant pt-8">
+          <h2 className="text-xl font-bold text-on-surface mb-4">{t('result.videoToolProjects')}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {projects.map((project) => (
+              <button key={project.id} type="button" onClick={() => onNavigate('video-tool-editor', { projectId: project.id })} className="text-left bg-surface-container rounded-xl border border-surface-variant p-4 hover:border-primary transition-colors">
+                <div className="flex items-center gap-3"><span className="material-symbols-outlined text-primary">movie_edit</span><span className="font-semibold text-on-surface truncate">{project.name}</span></div>
+                <p className="text-xs text-outline mt-2">{project.duration ? formatDuration(project.duration) : t('videoTool.loading')}</p>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       <ConfirmDialog
         open={!!confirmAction}

@@ -13,6 +13,23 @@ YouTube 视频翻译桌面应用。粘贴链接，自动完成下载、语音转
 - **多语言界面** — 支持中文 / English 切换，语言偏好自动保存
 - **网络代理** — 内置代理设置，支持需要代理的网络环境
 
+### Phase 1 Video Tool
+
+侧边栏新增独立的 **Video Tool**。可选择 YouTube、Bilibili 或本地视频作为输入：网络来源仅负责下载，本地文件会复制到 `outputDir/projects/<projectId>` 下的自包含项目目录。Video Tool 的项目编辑器与翻译流程中的人工复核编辑器相互独立。
+
+项目编辑器提供预览和时间线，以及分割、删除、裁剪、重排、撤销/重做和自动保存。音频工具面板还提供普通音频提取，以及独立的 **按 speaker 导出音频** 操作：使用本地 WhisperX 做说话人分离标注，按每位 speaker 的识别片段时间顺序拼接，分别生成 WAV/MP3/M4A 项目音频资产。还支持截取 PNG/JPEG 帧，并按原始分辨率或 1080p、720p、480p 渲染 MP4。
+
+项目媒体通过主进程 IPC 和 FFmpeg 处理；项目清单保存相对路径和时间线状态，避免依赖机器上的绝对路径。
+
+使用流程：
+
+1. 从侧边栏打开 **Video Tool**，选择 YouTube、Bilibili 或本地视频。
+2. 等待网络视频下载或本地文件复制到项目目录。
+3. 在独立项目编辑器中预览并编辑时间线，项目会自动保存。
+4. 按需截取帧、提取音频，或在音频工具面板使用 **按 speaker 导出音频**；使用该操作前须配置 WhisperX 路径、token 和模型。选择输出分辨率后渲染 MP4。
+
+Phase 1 暂不包含字幕、多音轨、代理、裁剪/旋转/变速等能力。**按 speaker 导出音频** 是基于本地 WhisperX 识别和说话人标注的独立导出功能；它不会保留原始时间线间隔，也不是声源分离或人声分离。
+
 ## 技术栈
 
 | 层级 | 技术 |
@@ -70,6 +87,12 @@ YouTube 视频翻译桌面应用。粘贴链接，自动完成下载、语音转
 └── package.json
 ```
 
+### Video Tool 结构
+
+- **侧边栏入口**：`Video Tool` 作为独立的一等功能入口。
+- **项目目录**：每个项目位于配置的 `outputDir/projects/<projectId>`，媒体文件与项目清单一起保存。
+- **处理边界**：项目媒体操作经主进程 IPC 调用 FFmpeg；项目清单记录媒体相对路径和时间线状态。
+
 ## 处理流水线
 
 ```
@@ -101,7 +124,7 @@ YouTube URL
 ### 环境要求
 
 - Node.js >= 18
-- Python 3.8+（仅在使用本地 Whisper CLI 模式时需要）
+- Python 3.8+（仅在使用本地 Whisper CLI 模式时需要；**按 speaker 导出音频** 还需要已配置的本地 WhisperX 路径、token 和模型）
 
 ### 安装
 
@@ -144,7 +167,7 @@ npm run preview
 | API Key | 对应服务的 API 密钥 |
 | Translation Model | 翻译 LLM：OpenAI / DeepSeek / GLM 智谱 |
 | TTS Engine | 语音合成：Edge TTS（免费）/ OpenAI TTS |
-| Working Directory | 工作目录，存放临时文件和导出视频 |
+| Working Directory | 工作目录，存放临时文件和导出视频；Video Tool 使用其中配置的 `outputDir` 创建项目目录 |
 | Network Proxy | 网络代理开关和地址 |
 
 所有配置通过 `electron-store` 加密存储在本地。

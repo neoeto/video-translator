@@ -102,3 +102,9 @@ body {
   background-color: var(--color-background);
   color: var(--color-on-background);
 }
+
+.tool-button { border: 1px solid var(--color-outline-variant); border-radius: 6px; padding: 7px 8px; color: var(--color-on-surface-variant); font-size: 12px; white-space: nowrap; transition: background-color .15s, border-color .15s; }
+.tool-button:hover:not(:disabled) { background: var(--color-surface-variant); border-color: var(--color-primary); color: var(--color-on-surface); }
+.tool-button:disabled { opacity: .45; cursor: not-allowed; }
+.tool-input { width: 100%; min-width: 0; border: 1px solid var(--color-outline-variant); border-radius: 6px; background: var(--color-surface-container-low); color: var(--color-on-surface); padding: 7px 8px; font-size: 12px; outline: none; }
+.tool-input:focus { border-color: var(--color-primary); }

@@ -9,15 +9,13 @@ function formatTime(seconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(ms).padStart(2, '0')}`
 }
 
-function toMediaUrl(filePath: string, port: number): string {
-  return `http://127.0.0.1:${port}/${encodeURIComponent(filePath)}`
-}
 
 export const VideoPreview: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
   const rafRef = useRef<number>(0)
-  const [mediaPort, setMediaPort] = useState(0)
+  const [videoUrl, setVideoUrl] = useState<string>()
+  const [audioUrl, setAudioUrl] = useState<string>()
 
   const videoPath = useEditorStore(s => s.videoPath)
   const audioPath = useEditorStore(s => s.audioPath)
@@ -31,10 +29,15 @@ export const VideoPreview: React.FC = () => {
   const duration = useEditorStore(s => s.duration)
   const t = useI18n(s => s.t)
 
-  // Fetch media server port on mount
   useEffect(() => {
-    window.electronAPI.getMediaServerPort().then(setMediaPort)
-  }, [])
+    let cancelled = false
+    const videoRequest = videoPath ? window.electronAPI.getMediaFileUrl(videoPath) : Promise.resolve(undefined)
+    const audioRequest = hasSynthesizedAudio && audioPath ? window.electronAPI.getMediaFileUrl(audioPath) : Promise.resolve(undefined)
+    Promise.all([videoRequest, audioRequest]).then(([video, audio]) => {
+      if (!cancelled) { setVideoUrl(video); setAudioUrl(audio) }
+    }).catch(() => { if (!cancelled) { setVideoUrl(undefined); setAudioUrl(undefined) } })
+    return () => { cancelled = true }
+  }, [videoPath, audioPath, hasSynthesizedAudio])
 
   // Map video time to audio time based on segment timings
   const videoTimeToAudioTime = useCallback((vTime: number): number | null => {
@@ -193,15 +196,15 @@ export const VideoPreview: React.FC = () => {
       <div className="relative w-full max-w-4xl aspect-video bg-black rounded-lg overflow-hidden border border-surface-variant shadow-[0px_4px_12px_rgba(0,0,0,0.5)]">
         <video
           ref={videoRef}
-          src={videoPath && mediaPort ? toMediaUrl(videoPath, mediaPort) : undefined}
+          src={videoUrl}
           className="w-full h-full object-contain"
           muted={hasSynthesizedAudio}
           playsInline
         />
-        {hasSynthesizedAudio && audioPath && mediaPort > 0 && (
+        {hasSynthesizedAudio && audioUrl && (
           <audio
             ref={audioRef}
-            src={toMediaUrl(audioPath, mediaPort)}
+            src={audioUrl}
             preload="auto"
           />
         )}

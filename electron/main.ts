@@ -1,8 +1,10 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, nativeTheme, screen, shell } from 'electron'
 import { createReadStream, statSync } from 'node:fs'
+import { promises as fsPromises } from 'node:fs'
 import { createServer, type Server } from 'node:http'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { randomUUID } from 'node:crypto'
 import { is } from '@electron-toolkit/utils'
 import { getConfig, setConfig } from './services/config.js'
 import { checkMissingDeps, installMissingDeps } from './services/dependency-manager.js'
@@ -11,13 +13,30 @@ import { buildHistorySourceUrl } from './services/history-source-link.js'
 import { addHistoryEntry, deleteHistoryEntry, getHistory, type HistoryEntry } from './services/history.js'
 import { cancelExport, exportVideo, type ExportResolution } from './services/export-video.js'
 import { PipelineOrchestrator } from './services/pipeline.js'
+import { ProjectStore, validateTimeline } from './services/project-store.js'
+import { acquireProjectMedia } from './services/project-acquisition.js'
+import { extractAudio, extractFrame, probeMedia, renderProject } from './services/project-media.js'
+import { exportSpeakerAudio } from './services/project-speaker-audio.js'
+import { getProjectDirectories, resolveProjectAssetPath, resolveProjectRelativePath, toProjectRelativePath, assertProjectId } from './services/project-paths.js'
 import type { AppConfig, MissingDep, PipelineMode, PipelineState, SpeakerProfile, TranslationLanguage, VideoSourceType } from './services/types.js'
+import type { ProjectOperationProgress, ProjectSpeakerAudioResult } from '../shared/project-types.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 let mainWindow: BrowserWindow | null = null
 let mediaServer: Server | null = null
 let mediaServerPort = 0
-
+const mediaTokens = new Map<string, { filePath: string; extension: string }>()
+async function registerMediaFile(filePath: string): Promise<string> {
+  const canonical = await fsPromises.realpath(filePath)
+  const stat = await fsPromises.stat(canonical)
+  if (!stat.isFile()) throw new Error('Media path is not a regular file')
+  const outputRoot = await fsPromises.realpath(getConfig().outputDir)
+  const rootWithSep = `${outputRoot}${path.sep}`
+  if (canonical !== outputRoot && !canonical.startsWith(rootWithSep)) throw new Error('Media path is outside output directory')
+  const token = randomUUID()
+  mediaTokens.set(token, { filePath: canonical, extension: path.extname(canonical).toLowerCase() })
+  return `http://127.0.0.1:${mediaServerPort}/media/${token}`
+}
 // ─── Task Queue ─────────────────────────────────────────────────
 
 interface QueueTask {
@@ -49,6 +68,29 @@ let dependencyInstallController: AbortController | null = null
 const taskQueue: QueueTask[] = []
 let activeTask: QueueTask | null = null
 let lastDependencySourceType: VideoSourceType = 'youtube'
+type ActiveProjectOperation = { operationId: string; controller: AbortController }
+const activeProjectOperations = new Map<string, ActiveProjectOperation>()
+const approvedLocalFiles = new Set<string>()
+const OPERATION_ID_RE = /^[A-Za-z0-9_-]{1,128}$/
+function validateOperationId(value: unknown): asserts value is string { if (typeof value !== 'string' || !OPERATION_ID_RE.test(value)) throw new Error('Invalid operation id') }
+function isIpcRecord(value: unknown): value is Record<string, unknown> { return !!value && typeof value === 'object' }
+
+function beginProjectOperation(projectId: string, operationId: string): AbortController {
+  assertProjectId(projectId); validateOperationId(operationId)
+  if (activeProjectOperations.has(projectId)) throw new Error('A project operation is already in progress')
+  const operation = { operationId, controller: new AbortController() }
+  activeProjectOperations.set(projectId, operation)
+  return operation.controller
+}
+
+function endProjectOperation(projectId: string, operationId: string): void {
+  const operation = activeProjectOperations.get(projectId)
+  if (operation?.operationId === operationId) activeProjectOperations.delete(projectId)
+}
+
+function projectProgress(projectId: string, operationId: string, stage: ProjectOperationProgress['stage'], percent: number): void {
+  mainWindow?.webContents.send('project:progress', { projectId, operationId, stage, percent: Math.max(0, Math.min(100, percent)) } satisfies ProjectOperationProgress)
+}
 
 function toBroadcastTask(task: QueueTask): BroadcastQueueTask {
   return {
@@ -184,8 +226,7 @@ function createWindow(): void {
 }
 
 function registerIpcHandlers(): void {
-  ipcMain.handle('media:getServerPort', () => mediaServerPort)
-
+  ipcMain.handle('media:getFileUrl', async (_event, filePath: string): Promise<string> => registerMediaFile(filePath))
   ipcMain.handle('pipeline:start', async (_event, url: string, outputDir: string, sourceType: VideoSourceType = 'youtube'): Promise<void> => {
     if (!mainWindow) {
       throw new Error('Main window is not available')
@@ -309,10 +350,10 @@ function registerIpcHandlers(): void {
         { name: 'Video Files', extensions: ['mp4', 'mkv', 'webm', 'mov', 'm4v', 'avi', 'flv', 'wmv', 'ts', 'mts'] },
       ],
     })
-    if (result.canceled || result.filePaths.length === 0) {
-      return null
-    }
-    return result.filePaths[0]
+    if (result.canceled || result.filePaths.length === 0) return null
+    const selected = await fsPromises.realpath(result.filePaths[0])
+    approvedLocalFiles.add(selected)
+    return selected
   })
 
   ipcMain.handle('shell:openPath', async (_event, targetPath: string): Promise<void> => {
@@ -402,6 +443,194 @@ function registerIpcHandlers(): void {
        })
    })
   })
+  // ─── Phase 1 project IPC ────────────────────────────────────────
+  ipcMain.handle('project:create', async (_event, request: unknown = {}): Promise<import('../shared/project-types.js').ProjectManifest> => {
+    if (!isIpcRecord(request)) throw new Error('Invalid project create request')
+    let name: string | undefined
+    if ('name' in request) {
+      if (typeof request.name !== 'string') throw new Error('Invalid project create request')
+      name = request.name
+    }
+    return new ProjectStore(getConfig().outputDir).create(name)
+  })
+
+  ipcMain.handle('project:list', async (): Promise<import('../shared/project-types.js').ProjectListItem[]> => {
+    return new ProjectStore(getConfig().outputDir).list()
+  })
+
+  ipcMain.handle('project:open', async (_event, projectId: unknown): Promise<import('../shared/project-types.js').ProjectManifest> => {
+    assertProjectId(projectId)
+    return new ProjectStore(getConfig().outputDir).open(projectId)
+  })
+
+  ipcMain.handle('project:save', async (_event, projectId: unknown, manifest: unknown): Promise<import('../shared/project-types.js').ProjectManifest> => {
+    assertProjectId(projectId)
+    if (activeProjectOperations.has(projectId)) throw new Error('Project operation is in progress')
+    if (!manifest || typeof manifest !== 'object') throw new Error('Invalid project manifest')
+    return new ProjectStore(getConfig().outputDir).save(projectId, manifest)
+  })
+
+  ipcMain.handle('project:delete', async (_event, projectId: unknown): Promise<void> => {
+    assertProjectId(projectId)
+    if (activeProjectOperations.has(projectId)) throw new Error('Project operation is in progress')
+    await new ProjectStore(getConfig().outputDir).delete(projectId)
+  })
+
+  ipcMain.handle('project:acquire', async (_event, projectId: unknown, request: import('../shared/project-types.js').ProjectAcquireRequest, operationId: unknown): Promise<import('../shared/project-types.js').ProjectManifest> => {
+    assertProjectId(projectId)
+    validateOperationId(operationId)
+    const config = getConfig()
+    if (!request || typeof request !== 'object' || !['youtube', 'bilibili', 'local-file'].includes(request.sourceType) || typeof request.url !== 'string' || !request.url.trim()) throw new Error('Invalid project acquisition request')
+    if (request.sourceType === 'local-file') {
+      let stat
+      let canonical: string
+      try { canonical = await fsPromises.realpath(request.url); stat = statSync(canonical) } catch { throw new Error('Local video file not found') }
+      if (!stat.isFile() || !path.isAbsolute(request.url)) throw new Error('Local source must be an absolute file path')
+      if (!approvedLocalFiles.delete(canonical)) throw new Error('Local video file was not approved by the native file picker')
+      request = { ...request, url: canonical }
+    }
+    const controller = beginProjectOperation(projectId, operationId)
+    try {
+      const manifest = await new ProjectStore(config.outputDir).open(projectId, true)
+      return await acquireProjectMedia(config.outputDir, config, manifest, request, controller.signal, percent => projectProgress(projectId, operationId, 'acquiring', percent))
+    } finally {
+      endProjectOperation(projectId, operationId)
+    }
+  })
+
+  ipcMain.handle('project:cancel', (_event, projectId: unknown, operationId: unknown): void => {
+    assertProjectId(projectId)
+    validateOperationId(operationId)
+    const operation = activeProjectOperations.get(projectId)
+    if (operation?.operationId === operationId) operation.controller.abort()
+  })
+
+  ipcMain.handle('project:asset-url', async (_event, projectId: unknown, assetPath: unknown): Promise<string> => {
+    assertProjectId(projectId)
+    if (typeof assetPath !== 'string') throw new Error('Invalid asset path')
+    const outputDir = getConfig().outputDir
+    const manifest = await new ProjectStore(outputDir).open(projectId)
+    const absolute = await resolveProjectAssetPath(outputDir, projectId, assetPath, manifest)
+    return registerMediaFile(absolute)
+  })
+
+  ipcMain.handle('project:metadata', async (_event, projectId: unknown, assetPath?: unknown): Promise<import('../shared/project-types.js').ProjectMediaMetadata> => {
+    assertProjectId(projectId)
+    if (assetPath !== undefined && typeof assetPath !== 'string') throw new Error('Invalid asset path')
+    const outputDir = getConfig().outputDir
+    const manifest = await new ProjectStore(outputDir).open(projectId)
+    const relative = assetPath || manifest.assets.video
+    if (!relative) throw new Error('Project has no video asset')
+    const absolute = await resolveProjectAssetPath(outputDir, projectId, relative, manifest)
+    const media = await probeMedia(absolute)
+    return { ...media, assetPath: relative }
+  })
+
+  ipcMain.handle('project:extract-frame', async (_event, projectId: unknown, request: unknown, operationId: unknown): Promise<import('../shared/project-types.js').ProjectFrameResult> => {
+    assertProjectId(projectId); validateOperationId(operationId)
+    if (!isIpcRecord(request) || typeof request.timestamp !== 'number' || !Number.isFinite(request.timestamp) || request.timestamp < 0 || (request.assetPath !== undefined && typeof request.assetPath !== 'string') || (request.format !== undefined && request.format !== 'png' && request.format !== 'jpeg')) throw new Error('Invalid frame request')
+    const outputDir = getConfig().outputDir; const controller = beginProjectOperation(projectId, operationId)
+    try {
+      const manifest = await new ProjectStore(outputDir).open(projectId); const sourceRelative = request.assetPath || manifest.assets.video
+      if (!sourceRelative) throw new Error('Project has no video asset')
+      const source = await resolveProjectAssetPath(outputDir, projectId, sourceRelative, manifest); const format = request.format === 'jpeg' ? 'jpeg' : 'png'
+      const dirs = getProjectDirectories(outputDir, projectId); const relative = `generated/frames/frame-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${format === 'jpeg' ? 'jpg' : 'png'}`; const absolute = path.join(dirs.root, relative)
+      const metadata = await extractFrame(source, request.timestamp, format, absolute, controller.signal)
+      if (controller.signal.aborted) throw new Error('Project operation cancelled'); projectProgress(projectId, operationId, 'frame', 100)
+      if (controller.signal.aborted) throw new Error('Project operation cancelled'); const current = await new ProjectStore(outputDir).open(projectId)
+      if (controller.signal.aborted) throw new Error('Project operation cancelled'); await new ProjectStore(outputDir).save(projectId, { ...current, generated: { ...current.generated, frames: [...current.generated.frames, relative] } })
+      if (controller.signal.aborted) throw new Error('Project operation cancelled'); return { assetPath: relative, width: metadata.width, height: metadata.height, timestamp: request.timestamp }
+    } finally { endProjectOperation(projectId, operationId) }
+  })
+
+  ipcMain.handle('project:extract-audio', async (_event, projectId: unknown, request: unknown, operationId: unknown): Promise<import('../shared/project-types.js').ProjectAudioResult> => {
+    assertProjectId(projectId); validateOperationId(operationId); const formats = ['wav', 'mp3', 'aac', 'm4a', 'flac', 'ogg'] as const
+    if (!isIpcRecord(request) || (request.assetPath !== undefined && typeof request.assetPath !== 'string') || !formats.some(value => value === request.format)) throw new Error('Invalid audio request')
+    const format = formats.find(value => value === request.format)!; const outputDir = getConfig().outputDir; const controller = beginProjectOperation(projectId, operationId)
+    try {
+      const manifest = await new ProjectStore(outputDir).open(projectId); const sourceRelative = request.assetPath || manifest.assets.video
+      if (!sourceRelative) throw new Error('Project has no video asset')
+      const source = await resolveProjectAssetPath(outputDir, projectId, sourceRelative, manifest); const dirs = getProjectDirectories(outputDir, projectId); const relative = `generated/audio/audio-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${format}`; const absolute = path.join(dirs.root, relative)
+      const result = await extractAudio(source, format, absolute, controller.signal)
+      if (controller.signal.aborted) throw new Error('Project operation cancelled'); projectProgress(projectId, operationId, 'audio', 100)
+      if (controller.signal.aborted) throw new Error('Project operation cancelled'); const current = await new ProjectStore(outputDir).open(projectId)
+      if (controller.signal.aborted) throw new Error('Project operation cancelled'); await new ProjectStore(outputDir).save(projectId, { ...current, generated: { ...current.generated, audio: [...current.generated.audio, relative] } })
+      if (controller.signal.aborted) throw new Error('Project operation cancelled'); return { assetPath: relative, format: result.format }
+    } finally { endProjectOperation(projectId, operationId) }
+  })
+
+  ipcMain.handle('project:extract-speaker-audio', async (_event, projectId: unknown, request: unknown, operationId: unknown): Promise<ProjectSpeakerAudioResult> => {
+    assertProjectId(projectId); validateOperationId(operationId)
+    const formats = ['wav', 'mp3', 'aac', 'm4a', 'flac', 'ogg'] as const
+    if (!isIpcRecord(request) || (request.assetPath !== undefined && typeof request.assetPath !== 'string') || !formats.some(value => value === request.format)) throw new Error('Invalid speaker audio request')
+    const format = formats.find(value => value === request.format)!
+    const outputDir = getConfig().outputDir
+    const controller = beginProjectOperation(projectId, operationId)
+    let generatedPaths: string[] = []
+    let saved = false
+    try {
+      const config = getConfig()
+      const manifest = await new ProjectStore(outputDir).open(projectId)
+      const sourceRelative = request.assetPath || manifest.assets.video
+      if (!sourceRelative) throw new Error('Project has no video asset')
+      const source = await resolveProjectAssetPath(outputDir, projectId, sourceRelative, manifest)
+      const dirs = getProjectDirectories(outputDir, projectId)
+      const result = await exportSpeakerAudio({
+        sourcePath: source,
+        tempDir: dirs.temp,
+        outputDir: path.join(dirs.generated, 'audio'),
+        config,
+        format,
+        signal: controller.signal,
+        onProgress: progress => projectProgress(projectId, operationId, progress.stage, progress.percent),
+      })
+      if (controller.signal.aborted) throw new Error('Project operation cancelled')
+      const relativePaths = result.files.map(file => toProjectRelativePath(outputDir, projectId, file.outputPath))
+      generatedPaths = relativePaths
+      const files = result.files.map((file, index) => ({
+        speaker: file.speaker,
+        assetPath: relativePaths[index],
+        format: file.format,
+        duration: file.duration,
+      }))
+      if (controller.signal.aborted) throw new Error('Project operation cancelled')
+      const current = await new ProjectStore(outputDir).open(projectId)
+      const audio = Array.from(new Set([...current.generated.audio, ...generatedPaths]))
+      if (controller.signal.aborted) throw new Error('Project operation cancelled')
+      await new ProjectStore(outputDir).save(projectId, { ...current, generated: { ...current.generated, audio } })
+      saved = true
+      if (controller.signal.aborted) throw new Error('Project operation cancelled')
+      return { files }
+    } catch (error) {
+      if (!saved) {
+        await Promise.all(generatedPaths.map(relative => {
+          try {
+            return fsPromises.unlink(resolveProjectRelativePath(outputDir, projectId, relative)).catch(() => {})
+          } catch {
+            return Promise.resolve()
+          }
+        }))
+      }
+      throw error
+    } finally { endProjectOperation(projectId, operationId) }
+  })
+
+  ipcMain.handle('project:render', async (_event, projectId: unknown, request: unknown, operationId: unknown): Promise<import('../shared/project-types.js').ProjectRenderResult> => {
+    assertProjectId(projectId); validateOperationId(operationId)
+    if (!isIpcRecord(request) || (request.resolution !== 'original' && request.resolution !== '1080p' && request.resolution !== '720p' && request.resolution !== '480p') || (request.outputName !== undefined && (typeof request.outputName !== 'string' || request.outputName.length > 96))) throw new Error('Invalid render request')
+    const resolution = request.resolution === 'original' ? 'original' : request.resolution === '1080p' ? '1080p' : request.resolution === '720p' ? '720p' : '480p'; const outputName = typeof request.outputName === 'string' ? request.outputName : `render-${Date.now()}.mp4`
+    const outputDir = getConfig().outputDir; const controller = beginProjectOperation(projectId, operationId)
+    try {
+      const manifest = await new ProjectStore(outputDir).open(projectId); const timeline = request.timeline || manifest.timeline; validateTimeline(timeline, manifest.media?.duration)
+      const sourceRelative = manifest.assets.video; if (!sourceRelative) throw new Error('Project has no video asset')
+      const source = await resolveProjectAssetPath(outputDir, projectId, sourceRelative, manifest); const dirs = getProjectDirectories(outputDir, projectId); const requested = path.basename(outputName).slice(0, 96); const basename = requested.replace(/[^a-zA-Z0-9._-]/g, '-') || `render-${Date.now()}.mp4`; let filename = basename.toLowerCase().endsWith('.mp4') ? basename : `${basename}.mp4`; let suffix = 1
+      while (await fsPromises.access(path.join(dirs.root, 'generated/exports', filename)).then(() => true).catch(() => false)) filename = `${basename.replace(/\.mp4$/i, '')}-${suffix++}.mp4`
+      const relative = `generated/exports/${filename}`; const absolute = path.join(dirs.root, relative); const result = await renderProject(source, timeline, resolution, absolute, dirs.temp, controller.signal, percent => projectProgress(projectId, operationId, 'rendering', percent))
+      if (controller.signal.aborted) throw new Error('Project operation cancelled'); const current = await new ProjectStore(outputDir).open(projectId); const exports = Array.from(new Set([...current.generated.exports, relative]))
+      if (controller.signal.aborted) throw new Error('Project operation cancelled'); await new ProjectStore(outputDir).save(projectId, { ...current, timeline, generated: { ...current.generated, exports } })
+      if (controller.signal.aborted) throw new Error('Project operation cancelled'); return { assetPath: relative, duration: result.duration }
+    } finally { endProjectOperation(projectId, operationId) }
+  })
 }
 
 // Start a local HTTP server for serving media files with proper Range support
@@ -410,54 +639,44 @@ function startMediaServer(): Promise<number> {
     const mimeTypes: Record<string, string> = {
       '.mp4': 'video/mp4', '.webm': 'video/webm', '.mkv': 'video/x-matroska',
       '.avi': 'video/x-msvideo', '.mov': 'video/quicktime',
+      '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
       '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.aac': 'audio/aac',
       '.ogg': 'audio/ogg', '.flac': 'audio/flac', '.m4a': 'audio/mp4',
     }
 
     mediaServer = createServer((req, res) => {
-      const filePath = decodeURIComponent(req.url?.slice(1) || '')
-      if (!filePath) {
-        res.writeHead(400)
-        res.end('Missing file path')
+      const match = req.url?.match(/^\/media\/([A-Za-z0-9-]+)$/)
+      const entry = match ? mediaTokens.get(match[1]) : undefined
+      if (!entry) {
+        res.writeHead(404)
+        res.end('Media not found')
         return
       }
-
+      const filePath = entry.filePath
       let fileSize: number
-      try {
-        fileSize = statSync(filePath).size
-      } catch {
+      try { fileSize = statSync(filePath).size } catch {
         res.writeHead(404)
         res.end('File not found')
         return
       }
-
-      const ext = path.extname(filePath).toLowerCase()
-      const contentType = mimeTypes[ext] || 'application/octet-stream'
+      const contentType = mimeTypes[entry.extension] || 'application/octet-stream'
       const range = req.headers.range
-
       if (range) {
-        const match = range.match(/bytes=(\d+)-(\d*)/)
-        if (match) {
-          const start = parseInt(match[1], 10)
-          const end = match[2] ? parseInt(match[2], 10) : fileSize - 1
-          const chunkSize = end - start + 1
-
-          res.writeHead(206, {
-            'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-            'Accept-Ranges': 'bytes',
-            'Content-Length': chunkSize,
-            'Content-Type': contentType,
-          })
-          createReadStream(filePath, { start, end }).pipe(res)
-          return
+        const rangeMatch = range.match(/bytes=(\d+)-(\d*)/)
+        if (rangeMatch) {
+          const start = Number(rangeMatch[1])
+          const end = Math.min(rangeMatch[2] ? Number(rangeMatch[2]) : fileSize - 1, fileSize - 1)
+          if (start <= end && start < fileSize) {
+            res.writeHead(206, { 'Content-Range': `bytes ${start}-${end}/${fileSize}`, 'Accept-Ranges': 'bytes', 'Content-Length': end - start + 1, 'Content-Type': contentType })
+            createReadStream(filePath, { start, end }).pipe(res)
+            return
+          }
         }
+        res.writeHead(416, { 'Content-Range': `bytes */${fileSize}` })
+        res.end()
+        return
       }
-
-      res.writeHead(200, {
-        'Content-Length': fileSize,
-        'Content-Type': contentType,
-        'Accept-Ranges': 'bytes',
-      })
+      res.writeHead(200, { 'Content-Length': fileSize, 'Content-Type': contentType, 'Accept-Ranges': 'bytes' })
       createReadStream(filePath).pipe(res)
     })
 

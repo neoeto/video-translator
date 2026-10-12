@@ -7,6 +7,7 @@ export function SideNavBar({ activeView, onNavigate }: { activeView: string, onN
   const toggleSidebar = useUIStore((s) => s.toggleSidebar)
 
   const navItems = [
+    { id: 'video-tool', icon: 'movie_edit', label: t('nav.videoTool') },
     { id: 'home', icon: 'download', label: t('nav.home') },
     { id: 'processing', icon: 'sync', label: t('nav.processing') },
     { id: 'library', icon: 'video_library', label: t('nav.library') },

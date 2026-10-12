@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { PipelineState, AppConfig, DepInstallProgress, MissingDep, SpeakerProfile, VideoSourceType } from './services/types.js'
 import type { HistoryEntry } from './services/history.js'
-
+import type { ProjectAcquireRequest, ProjectAudioRequest, ProjectAudioResult, ProjectCreateRequest, ProjectFrameRequest, ProjectFrameResult, ProjectListItem, ProjectManifest, ProjectMediaMetadata, ProjectOperationProgress, ProjectRenderRequest, ProjectRenderResult, ProjectSpeakerAudioRequest, ProjectSpeakerAudioResult } from '../shared/project-types.js'
 const electronAPI = {
   pipelineStart: (url: string, outputDir: string, sourceType: VideoSourceType = 'youtube'): Promise<void> =>
     ipcRenderer.invoke('pipeline:start', url, outputDir, sourceType),
@@ -71,8 +71,26 @@ const electronAPI = {
     ipcRenderer.invoke('video:getDimensions', videoPath),
   getAudioWaveform: (audioPath: string, samples: number): Promise<number[]> =>
     ipcRenderer.invoke('audio:getWaveform', audioPath, samples),
-  getMediaServerPort: (): Promise<number> =>
-    ipcRenderer.invoke('media:getServerPort'),
+  getMediaFileUrl: (filePath: string): Promise<string> =>
+    ipcRenderer.invoke('media:getFileUrl', filePath),
+  projectCreate: (request: ProjectCreateRequest = {}): Promise<ProjectManifest> => ipcRenderer.invoke('project:create', request),
+  projectList: (): Promise<ProjectListItem[]> => ipcRenderer.invoke('project:list'),
+  projectOpen: (projectId: string): Promise<ProjectManifest> => ipcRenderer.invoke('project:open', projectId),
+  projectSave: (projectId: string, manifest: ProjectManifest): Promise<ProjectManifest> => ipcRenderer.invoke('project:save', projectId, manifest),
+  projectDelete: (projectId: string): Promise<void> => ipcRenderer.invoke('project:delete', projectId),
+  projectAcquire: (projectId: string, request: ProjectAcquireRequest, operationId: string): Promise<ProjectManifest> => ipcRenderer.invoke('project:acquire', projectId, request, operationId),
+  projectCancel: (projectId: string, operationId: string): Promise<void> => ipcRenderer.invoke('project:cancel', projectId, operationId),
+  projectAssetUrl: (projectId: string, assetPath: string): Promise<string> => ipcRenderer.invoke('project:asset-url', projectId, assetPath),
+  projectMetadata: (projectId: string, assetPath?: string): Promise<ProjectMediaMetadata> => ipcRenderer.invoke('project:metadata', projectId, assetPath),
+  projectExtractFrame: (projectId: string, request: ProjectFrameRequest, operationId: string): Promise<ProjectFrameResult> => ipcRenderer.invoke('project:extract-frame', projectId, request, operationId),
+  projectExtractAudio: (projectId: string, request: ProjectAudioRequest, operationId: string): Promise<ProjectAudioResult> => ipcRenderer.invoke('project:extract-audio', projectId, request, operationId),
+  projectExtractSpeakerAudio: (projectId: string, request: ProjectSpeakerAudioRequest, operationId: string): Promise<ProjectSpeakerAudioResult> => ipcRenderer.invoke('project:extract-speaker-audio', projectId, request, operationId),
+  projectRender: (projectId: string, request: ProjectRenderRequest, operationId: string): Promise<ProjectRenderResult> => ipcRenderer.invoke('project:render', projectId, request, operationId),
+  onProjectProgress: (callback: (progress: ProjectOperationProgress) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, progress: ProjectOperationProgress) => callback(progress)
+    ipcRenderer.on('project:progress', handler)
+    return () => ipcRenderer.removeListener('project:progress', handler)
+  },
 }
 
 // 使用 contextBridge 暴露白名单 API，隔离渲染进程与 ipcRenderer，避免直接挂载 Node/Electron 能力。
