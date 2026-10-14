@@ -157,6 +157,16 @@ npm run build
 npm run preview
 ```
 
+### 发布桌面安装包
+
+仓库提供 `.github/workflows/release.yml`，用于在 GitHub Actions 中构建并发布 macOS、Windows 和 Linux 安装包。
+
+1. 打开仓库的 **Actions → Release desktop packages**。
+2. 点击 **Run workflow**，在 `version` 中填写 SemVer 版本号，例如 `1.0.0`，不要加 `v` 前缀。
+3. 等待三个平台的构建完成。Workflow 会创建 `v<version>` 标签和 GitHub Release，并将 DMG、NSIS EXE 和 AppImage 作为发行资产上传。
+
+版本号只写入本次构建工作区，不会自动提交回仓库。Windows 构建会准备应用配置中声明的嵌入式 Python；macOS 和 Linux 构建会准备对应的可选资源目录。
+
 ## 配置说明
 
 首次启动后，进入 **Settings** 页面配置以下内容：

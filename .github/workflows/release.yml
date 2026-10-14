@@ -1,0 +1,129 @@
+name: Release desktop packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version in SemVer format, for example 1.0.0
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: Validate release version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Validate and normalize version
+        id: version
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          npm version "$RELEASE_VERSION" --no-git-tag-version --allow-same-version >/dev/null
+          VERSION="$(node -p "JSON.parse(require('node:fs').readFileSync('package.json', 'utf8')).version")"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Release version: $VERSION"
+
+  build:
+    name: Build ${{ matrix.platform }} package
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            script: dist:linux
+            asset: dist/*.AppImage
+          - os: windows-latest
+            platform: windows
+            script: dist:win
+            asset: dist/*.exe
+          - os: macos-latest
+            platform: macos
+            script: dist:mac
+            asset: dist/*.dmg
+    env:
+      RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set package version
+        shell: bash
+        run: npm version "$RELEASE_VERSION" --no-git-tag-version --allow-same-version >/dev/null
+
+      - name: Prepare embedded Python for Windows
+        if: matrix.platform == 'windows'
+        run: npm run setup-python
+
+      - name: Prepare optional Python resource directory
+        if: matrix.platform != 'windows'
+        shell: bash
+        run: mkdir -p resources/python
+
+      - name: Build package
+        run: npm run "${{ matrix.script }}" -- --publish never
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform }}
+          path: ${{ matrix.asset }}
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Publish GitHub release
+    needs:
+      - prepare
+      - build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create GitHub release
+        shell: bash
+        env:
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          gh release create "v${RELEASE_VERSION}" release-assets/* \
+            --target "$TARGET_SHA" \
+            --title "VidiTranslate v${RELEASE_VERSION}" \
+            --generate-notes
