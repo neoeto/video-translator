@@ -124,6 +124,7 @@ jobs:
         run: |
           set -euo pipefail
           gh release create "v${RELEASE_VERSION}" release-assets/* \
+            --repo "$GITHUB_REPOSITORY" \
             --target "$TARGET_SHA" \
             --title "VidiTranslate v${RELEASE_VERSION}" \
             --generate-notes
